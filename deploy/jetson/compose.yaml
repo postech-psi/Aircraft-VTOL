@@ -1,0 +1,46 @@
+# Companion computer (Jetson): the uXRCE-DDS agent on the serial link to the Pixhawk, and the
+# ROS 2 container the mission nodes run in. docs/04_onboard.md has the steps.
+#
+#   docker compose -f deploy/jetson/compose.yaml up -d --build
+#   docker exec -it ros2 bash
+services:
+  microxrce-agent:
+    build:
+      context: ../microxrce-agent
+      dockerfile: Dockerfile
+    container_name: microxrce-agent
+    network_mode: host
+    privileged: true
+    restart: unless-stopped
+    volumes:
+      - /dev:/dev
+    command: ["bash", "-lc", "MicroXRCEAgent serial --dev $${PX4_UXRCE_DEV:-/dev/ttyUSB0} -b $${PX4_UXRCE_BAUD:-921600}"]
+    environment:
+      - ROS_DOMAIN_ID=0
+      - ROS_LOCALHOST_ONLY=0
+      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+      - FASTDDS_BUILTIN_TRANSPORTS=UDPv4
+      - PX4_UXRCE_DEV=/dev/ttyUSB0
+      - PX4_UXRCE_BAUD=921600
+
+  ros2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ros2
+    network_mode: host
+    restart: unless-stopped
+    depends_on:
+      - microxrce-agent
+    volumes:
+      - ../..:/workspace
+    working_dir: /workspace/ros2/ws
+    environment:
+      - ROS_DOMAIN_ID=0
+      - ROS_LOCALHOST_ONLY=0
+      - RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+      - FASTDDS_BUILTIN_TRANSPORTS=UDPv4
+      - PYTHONUNBUFFERED=1
+    stdin_open: true
+    tty: true
+    command: ["sleep", "infinity"]

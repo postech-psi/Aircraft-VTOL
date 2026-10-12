@@ -1,0 +1,76 @@
+# The airframe: four lift rotors, one pusher, a fixed wing and a rear plate. No control surfaces.
+# This file is the only place an airframe number is written. The simulation builds its Gazebo
+# model from it (psi_vtol/sim/gz_model.py) and PX4 is told the motor geometry from it.
+#
+# Part of this is the airframe team's data, the rest is still assumed. Status of each value:
+#   GIVEN    stated by the airframe team (dimensions and eCalc result of 2026-10-08, for a
+#            7 kg vehicle; sketch of 2026-08-04; chat)
+#   DERIVED  computed from GIVEN values, with the assumption named
+#   ASSUMED  placeholder; replace when the airframe team supplies the number
+#   MEASURED measured on the built vehicle or on the bench (none yet)
+# Nothing is measured on a built vehicle. eCalc is a calculation, not a bench test.
+# A run that passes with these numbers shows the control concept is workable for a vehicle
+# of this kind. It does not qualify the real vehicle.
+#
+# Frames: body x forward, y left, z up (Gazebo). Lengths in metres from the nominal CG,
+# which is also the point PX4's motor geometry is referred to.
+
+# --- mass properties -----------------------------------------------------------------
+mass_kg: 7.0                # GIVEN: the weight the eCalc result is for, taken as all-up
+ixx_kgm2: 0.48              # ASSUMED; a uniform 1.5 kg, 1.7 m wing alone gives 0.36
+iyy_kgm2: 0.34              # ASSUMED
+izz_kgm2: 0.81              # ASSUMED
+inertia_scale: 1.0          # multiplies all three
+cg_x_m: 0.0                 # true CG minus the CG PX4 assumes
+cg_y_m: 0.0
+cg_z_m: 0.0
+
+# --- lift motors (4) -----------------------------------------------------------------
+# GIVEN: the motors sit on a rectangle 665 mm fore-aft by 505 mm across.
+# ASSUMED: the CG is at the centre of that rectangle.
+rotor_x_m: 0.3325
+rotor_y_m: 0.2525
+lift_thrust_max_n: 32.6     # DERIVED, per motor: eCalc thrust-to-weight 1.9 at 7 kg
+lift_moment_m: 0.030        # DERIVED reaction torque per newton of thrust: eCalc power and
+                            # speed (311 W, 4305 rpm in hover; 784 W, 6574 rpm at maximum),
+                            # with 82 to 85 % of the electrical power assumed at the shaft
+lift_tau_up_s: 0.04         # ASSUMED motor time constants
+lift_tau_down_s: 0.06
+lift_mismatch_pct: 0.0      # motor 0 gets +p %, motor 1 gets -p % of thrust
+
+# --- pusher --------------------------------------------------------------------------
+pusher_thrust_max_n: 25.0   # ASSUMED
+pusher_moment_m: 0.015      # ASSUMED reaction torque per newton of thrust
+pusher_x_m: -0.40           # ASSUMED: behind the 0.71 m body (GIVEN), body centred on the CG
+pusher_y_m: 0.0             # thrust line offset to the left
+pusher_z_m: 0.0             # thrust line offset above the CG
+
+# --- wing: NACA 4415, 1700 x 250 mm (GIVEN), 1.5 kg (GIVEN) ---------------------------
+wing_span_m: 1.70
+wing_chord_m: 0.25
+wing_incidence_deg: 0.0     # ASSUMED
+wing_alpha0_deg: 4.0        # zero-lift angle of NACA 4415 is about -4 deg (textbook value)
+wing_cla_2d: 6.0            # section lift slope per rad (textbook value)
+wing_stall_deg: 14.0        # ASSUMED section stall angle
+wing_cd0: 0.08              # ASSUMED whole-aircraft drag coefficient on the wing area
+wing_cp_x_m: -0.08          # ASSUMED where the wing lift acts; aft of the CG is negative.
+                            # This one number stands for the wing's pitching moment.
+                            # -0.08: CG at the quarter chord, and 8 cm for the nose-down
+                            # moment of the cambered airfoil (moment coefficient about -0.10).
+wing_cp_z_m: 0.05           # ASSUMED
+
+# --- rear plate (GIVEN): a flat plate between the booms, 475 x 150 mm; no fin. ---------
+# Aerodynamically a small fixed horizontal tail.
+tail_area_m2: 0.0713        # GIVEN: 0.475 m x 0.150 m
+tail_arm_m: 0.62            # DERIVED: its trailing edge is 1065 mm behind the front motors
+                            # (GIVEN); quarter chord, CG at the centre of the motors
+tail_incidence_deg: 0.0     # ASSUMED: in line with the booms
+tail_cla: 3.5               # lift slope per rad of a flat plate of this aspect ratio
+
+# --- side area ------------------------------------------------------------------------
+# The fuselage, booms and pusher still feel a side wind. One side-force surface stands for
+# them; where it acts decides which way it turns the nose.
+side_area_m2: 0.15          # DERIVED: side of the 0.71 m x 0.215 m body (GIVEN)
+side_cla: 1.0               # ASSUMED side-force slope per rad
+side_cp_x_m: 0.0            # ASSUMED: ahead of the CG (+) turns the nose away from the
+                            # wind, behind it (-) turns the nose into the wind

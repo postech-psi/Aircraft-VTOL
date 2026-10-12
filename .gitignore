@@ -1,0 +1,34 @@
+# Simulation output: sweep tables and per-case results (python3 -m psi_vtol.sim.sweep)
+out/
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+
+# ROS 2 build output
+ros2/ws/build/
+ros2/ws/install/
+ros2/ws/log/
+
+# External repository, cloned at the tag px4/README.md names
+ros2/ws/src/px4_msgs/
+
+# Flight and simulation logs
+*.ulg
+*.log
+
+# Model weights
+*.pt
+*.pth
+*.onnx
+*.engine
+
+# Machine
+.env
+.DS_Store
+.vscode/
+.idea/

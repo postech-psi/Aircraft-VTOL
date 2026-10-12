@@ -1,0 +1,5 @@
+# One line ending everywhere. Files edited on Windows and run on Linux (WSL, Jetson) otherwise
+# break: a shell script with CRLF does not start.
+* text=auto eol=lf
+*.png binary
+*.pdf binary

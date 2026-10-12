@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "psi-vtol"
+version = "0.1.0"
+description = "PSI VTOL: vehicle data, mission profile and PX4 SITL simulation"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy",
+    "pyyaml",
+    "pymavlink",        # the simulation runner talks to PX4 over MAVLink
+    "pyulog",           # reads the PX4 log of a run
+    "matplotlib",       # figures
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "pyflakes"]
+
+[tool.setuptools.packages.find]
+include = ["psi_vtol*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

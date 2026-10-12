@@ -1,0 +1,44 @@
+# The simulation study behind report.md: what the nominal case flies in, and how far each
+# uncertain value is varied.
+
+# The air the nominal case flies in.
+environment:
+  air_density: 1.2041         # kg/m^3; scales lift, drag and all thrusts
+  wind_speed_mps: 0.0
+  wind_from_deg: 0.0          # 0 headwind, 90 from the left, 180 tailwind, 270 from the right
+  wind_gust_pct: 0.0          # slow sinusoidal variation of the speed, fraction of the mean
+
+# Range of each swept quantity: [low, high]. psi_vtol/sim/sweep.py uses these for the
+# one-at-a-time and the random study. Values the airframe team has given are not swept, except
+# the mass. Keep the order: the random study draws the values in this order, so reordering
+# changes which vehicle a given seed produces.
+sweep:
+  mass_kg: [6.0, 8.0]
+  inertia_scale: [0.6, 1.6]
+  cg_x_m: [-0.04, 0.04]
+  cg_y_m: [-0.02, 0.02]
+  cg_z_m: [-0.03, 0.03]
+  lift_thrust_max_n: [27.5, 37.5]
+  lift_moment_m: [0.020, 0.040]
+  lift_tau_up_s: [0.02, 0.10]
+  lift_mismatch_pct: [0.0, 8.0]
+  pusher_thrust_max_n: [15.0, 40.0]
+  pusher_y_m: [-0.02, 0.02]
+  pusher_z_m: [-0.06, 0.06]
+  wing_incidence_deg: [0.0, 4.0]
+  wing_cd0: [0.04, 0.16]
+  wing_cp_x_m: [-0.14, 0.0]
+  tail_arm_m: [0.52, 0.72]
+  tail_incidence_deg: [-2.0, 2.0]
+  side_area_m2: [0.10, 0.20]
+  side_cp_x_m: [-0.3, 0.4]
+  air_density: [1.10, 1.29]
+  wind_speed_mps: [0.0, 8.0]
+  wind_from_deg: [0.0, 360.0]
+  wind_gust_pct: [0.0, 0.4]
+  cruise_mps: [6.0, 14.0]
+  accel_mps2: [0.5, 2.0]
+
+sim:
+  autostart: 4004             # PX4 airframe the parameters are applied on top of (standard VTOL)
+  speed_factor: 4             # simulation time runs this many times faster than the clock

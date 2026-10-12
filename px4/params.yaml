@@ -1,0 +1,37 @@
+# PX4 parameters of the control concept (docs/02_control_concept.md, section 3). PX4 itself is
+# stock v1.17.0 (px4/README.md): nothing in the firmware is changed, only these parameters.
+#
+# The simulation applies all three groups on top of airframe 4004 (standard VTOL). The motor
+# positions (CA_ROTORn_PX, _PY) are not here: they are written from vehicle/<name>.yaml.
+#
+# For the real Pixhawk: load `concept`, replace every `per_vehicle` value with a measured one,
+# and never load `sim_only`.
+
+# The control concept. The same on the vehicle and in the simulation.
+concept:
+  CA_SV_CS_COUNT: 0           # no control surfaces
+  VT_FWD_THRUST_EN: 4         # pusher gives the forward force in multicopter mode, always
+  VT_PITCH_MIN: 0.0           # no nose-down pitch: every forward demand goes to the pusher
+  CA_R4_SLEW: 1.0             # pusher command takes at least 1 s from 0 to 1
+  CA_ROTOR4_PZ: 0.0           # thrust-line offset is left to the rate integrator
+  MPC_XY_VEL_MAX: 16.0        # above the cruise speed, or PX4 clips the commanded speed
+  WV_EN: 0                    # the mission node commands the heading
+
+# Values that belong to one vehicle. These are the simulated vehicle's, not the real one's.
+per_vehicle:
+  VT_FWD_THRUST_SC: 2.75      # weight / pusher maximum thrust; real value from the pusher bench test
+  THR_MDL_FAC: 1.0            # the simulated motors are exactly quadratic; eCalc suggests
+                              # about 0.35 for the real ones, to be confirmed on the bench
+  MC_YAWRATE_K: 3.0           # this vehicle turns about 1/3 as hard in yaw per unit of command
+                              # as PX4's standard VTOL model; real value from hover tuning
+
+# Simulation housekeeping. NEVER load these on the Pixhawk: they switch off the RC and
+# data-link failsafes so that a simulated flight needs no RC and no ground station.
+sim_only:
+  SIM_GZ_SV_FUNC1: 0          # the Gazebo model has no servos
+  SIM_GZ_SV_FUNC2: 0
+  SIM_GZ_SV_FUNC3: 0
+  COM_RC_IN_MODE: 4           # no RC
+  COM_RCL_EXCEPT: 4
+  NAV_DLL_ACT: 0
+  NAV_RCL_ACT: 0
