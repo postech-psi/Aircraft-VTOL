@@ -49,6 +49,12 @@ flowchart LR
 - 조종사가 offboard에서 나가거나 PX4 failsafe가 모드를 바꾸면, 노드는
   `FAILED:left offboard`를 보고하고 멈춥니다. 그 뒤는 조종사와 PX4가 맡습니다.
 - 단계가 예상 시간을 넘기면 `FAILED:timeout`입니다.
+- 단계 status가 2초 동안 없으면 mission manager가 FAILSAFE로 갑니다.
+- HOLD는 진입 시 위치와 기수를 고정합니다. 이후 위치가 밀려도 목표를 따라 옮기지 않습니다.
+- 위치 토픽이 1초 동안 없거나 위치 유효성이 깨지면 mux는 Offboard 스트림을 멈춥니다.
+  PX4의 `COM_OF_LOSS_T`와 loss action이 이어서 적용되므로 실제 설정을 시험해야 합니다.
+- 단계 노드는 위치/상태 수신의 wall-clock 신선도도 확인합니다. PX4 timestamp가 멈춰
+  단계 timeout까지 멈추는 상황을 줄이기 위한 검사입니다. 실제 DDS 장애 주입 시험은 별도입니다.
 
 ## 2. PX4 연결
 
@@ -63,14 +69,14 @@ px4_msgs는 이 repo에 넣지 않고 태그를 고정해 받습니다.
 git clone --depth 1 -b v1.17.0 https://github.com/PX4/px4_msgs.git ros2/ws/src/px4_msgs
 ```
 
-```bash
-cd ros2/ws && colcon build && source install/setup.bash
-```
-
 노드는 `psi_vtol`을 repo에서 바로 읽습니다. repo 최상위를 `PYTHONPATH`에 넣습니다.
+repo 최상위에서 다음을 실행합니다.
 
 ```bash
 export PYTHONPATH=$PWD:$PYTHONPATH
+cd ros2/ws
+colcon build
+source install/setup.bash
 ```
 
 ## 4. 실행

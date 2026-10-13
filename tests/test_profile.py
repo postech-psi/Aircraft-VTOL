@@ -106,6 +106,14 @@ def test_a_phase_that_takes_too_long_is_reported():
     assert profile.overdue(61.0)
 
 
+def test_acceleration_does_not_finish_if_vehicle_never_reaches_speed():
+    profile = Profile(P, HOME, 0, phases=("accel", "cruise"))
+    for i in range(400):
+        profile.update(i * .1, HOME, (0, 0, 0))
+    assert profile.phase == "accel"
+    assert profile.overdue(40)
+
+
 def test_heading_into_wind_turns_no_faster_than_the_turn_rate():
     profile = Profile(dict(P, heading_into_wind=1), HOME, 0.0, wind_ne=(0.0, -6.0))
     yaws = [(t, sp.yaw) for t, _, sp, _ in fly(profile)]

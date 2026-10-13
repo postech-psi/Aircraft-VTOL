@@ -26,7 +26,7 @@ class MissionManager(Node):
     def __init__(self):
         super().__init__("mission_manager")
         self.steps = [s.upper() for s in self.declare_parameter("steps", ["PATH", "LANDING"]).value]
-        # a step's node silent for this long gets a warning in the log
+        # a step silent for this long triggers a latched mission failure
         self.status_timeout_s = self.declare_parameter("status_timeout_s", 2.0).value
 
         self.state = WAIT_START
@@ -93,7 +93,9 @@ class MissionManager(Node):
 
         last_heard = self.step_status_time or self.state_start
         if time.monotonic() - last_heard > self.status_timeout_s:
-            self.get_logger().warn(f"No status from the {step} node.", throttle_duration_sec=2.0)
+            self.get_logger().error(f"No status from the {step} node; entering FAILSAFE.")
+            self.change_state(FAILSAFE)
+            return
 
         result = self.step_status.split(":", 1)[0]
         if result == "DONE":

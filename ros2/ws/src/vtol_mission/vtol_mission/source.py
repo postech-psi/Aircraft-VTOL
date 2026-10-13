@@ -11,6 +11,7 @@ active, and step(), called at the setpoint rate while it is. PathNode and Landin
 two steps of the year-end flight; a vision landing would be a third.
 """
 import math
+import time
 
 from px4_msgs.msg import (TrajectorySetpoint, VehicleCommand, VehicleLocalPosition,
                           VehicleStatus)
@@ -39,6 +40,7 @@ class SetpointSource(Node):
         self.armed = False
         self.nav_state = None
         self.ground_z = 0.0         # the height the vehicle stood at before it was armed
+        self.last_position_timestamp = None
 
         self.mission_state = "INACTIVE"
         self.active = False
@@ -115,6 +117,14 @@ class SetpointSource(Node):
 
     # --- machinery -----------------------------------------------------------------------------
     def _on_local_position(self, msg):
+        if (self.last_position_timestamp is not None and msg.timestamp <= self.last_position_timestamp):
+            return
+        if not (msg.xy_valid and msg.z_valid and msg.v_xy_valid and msg.v_z_valid and
+                all(math.isfinite(v) for v in (msg.x, msg.y, msg.z, msg.vx, msg.vy, msg.vz, msg.heading))):
+            self.position_received_at = 0.0
+            return
+        self.position_received_at = time.monotonic()
+        self.last_position_timestamp = msg.timestamp
         self.t = msg.timestamp * 1e-6
         self.pos = (float(msg.x), float(msg.y), float(msg.z))
         self.vel = (float(msg.vx), float(msg.vy), float(msg.vz))
@@ -123,6 +133,7 @@ class SetpointSource(Node):
             self.ground_z = self.pos[2]
 
     def _on_vehicle_status(self, msg):
+        self.status_received_at = time.monotonic()
         self.armed = msg.arming_state == VehicleStatus.ARMING_STATE_ARMED
         self.nav_state = msg.nav_state
 
@@ -135,6 +146,13 @@ class SetpointSource(Node):
             return
         if self.pos is None or self.nav_state is None:
             self.report("ACTIVE:waiting for PX4")
+            return
+        now = time.monotonic()
+        if max(now - getattr(self, "position_received_at", 0),
+               now - getattr(self, "status_received_at", 0)) > 1.0:
+            self.active = True  # keep this failure latched until the mission selects a new step
+            self.fail("PX4 state telemetry stale")
+            self.report(self.result)
             return
         if not self.active:
             self.active, self.result = True, None

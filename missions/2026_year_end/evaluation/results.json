@@ -1,0 +1,188 @@
+{
+  "scope": "analytical calculations and synthetic software checks; no SITL or flight",
+  "nominal": {
+    "wing_area_m2": 0.425,
+    "aspect_ratio": 6.8,
+    "wing_cla": 4.509835430001878,
+    "wing_alpha0_rad": 0.06981317007977318,
+    "wing_stall_rad": 0.3141592653589793,
+    "cl_level": 0.3148459079065082,
+    "weight_n": 68.64654999999999,
+    "lift_thrust_to_weight": 1.8995856310331696,
+    "wing_lift_fraction_cruise": 0.11735479206664158
+  },
+  "pitch_envelope": [
+    {
+      "incidence_deg": 0,
+      "airspeed_mps": 10,
+      "pitch_deg": 0,
+      "wing_lift_fraction": 0.11735479206664158
+    },
+    {
+      "incidence_deg": 0,
+      "airspeed_mps": 10,
+      "pitch_deg": 6.4,
+      "wing_lift_fraction": 0.30512245937326804
+    },
+    {
+      "incidence_deg": 0,
+      "airspeed_mps": 13,
+      "pitch_deg": 0,
+      "wing_lift_fraction": 0.19832959859262425
+    },
+    {
+      "incidence_deg": 0,
+      "airspeed_mps": 13,
+      "pitch_deg": 6.4,
+      "wing_lift_fraction": 0.515656956340823
+    },
+    {
+      "incidence_deg": 0,
+      "airspeed_mps": 18,
+      "pitch_deg": 0,
+      "wing_lift_fraction": 0.38022952629591866
+    },
+    {
+      "incidence_deg": 0,
+      "airspeed_mps": 18,
+      "pitch_deg": 6.4,
+      "wing_lift_fraction": 0.9885967683693885
+    },
+    {
+      "incidence_deg": 4,
+      "airspeed_mps": 10,
+      "pitch_deg": 0,
+      "wing_lift_fraction": 0.23470958413328316
+    },
+    {
+      "incidence_deg": 4,
+      "airspeed_mps": 10,
+      "pitch_deg": 6.4,
+      "wing_lift_fraction": 0.4224772514399097
+    },
+    {
+      "incidence_deg": 4,
+      "airspeed_mps": 13,
+      "pitch_deg": 0,
+      "wing_lift_fraction": 0.3966591971852485
+    },
+    {
+      "incidence_deg": 4,
+      "airspeed_mps": 13,
+      "pitch_deg": 6.4,
+      "wing_lift_fraction": 0.7139865549334473
+    },
+    {
+      "incidence_deg": 4,
+      "airspeed_mps": 18,
+      "pitch_deg": 0,
+      "wing_lift_fraction": 0.7604590525918373
+    },
+    {
+      "incidence_deg": 4,
+      "airspeed_mps": 18,
+      "pitch_deg": 6.4,
+      "wing_lift_fraction": 1.3688262946653074
+    }
+  ],
+  "level_speed_at_40pct_lift": [
+    {
+      "incidence_deg": 0,
+      "airspeed_at_40pct_lift_mps": 18.462035491570656
+    },
+    {
+      "incidence_deg": 4,
+      "airspeed_at_40pct_lift_mps": 13.054630490596326
+    }
+  ],
+  "isolated_axis_yaw_bounds": [
+    {
+      "wing_lift_fraction": 0,
+      "ideal_yaw_bound_nm": 1.8526035000000003
+    },
+    {
+      "wing_lift_fraction": 0.4,
+      "ideal_yaw_bound_nm": 1.2356378999999997
+    },
+    {
+      "wing_lift_fraction": 0.59,
+      "ideal_yaw_bound_nm": 0.8443525649999999
+    },
+    {
+      "wing_lift_fraction": 0.8,
+      "ideal_yaw_bound_nm": 0.41187929999999984
+    }
+  ],
+  "approx_level_drag": [
+    {
+      "airspeed_mps": 10,
+      "lift_rotor_radps": 1022.4801957709058,
+      "lift_rotor_drag_n": 4.352820891020238,
+      "wing_drag_n": 2.04697,
+      "approx_pusher_command": 0.2559916356408095
+    },
+    {
+      "airspeed_mps": 18,
+      "lift_rotor_radps": 856.7956685731402,
+      "lift_rotor_drag_n": 6.565467557872957,
+      "wing_drag_n": 6.6321828,
+      "approx_pusher_command": 0.5279060143149182
+    }
+  ],
+  "prestall_polar": [
+    {
+      "pitch_deg": -4,
+      "cl": 0.0,
+      "cd": 0.0,
+      "cm_from_lift_offset_only": -0.0
+    },
+    {
+      "pitch_deg": 0,
+      "cl": 0.3148459079065082,
+      "cd": 0.08,
+      "cm_from_lift_offset_only": -0.10075069053008262
+    },
+    {
+      "pitch_deg": 6.4,
+      "cl": 0.8185993605569212,
+      "cd": 0.20800000000000002,
+      "cm_from_lift_offset_only": -0.2619517953782148
+    }
+  ],
+  "ideal_stopping_distance_m": 50.0,
+  "acceptance_checks": {
+    "all_nan_metrics_pass": true,
+    "poor_tracking_pass": true,
+    "synthetic_log": {
+      "actual_full_log_tilt_deg": 75,
+      "reported_tilt_max_deg": 0.0,
+      "reported_cruise_speed_mps": 0.0,
+      "passed": true
+    },
+    "profile_completes_without_horizontal_motion": true,
+    "hold": {
+      "first_target_m": [
+        0.0,
+        0.0,
+        -20.0
+      ],
+      "target_after_5m_drift_m": [
+        5.0,
+        0.0,
+        -20.0
+      ],
+      "target_is_latched": false
+    }
+  },
+  "sweep": {
+    "dimensions": 25,
+    "oat_cases_including_nominal": 48,
+    "wind_cases": 40,
+    "reported_random_successes": 38,
+    "reported_random_trials": 40,
+    "wilson_95_interval": [
+      0.8349612263085903,
+      0.9861793326138516
+    ]
+  }
+}

@@ -34,6 +34,11 @@ class SetpointMux(Node):
         self.latest = {}            # step -> (its last setpoint, when it arrived)
         self.position = None        # north, east, down
         self.heading = 0.0
+        self.hold_position = None
+        self.hold_heading = None
+        self.position_received_at = None
+        self.last_position_timestamp = None
+        self.state_timeout_s = self.declare_parameter("state_timeout_s", 1.0).value
 
         self.create_subscription(String, "/setpoint_mux/source", self.on_source, 10)
         for step in self.steps:
@@ -58,24 +63,36 @@ class SetpointMux(Node):
             return
         if source != self.source:
             self.get_logger().info(f"Mux source changed: {self.source} -> {source}")
+            self.hold_position = self.hold_heading = None
         self.source = source
 
     def on_setpoint(self, step, msg):
         self.latest[step] = (msg, time.monotonic())
 
     def on_local_position(self, msg):
+        if (self.last_position_timestamp is not None and msg.timestamp <= self.last_position_timestamp):
+            return  # repeated old packets must not refresh the watchdog
+        if not (msg.xy_valid and msg.z_valid and
+                all(math.isfinite(v) for v in (msg.x, msg.y, msg.z, msg.heading))):
+            self.position_received_at = None
+            return
         self.position = [float(msg.x), float(msg.y), float(msg.z)]
         self.heading = float(msg.heading)
+        self.position_received_at = time.monotonic()
+        self.last_position_timestamp = msg.timestamp
 
     def hold_setpoint(self):
         """Stay where the vehicle is now. None until PX4 has reported a position."""
         if self.position is None:
             return None
+        if self.hold_position is None:
+            self.hold_position = list(self.position)
+            self.hold_heading = self.heading
         msg = TrajectorySetpoint()
-        msg.position = self.position
+        msg.position = list(self.hold_position)
         msg.velocity = NANS
         msg.acceleration = NANS
-        msg.yaw = self.heading
+        msg.yaw = self.hold_heading
         msg.yawspeed = math.nan
         return msg
 
@@ -86,9 +103,14 @@ class SetpointMux(Node):
         setpoint, arrived = self.latest.get(self.source, (None, 0.0))
         if setpoint is None or time.monotonic() - arrived > self.timeout_s:
             return self.hold_setpoint(), f"{self.source}_STALE_HOLD"
+        self.hold_position = self.hold_heading = None
         return setpoint, f"{self.source}_SELECTED"
 
     def forward(self):
+        if (self.position_received_at is None or
+                time.monotonic() - self.position_received_at > self.state_timeout_s):
+            self.status_pub.publish(String(data="STALE_LOCAL_POSITION_STOP_STREAM"))
+            return  # let the configured PX4 offboard-loss action take over
         selected, status = self.select()
         if selected is None:
             self.status_pub.publish(String(data="NO_LOCAL_POSITION"))

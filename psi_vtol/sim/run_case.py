@@ -3,20 +3,23 @@
 
 Starts PX4 SITL with a headless Gazebo, flies the mission profile (psi_vtol/profile.py) in
 offboard mode over MAVLink (the same position/velocity setpoints the ROS 2 nodes send), lands,
-and reads the PX4 log. Runs on Linux (WSL); needs a built PX4 tree (docs/03_simulation.md).
+and reads the PX4 log. Runs in the project's Linux Docker image (docs/03_simulation.md).
 
     python3 -m psi_vtol.sim.run_case                             # the nominal vehicle
     python3 -m psi_vtol.sim.run_case --set wind_speed_mps=6 --set wind_from_deg=90
 """
 import argparse
+import hashlib
+import importlib.metadata
 import json
 import math
 import os
-import shutil
+import platform
 import signal
 import struct
 import subprocess
 import time
+import uuid
 from pathlib import Path
 
 os.environ.setdefault("MAVLINK20", "1")
@@ -53,6 +56,9 @@ class Link:
         self._last_send = 0.0
         self._last_heartbeat = 0.0
         self.setpoint = None        # profile.Setpoint
+        self.last_position_received = self.last_attitude_received = time.monotonic()
+        self.applied_params = {}
+        self.last_position_boot_ms = self.last_attitude_boot_ms = -1
 
     def pump(self, timeout=0.02):
         """Read one message and keep the setpoint stream alive (PX4 leaves offboard without it)."""
@@ -60,10 +66,16 @@ class Link:
         if msg is not None:
             kind = msg.get_type()
             if kind == "LOCAL_POSITION_NED":
+                if msg.time_boot_ms > self.last_position_boot_ms:
+                    self.last_position_received = time.monotonic()
+                    self.last_position_boot_ms = msg.time_boot_ms
                 self.t = msg.time_boot_ms * 1e-3
                 self.pos = (msg.x, msg.y, msg.z)
                 self.vel = (msg.vx, msg.vy, msg.vz)
             elif kind == "ATTITUDE":
+                if msg.time_boot_ms > self.last_attitude_boot_ms:
+                    self.last_attitude_received = time.monotonic()
+                    self.last_attitude_boot_ms = msg.time_boot_ms
                 self.att = (msg.roll, msg.pitch, msg.yaw)
             elif kind == "HEARTBEAT" and msg.get_srcComponent() == 1:
                 self.armed = bool(msg.base_mode & mavutil.mavlink.MAV_MODE_FLAG_SAFETY_ARMED)
@@ -113,7 +125,29 @@ class Link:
         is_int = current.param_type == mavutil.mavlink.MAV_PARAM_TYPE_INT32
         # PX4 carries an integer parameter as its four bytes inside the float field.
         raw = struct.unpack("<f", struct.pack("<i", int(value)))[0] if is_int else float(value)
-        reply(lambda: self.conn.mav.param_set_send(*target, key, raw, current.param_type))
+        received = reply(lambda: self.conn.mav.param_set_send(*target, key, raw, current.param_type))
+        actual = struct.unpack("<i", struct.pack("<f", received.param_value))[0] if is_int else received.param_value
+        if not math.isclose(actual, value, rel_tol=1e-5, abs_tol=1e-5):
+            raise Abort(f"PX4 parameter {name}: requested {value}, received {actual}")
+        self.applied_params[name] = actual
+
+    def parameter_snapshot(self):
+        """Request the full effective configuration; mark partial dumps explicitly."""
+        self.conn.mav.param_request_list_send(self.conn.target_system, self.conn.target_component)
+        values, expected = {}, None
+        deadline = time.monotonic() + 30
+        while time.monotonic() < deadline:
+            msg = self.pump(.05)
+            if msg is None or msg.get_type() != "PARAM_VALUE":
+                continue
+            expected = msg.param_count
+            value = msg.param_value
+            if msg.param_type == mavutil.mavlink.MAV_PARAM_TYPE_INT32:
+                value = struct.unpack("<i", struct.pack("<f", value))[0]
+            values[msg.param_id] = value
+            if len(values) == expected:
+                break
+        return {"complete": len(values) == expected, "expected_count": expected, "values": values}
 
 
 def wind_ne(p, yaw0):
@@ -126,8 +160,11 @@ def wind_ne(p, yaw0):
 
 def fly(p, params, instance, wall_limit_s=420.0):
     """Fly the profile. Returns what happened, with the phase times metrics.compute() needs."""
-    result = {"completed": False, "fail_reason": None, "phases": {}, "alt_m": p["alt_m"]}
+    result = {"completed": False, "fail_reason": None, "phases": {}, "alt_m": p["alt_m"],
+              "cruise_mps": p["cruise_mps"]}
     link = Link(instance)
+    flight = None
+    result["applied_params"] = link.applied_params
     wall_start = time.monotonic()
     try:
         if link.conn.wait_heartbeat(timeout=90) is None:
@@ -138,6 +175,7 @@ def fly(p, params, instance, wall_limit_s=420.0):
                 raise Abort("no position estimate")
         for name, value in params.items():
             link.set_param(name, value)
+        result["effective_params"] = link.parameter_snapshot()
         home, yaw0 = link.pos, link.att[2]
         result["home"], result["yaw0"] = list(home), yaw0
         # With heading_into_wind the true mean wind is used; the vehicle will need an estimate.
@@ -149,6 +187,10 @@ def fly(p, params, instance, wall_limit_s=420.0):
         t_wait, t_ask = link.t, -1e9
         while not (link.armed and link.main_mode == OFFBOARD):
             link.pump()
+            if time.monotonic() - wall_start > wall_limit_s:
+                raise Abort("wall-clock limit during arming")
+            if time.monotonic() - link.last_position_received > 2.0:
+                raise Abort("position telemetry stale during arming")
             if link.t - t_wait > 60:
                 raise Abort("could not arm in offboard: " + " | ".join(link.texts[-4:]))
             if link.t - t_wait > 1.5 and link.t - t_ask > 1.0:
@@ -157,7 +199,10 @@ def fly(p, params, instance, wall_limit_s=420.0):
                 t_ask = link.t
 
         land_asked = False
+        touchdown_speed = None
         while True:
+            if not link.armed and flight.phase == "land" and touchdown_speed is None:
+                touchdown_speed = float(velocity_norm(link.vel))
             link.setpoint = flight.update(link.t, link.pos, link.vel, link.armed)
             if flight.done:
                 break
@@ -166,13 +211,16 @@ def fly(p, params, instance, wall_limit_s=420.0):
                 link.command(mavutil.mavlink.MAV_CMD_DO_SET_MODE, 1, AUTO, AUTO_LAND)
                 land_asked = True
             link.pump()
+            if max(time.monotonic() - link.last_position_received,
+                   time.monotonic() - link.last_attitude_received) > 2.0:
+                raise Abort(f"state telemetry stale in {what}")
             if time.monotonic() - wall_start > wall_limit_s:
                 raise Abort(f"wall-clock limit during {what}")
             if flight.overdue(link.t):
                 raise Abort(f"timeout in {what}")
-            if what not in ("climb", "land"):       # airborne, and PX4 is following the setpoints
-                if max(abs(link.att[0]), abs(link.att[1])) > math.radians(60):
-                    raise Abort(f"tumbled in {what}")
+            if max(abs(link.att[0]), abs(link.att[1])) > math.radians(60):
+                raise Abort(f"tumbled in {what}")
+            if what not in ("climb", "land"):
                 if not link.armed:
                     raise Abort(f"disarmed in {what}")
                 if link.main_mode != OFFBOARD:
@@ -181,9 +229,14 @@ def fly(p, params, instance, wall_limit_s=420.0):
                     raise Abort(f"hit the ground in {what}")
         result["touchdown_err_m"] = math.hypot(link.pos[0] - flight.hold[0],
                                                link.pos[1] - flight.hold[1])
+        result["touchdown_speed_mps"] = touchdown_speed if touchdown_speed is not None else math.nan
+        result["landing_target"] = list(flight.hold)
         result["completed"] = True
     except Abort as stop:
         result["fail_reason"] = str(stop)
+        if flight is not None and flight._t0 is not None:
+            result["aborted_phase"] = flight.phase
+            result["phases"][flight.phase] = [flight._t0, link.t]
     result["texts"] = link.texts[-12:]
     time.sleep(1.0)                 # let the logger close the file after the disarm
     return result
@@ -192,7 +245,8 @@ def fly(p, params, instance, wall_limit_s=420.0):
 def launch(case_dir, env_add, cfg, instance):
     build = Path(cfg["sim"]["px4_root"]).expanduser() / "build/px4_sitl_default"
     env = dict(os.environ, **env_add)
-    env["GZ_PARTITION"] = f"psi_qp_{instance}_{os.getpid()}"      # keeps other Gazebos out
+    # PIDs repeat in separate Docker containers. Use a UUID to isolate transport too.
+    env["GZ_PARTITION"] = f"psi_qp_{instance}_{uuid.uuid4().hex}"
     # A terminal with ROS 2 sourced puts ROS's own Gazebo tools first, and that `gz` has no
     # `sim`: PX4 would wait for a Gazebo that never starts. PX4 gets the system's Gazebo.
     for name in ("PATH", "LD_LIBRARY_PATH", "GZ_CONFIG_PATH"):
@@ -200,6 +254,9 @@ def launch(case_dir, env_add, cfg, instance):
         env.pop(name, None)
         if kept:
             env[name] = os.pathsep.join(kept)
+    (case_dir / "runtime_env.json").write_text(json.dumps({name: env.get(name) for name in
+        ("GZ_PARTITION", "PX4_SIM_MODEL", "PX4_GZ_WORLD", "PX4_SIM_SPEED_FACTOR",
+         "GZ_SIM_SYSTEM_PLUGIN_PATH")}, indent=2))
     log = open(case_dir / "px4.log", "w")
     return subprocess.Popen([str(build / "bin/px4"), "-i", str(instance), "-d", str(build / "etc")],
                             cwd=case_dir, env=env, stdout=log, stderr=subprocess.STDOUT,
@@ -228,14 +285,25 @@ def case_values(cfg, overrides):
         if name not in p:
             raise KeyError(f"unknown vehicle value: {name}")
         p[name] = value
+    if any(not math.isfinite(v) for v in p.values() if isinstance(v, (int, float))):
+        raise ValueError("case values must be finite")
+    for name in ("mass_kg", "air_density", "wing_span_m", "wing_chord_m", "wing_efficiency",
+                 "wing_stall_blend_deg", "lift_zero_thrust_mps", "pusher_zero_thrust_mps",
+                 "motor_voltage_decay_s", "lift_thrust_max_n", "pusher_thrust_max_n"):
+        if p[name] <= 0:
+            raise ValueError(f"{name} must be positive")
     return p
 
 
 def run(cfg, overrides, case_id, instance):
     p = case_values(cfg, overrides)
-    case_dir = Path(cfg["sim"]["run_root"]) / case_id
-    shutil.rmtree(case_dir, ignore_errors=True)
-    case_dir.mkdir(parents=True)
+    plugin = gz_model.config_plugin_path(cfg) / "libpsi-aerodynamics.so"
+    if not plugin.is_file():
+        raise RuntimeError(f"Build the Gazebo plugin first: {plugin}; see docs/03_simulation.md")
+    case_dir = Path(cfg["sim"]["run_root"]) / case_id / ("run-" + uuid.uuid4().hex[:12])
+    case_dir.mkdir(parents=True, exist_ok=False)
+    manifest = provenance(cfg, p)
+    (case_dir / "manifest.json").write_text(json.dumps(manifest, indent=2))
 
     proc = launch(case_dir, gz_model.write_case(case_dir, p, cfg), cfg, instance)
     try:
@@ -254,12 +322,53 @@ def run(cfg, overrides, case_id, instance):
             figures = metrics.compute(logs[-1], flight)
         except Exception as error:      # a log cut short by a crash must not lose the result
             flight["log_error"] = repr(error)
+    try:
+        figures.update(metrics.aero_metrics(case_dir / "aero.csv"))
+        phases = flight["phases"]
+        figures["aero_covers_flight"] = bool("climb" in phases and "land" in phases and
+            figures["aero_duration_s"] >= phases["land"][1] - phases["climb"][0] - .5)
+    except (OSError, ValueError, KeyError) as error:
+        flight["aero_log_error"] = repr(error)
     passed, reasons = metrics.verdict(flight, figures)
     record = {"case": case_id, "passed": passed, "reasons": reasons, "overrides": overrides,
+              "model_revision": gz_model.MODEL_REVISION, "manifest": str(case_dir / "manifest.json"),
               "derived": gz_model.derived(p), "flight": flight, "figures": figures,
               "log": str(logs[-1]) if logs else None}
     (case_dir / "result.json").write_text(json.dumps(record, indent=1))
     return record
+
+
+def velocity_norm(values):
+    return math.sqrt(sum(v * v for v in values))
+
+
+def provenance(cfg, p):
+    def command(args, cwd=None):
+        try:
+            return subprocess.run(args, cwd=cwd, capture_output=True, text=True, timeout=5,
+                                  check=True).stdout.strip()
+        except (OSError, subprocess.SubprocessError):
+            return None
+    sources = [f for folder in ("simulation/gazebo", "psi_vtol", "ros2/ws/src/vtol_mission")
+               for f in (config.REPO / folder).rglob("*")
+               if f.suffix in (".cc", ".hh", ".py", ".txt") and "build" not in f.parts]
+    plugin = gz_model.config_plugin_path(cfg) / "libpsi-aerodynamics.so"
+    px4_root = Path(cfg["sim"]["px4_root"]).expanduser()
+    px4_diff = command(["git", "diff", "HEAD"], px4_root)
+    return {"model_revision": gz_model.MODEL_REVISION, "values": p, "sim": cfg["sim"],
+            "requested_px4_params": gz_model.px4_params(cfg), "acceptance_limits": metrics.LIMITS,
+            "repository_commit": command(["git", "rev-parse", "HEAD"], config.REPO),
+            "repository_dirty": bool(command(["git", "status", "--porcelain"], config.REPO)),
+            "px4_commit": command(["git", "rev-parse", "HEAD"], px4_root),
+            "px4_dirty": bool(command(["git", "status", "--porcelain"], px4_root)),
+            "px4_tracked_diff_sha256": hashlib.sha256(px4_diff.encode()).hexdigest() if px4_diff is not None else None,
+            "runtime_image": os.environ.get("PSI_RUNTIME_IMAGE"),
+            "runtime_image_id": os.environ.get("PSI_RUNTIME_IMAGE_ID"),
+            "runtime_platform": platform.platform(), "python_version": platform.python_version(),
+            "gazebo_versions": command(["gz", "sim", "--versions"]),
+            "source_sha256": {str(f.relative_to(config.REPO)): hashlib.sha256(f.read_bytes()).hexdigest() for f in sources},
+            "plugin_sha256": hashlib.sha256(plugin.read_bytes()).hexdigest() if plugin.is_file() else None,
+            "python_packages": {n: importlib.metadata.version(n) for n in ("numpy", "pyyaml", "pyulog", "pymavlink")}}
 
 
 def main():

@@ -1,5 +1,6 @@
 # Simulation output: sweep tables and per-case results (python3 -m psi_vtol.sim.sweep)
 out/
+simulation/gazebo/build/
 
 # Python
 __pycache__/

@@ -1,8 +1,8 @@
 """Write the Gazebo model, the world and the PX4 start-up settings of one simulation case.
 
 The vehicle is the placeholder of vehicle/psi_qp.yaml: one rigid body, four lift rotors, one pusher,
-and lift/drag surfaces for the wing, the flat plate between the booms and the side area of
-the fuselage. No fin and no control surfaces.
+and all-angle wing/rear-plate loads, body drag and installed propulsion losses.
+No fin and no control surfaces. Coefficients remain unmeasured approximations.
 
 Body axes are Gazebo's (x forward, y left, z up). PX4's are x forward, y right, z down, so a
 y or z coordinate changes sign on the way into a PX4 parameter.
@@ -14,8 +14,9 @@ G = 9.80665
 RHO_REF = 1.2041                # density the motor constants are quoted at
 LIFT_MAX_RADPS = 1500.0         # must equal SIM_GZ_EC_MAX1..4 of the airframe
 PUSHER_MAX_RADPS = 3500.0       # must equal SIM_GZ_EC_MAX5
-OSWALD = 0.85
+MODEL_REVISION = "aeroprop-v2"
 MODEL_NAME = "psi_qp"
+ALLOCATION_CT = 6.5             # common relative scale: keep KM*CT above PX4's 0.05 row cutoff
 
 # Sensors of PX4's standard_vtol model, unchanged.
 _NOISE = """<noise type="gaussian"><mean>0</mean><stddev>{sd}</stddev>
@@ -88,7 +89,7 @@ GUSTS = """
           <noise type="gaussian"><mean>0</mean><stddev>0.02</stddev></noise>
         </direction>
       </horizontal>
-      <vertical><noise type="gaussian"><mean>0</mean><stddev>0.02</stddev></noise></vertical>
+      <vertical><noise type="gaussian"><mean>0</mean><stddev>{vertical}</stddev></noise></vertical>
     </plugin>"""
 
 
@@ -98,7 +99,7 @@ def derived(p):
     area = span * chord
     aspect = span / chord
     a2d = p["wing_cla_2d"]
-    cla = a2d / (1.0 + a2d / (math.pi * OSWALD * aspect))
+    cla = a2d / (1.0 + a2d / (math.pi * p["wing_efficiency"] * aspect))
     alpha0 = math.radians(p["wing_alpha0_deg"] + p["wing_incidence_deg"])
     weight = p["mass_kg"] * G
     cl_level = cla * alpha0
@@ -107,7 +108,7 @@ def derived(p):
         "aspect_ratio": aspect,
         "wing_cla": cla,
         "wing_alpha0_rad": alpha0,
-        "wing_stall_rad": alpha0 + math.radians(p["wing_stall_deg"]),
+        "wing_stall_rad": math.radians(p["wing_stall_deg"]),
         "cl_level": cl_level,
         "weight_n": weight,
         "lift_thrust_to_weight": 4.0 * p["lift_thrust_max_n"] * p["air_density"] / RHO_REF / weight,
@@ -148,33 +149,49 @@ def _motor(name, number, direction, thrust_max, max_radps, moment, tau_up, tau_d
       <momentConstant>{moment}</momentConstant>
       <commandSubTopic>command/motor_speed</commandSubTopic>
       <motorNumber>{number}</motorNumber>
-      <rotorDragCoefficient>0.000106428</rotorDragCoefficient>
-      <rollingMomentCoefficient>1e-06</rollingMomentCoefficient>
+      <rotorDragCoefficient>0</rotorDragCoefficient>
+      <rollingMomentCoefficient>0</rollingMomentCoefficient>
       <rotorVelocitySlowdownSim>20</rotorVelocitySlowdownSim>
       <motorType>velocity</motorType>
     </plugin>"""
 
 
-def _surface(a0, cla, cda, stall, cp, area, rho, upward="0 0 1"):
-    """One lift/drag surface. Gazebo's plugin makes lift, drag and moment all proportional to
-    (a0 + angle of attack), so a surface has no moment of its own: where the force acts (cp)
-    is the only pitching-moment parameter."""
-    return f"""
-    <plugin filename="gz-sim-lift-drag-system" name="gz::sim::systems::LiftDrag">
-      <a0>{a0:.6f}</a0>
-      <cla>{cla:.6f}</cla>
-      <cda>{cda:.6f}</cda>
-      <cma>0.0</cma>
-      <alpha_stall>{stall:.6f}</alpha_stall>
-      <cla_stall>-3.85</cla_stall>
-      <cda_stall>-0.9233984055</cda_stall>
-      <cma_stall>0</cma_stall>
-      <cp>{cp[0]:.4f} {cp[1]:.4f} {cp[2]:.4f}</cp>
-      <area>{area:.5f}</area>
-      <air_density>{rho}</air_density>
-      <forward>1 0 0</forward>
-      <upward>{upward}</upward>
-      <link_name>base_link</link_name>
+def _aero_plugin(p, d, lift):
+    """All-angle aero and dynamic-thrust correction, implemented in simulation/gazebo."""
+    def surface(cp, area, chord, incidence, alpha0, cla, cd0, induced, cm0, stall):
+        return f"""<surface><cp>{cp}</cp><area>{area}</area><chord>{chord}</chord>
+          <incidence>{math.radians(incidence)}</incidence><alpha0>{math.radians(alpha0)}</alpha0>
+          <cla>{cla}</cla><cd0>{cd0}</cd0><induced>{induced}</induced><cm0>{cm0}</cm0>
+          <stall>{math.radians(stall)}</stall><blend>{math.radians(p['wing_stall_blend_deg'])}</blend></surface>"""
+    induced = 1 / (math.pi * p["wing_efficiency"] * d["aspect_ratio"])
+    surfaces = "".join(surface(f"{p['wing_cp_x_m']} {y} {p['wing_cp_z_m']}",
+        d["wing_area_m2"] / 2, p["wing_chord_m"], p["wing_incidence_deg"],
+        p["wing_alpha0_deg"], d["wing_cla"], p["wing_cd0"], induced, p["wing_cm0"],
+        p["wing_stall_deg"]) for y in (p["wing_span_m"] / 4, -p["wing_span_m"] / 4))
+    surfaces += surface(f"{-p['tail_arm_m']} 0 0", p["tail_area_m2"], p["tail_chord_m"],
+        p["tail_incidence_deg"], 0, p["tail_cla"], p["tail_cd0"], .12, 0, 12)
+    rotors = ""
+    for i, (name, x, y, direction, gain) in enumerate(lift):
+        efficiency = p["front_rotor_efficiency"] if x > 0 else p["rear_rotor_efficiency"]
+        rotors += f"""<rotor><joint>{name}_joint</joint><position>{x} {y} 0.07</position>
+          <axis>0 0 1</axis><max_speed>{LIFT_MAX_RADPS}</max_speed>
+          <max_thrust>{p['lift_thrust_max_n'] * gain * p['air_density'] / RHO_REF}</max_thrust>
+          <moment>{p['lift_moment_m']}</moment><reaction_sign>{-1 if direction == 'ccw' else 1}</reaction_sign>
+          <zero_thrust_speed>{p['lift_zero_thrust_mps']}</zero_thrust_speed>
+          <drag_at_full_rpm>{p['lift_drag_at_full_rpm']}</drag_at_full_rpm><interaction>{efficiency}</interaction></rotor>"""
+    rotors += f"""<rotor><joint>rotor_pusher_joint</joint>
+      <position>{p['pusher_x_m']} {p['pusher_y_m']} {p['pusher_z_m']}</position><axis>1 0 0</axis>
+      <max_speed>{PUSHER_MAX_RADPS}</max_speed><max_thrust>{p['pusher_thrust_max_n'] * p['air_density'] / RHO_REF}</max_thrust>
+      <moment>{p['pusher_moment_m']}</moment><reaction_sign>1</reaction_sign>
+      <zero_thrust_speed>{p['pusher_zero_thrust_mps']}</zero_thrust_speed>
+      <drag_at_full_rpm>{p['pusher_drag_at_full_rpm']}</drag_at_full_rpm><interaction>1</interaction></rotor>"""
+    return f"""<plugin filename="psi-aerodynamics" name="psi::AeroSystem">
+      <link_name>base_link</link_name><air_density>{p['air_density']}</air_density><weight_n>{d['weight_n']}</weight_n>
+      <body_cd_area>{p['body_forward_area_m2'] * p['body_forward_cd']} {p['side_area_m2'] * p['body_side_cd']} {p['body_vertical_area_m2'] * p['body_vertical_cd']}</body_cd_area>
+      <body_cp>{p['side_cp_x_m']} 0 0</body_cp>
+      <angular_damping>{' '.join([str(p['angular_damping_nm_per_radps'])] * 3)}</angular_damping>
+      <voltage_end_ratio>{p['motor_voltage_end_ratio']}</voltage_end_ratio><voltage_decay_s>{p['motor_voltage_decay_s']}</voltage_decay_s>
+      <rotor_slowdown>20</rotor_slowdown><telemetry_path>aero.csv</telemetry_path>{surfaces}{rotors}
     </plugin>"""
 
 
@@ -201,21 +218,7 @@ def model_sdf(p):
     motors += _motor("rotor_pusher", 4, "cw", p["pusher_thrust_max_n"] * thrust_scale,
                      PUSHER_MAX_RADPS, p["pusher_moment_m"], 0.05, 0.05)
 
-    # Drag is cda * (a0 + alpha) in the plugin; cda is set so that it equals cd0 in level flight.
-    a0 = d["wing_alpha0_rad"]
-    wing_cda = p["wing_cd0"] / max(a0, 0.02)
-    quarter_span = p["wing_span_m"] / 4.0
-    cp = (p["wing_cp_x_m"], quarter_span, p["wing_cp_z_m"])
-    half = d["wing_area_m2"] / 2.0
-    surfaces = _surface(a0, d["wing_cla"], wing_cda, d["wing_stall_rad"], cp, half, rho)
-    surfaces += _surface(a0, d["wing_cla"], wing_cda, d["wing_stall_rad"],
-                         (cp[0], -cp[1], cp[2]), half, rho)
-    # The flat plate between the booms: a symmetric surface that stalls early.
-    surfaces += _surface(math.radians(p["tail_incidence_deg"]), p["tail_cla"], 0.5, 0.2,
-                         (-p["tail_arm_m"], 0.0, 0.0), p["tail_area_m2"], rho)
-    # No fin. One side-force surface for the fuselage, booms and pusher in a side wind.
-    surfaces += _surface(0.0, p["side_cla"], 0.5, 0.25, (p["side_cp_x_m"], 0.0, 0.0),
-                         p["side_area_m2"], rho, upward="0 1 0")
+    surfaces = _aero_plugin(p, d, lift)
 
     return f"""<?xml version="1.0"?>
 <!-- Generated by psi_vtol/sim/gz_model.py. Placeholder vehicle: see vehicle/psi_qp.yaml. -->
@@ -236,7 +239,7 @@ def model_sdf(p):
         <pose>0 0 -0.07 0 0 0</pose>
         <geometry><box><size>0.7 0.55 0.05</size></box></geometry>
       </collision>{SENSORS}
-    </link>{links}{surfaces}{motors}
+    </link>{links}{motors}{surfaces}
     <static>0</static>
   </model>
 </sdf>
@@ -250,12 +253,12 @@ def world_sdf(p, stock_world, speed_factor):
     stock_world = stock_world.replace("<real_time_factor>1.0</real_time_factor>",
                                       f"<real_time_factor>{speed_factor}</real_time_factor>")
     speed = p["wind_speed_mps"]
-    if speed <= 0.0:
+    if speed <= 0.0 and p["wind_vertical_mps"] == 0.0:
         return stock_world
     # The vehicle is spawned facing +x. wind_from_deg is measured from the nose toward the left.
     a = math.radians(p["wind_from_deg"])
     wind = f"""    <wind>
-      <linear_velocity>{-speed * math.cos(a):.4f} {-speed * math.sin(a):.4f} 0</linear_velocity>
+      <linear_velocity>{-speed * math.cos(a):.4f} {-speed * math.sin(a):.4f} {p["wind_vertical_mps"]:.4f}</linear_velocity>
     </wind>
 """
     marker = "<spherical_coordinates>"
@@ -270,12 +273,21 @@ def px4_params(cfg):
     n = cfg["nominal"]
     rx, ry = n["rotor_x_m"], n["rotor_y_m"]
     params = {
+        "CA_AIRFRAME": 2, "VT_TYPE": 2, "CA_ROTOR_COUNT": 5,
         "CA_ROTOR0_PX": rx, "CA_ROTOR0_PY": ry,
         "CA_ROTOR1_PX": -rx, "CA_ROTOR1_PY": -ry,
         "CA_ROTOR2_PX": rx, "CA_ROTOR2_PY": -ry,
         "CA_ROTOR3_PX": -rx, "CA_ROTOR3_PY": ry,
         "CA_ROTOR4_PX": n["pusher_x_m"],
+        "CA_ROTOR4_CT": ALLOCATION_CT,
+        "CA_ROTOR4_AX": 1.0, "CA_ROTOR4_AY": 0.0, "CA_ROTOR4_AZ": 0.0,
+        "CA_ROTOR4_PY": 0.0, "CA_ROTOR4_KM": 0.0,
     }
+    for i in range(4):
+        params.update({f"CA_ROTOR{i}_AX": 0.0, f"CA_ROTOR{i}_AY": 0.0,
+                       f"CA_ROTOR{i}_PZ": -0.07,
+                       f"CA_ROTOR{i}_AZ": -1.0, f"CA_ROTOR{i}_CT": ALLOCATION_CT,
+                       f"CA_ROTOR{i}_KM": n["lift_moment_m"] * (1 if i < 2 else -1)})
     params.update(cfg["px4_params"])
     return params
 
@@ -297,8 +309,8 @@ def write_case(case_dir, p, cfg):
     stock = (px4_root / "Tools/simulation/gz/worlds/default.sdf").read_text(encoding="utf-8-sig")
     (world_dir / "default.sdf").write_text(world_sdf(p, stock, cfg["sim"]["speed_factor"]),
                                            newline="\n")
-    gusty = p["wind_speed_mps"] > 0.0 and p["wind_gust_pct"] > 0.0
-    gusts = GUSTS.format(amplitude=p["wind_gust_pct"]) if gusty else ""
+    gusty = p["wind_gust_pct"] > 0.0 or p["wind_vertical_gust_mps"] > 0.0
+    gusts = GUSTS.format(amplitude=p["wind_gust_pct"], vertical=p["wind_vertical_gust_mps"]) if gusty else ""
     (case_dir / "server.config").write_text(SERVER_CONFIG.format(gusts=gusts), newline="\n")
     # PX4's start-up script sources this file from its working directory before starting Gazebo.
     (case_dir / "gz_env.sh").write_text(
@@ -309,6 +321,7 @@ def write_case(case_dir, p, cfg):
 
     env = {f"PX4_PARAM_{k}": str(v) for k, v in px4_params(cfg).items()}
     env.update({
+        "GZ_SIM_SYSTEM_PLUGIN_PATH": str(config_plugin_path(cfg)),
         "HEADLESS": "1",
         "PX4_SYS_AUTOSTART": str(cfg["sim"]["autostart"]),
         "PX4_SIM_MODEL": f"gz_{MODEL_NAME}",
@@ -316,3 +329,8 @@ def write_case(case_dir, p, cfg):
         "PX4_SIM_SPEED_FACTOR": str(cfg["sim"]["speed_factor"]),
     })
     return env
+
+
+def config_plugin_path(cfg):
+    from psi_vtol import config
+    return Path(cfg["sim"].get("plugin_path", config.REPO / "simulation/gazebo/build"))

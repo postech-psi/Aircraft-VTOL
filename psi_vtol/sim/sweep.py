@@ -15,15 +15,19 @@ import queue
 import random
 import subprocess
 import sys
+import uuid
 from concurrent.futures import ThreadPoolExecutor
 
 from psi_vtol import config
+from psi_vtol.sim.gz_model import MODEL_REVISION
 
 COLUMNS = ["tilt_max_deg", "alt_err_max_m", "fwd_roll_max_deg", "fwd_pitch_max_deg",
            "fwd_yaw_err_max_deg", "cross_track_max_m", "cruise_speed_mps", "cruise_pusher_cmd",
            "pusher_max_cmd", "pusher_sat_frac", "hover_lift_cmd", "cruise_lift_cmd",
            "lift_max_cmd", "lift_min_cmd", "lift_sat_frac", "roll_integ_max", "pitch_integ_max",
-           "yaw_integ_max", "torque_unachieved_frac"]
+           "yaw_integ_max", "torque_unachieved_frac", "torque_unachieved_max_s",
+           "lift_low_frac", "cruise_speed_err_mps", "touchdown_err_m", "touchdown_speed_mps",
+           "wing_lift_fraction_max", "true_airspeed_max_mps", "data_gap_max_s", "aero_gap_max_s"]
 
 
 def oat_cases(cfg):
@@ -55,8 +59,26 @@ def wind_cases():
     """Steady wind by speed and direction, under each heading hold; the rest nominal."""
     return [(f"wind{speed}_from{direction}_{label}",
              {"wind_speed_mps": float(speed), "wind_from_deg": float(direction), **policy})
-            for speed in (2, 4, 6, 8) for direction in (0, 45, 90, 135, 180)
+            for speed in (2, 4, 6, 8) for direction in range(0, 360, 45)
             for label, policy in POLICIES.items()]
+
+
+def corner_cases():
+    """Deliberate combined stresses; random draws rarely hit these combinations."""
+    return [
+        ("weak_pusher_headwind", {"pusher_thrust_max_n": 15., "pusher_zero_thrust_mps": 25.,
+                                 "wind_speed_mps": 8., "wind_from_deg": 0.}),
+        ("high_lift_braking", {"mass_kg": 6., "wing_incidence_deg": 4., "cruise_mps": 14.,
+                               "accel_mps2": 2., "wing_cm0": -.15}),
+        ("heavy_low_voltage_front_loss", {"mass_kg": 8., "motor_voltage_end_ratio": .8,
+             "motor_voltage_decay_s": 90., "front_rotor_efficiency": .65, "lift_thrust_max_n": 27.5}),
+        ("heavy_low_voltage_rear_loss", {"mass_kg": 8., "motor_voltage_end_ratio": .8,
+             "motor_voltage_decay_s": 90., "rear_rotor_efficiency": .65, "lift_thrust_max_n": 27.5}),
+        *[(f"sidewind_gust_{d}", {"wind_speed_mps": 8., "wind_from_deg": float(d),
+              "wind_gust_pct": .4, "wind_vertical_gust_mps": 1., "side_cp_x_m": .4,
+              "lift_moment_m": .02}) for d in (90, 270)],
+        ("tailwind_low_speed", {"wind_speed_mps": 8., "wind_from_deg": 180., "cruise_mps": 6.}),
+    ]
 
 
 def random_cases(cfg, count, seed):
@@ -69,19 +91,22 @@ def random_cases(cfg, count, seed):
 def run_one(case, overrides, common, mission, instances, study):
     instance = instances.get()
     try:
-        out = config.REPO / "out" / mission / study / f"{case}.json"
+        out = config.REPO / "out" / mission / MODEL_REVISION / study / f"{case}.json"
+        temporary = out.with_name(f"{case}.{uuid.uuid4().hex[:12]}.json")
         cmd = [sys.executable, "-m", "psi_vtol.sim.run_case", "--mission", mission, "--case",
-               f"{study}/{case}", "--instance", str(instance), "--json", str(out)]
+               f"{study}/{case}", "--instance", str(instance), "--json", str(temporary)]
         for name, value in {**common, **overrides}.items():
             if name.startswith("px4:"):         # a PX4 parameter rather than a vehicle value
                 cmd += ["--px4", f"{name[4:]}={value}"]
             else:
                 cmd += ["--set", f"{name}={value}"]
         done = subprocess.run(cmd, capture_output=True, text=True, cwd=config.REPO)
-        if not out.exists():
+        if done.returncode != 0 or not temporary.exists():
+            temporary.unlink(missing_ok=True)
             return {"case": case, "passed": False, "overrides": overrides, "figures": {},
                     "reasons": ["runner failed: " + done.stderr.strip()[-300:]]}
-        record = json.loads(out.read_text())
+        record = json.loads(temporary.read_text())
+        temporary.replace(out)
         record["case"] = case
         return record
     finally:
@@ -90,7 +115,7 @@ def run_one(case, overrides, common, mission, instances, study):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    parser.add_argument("study", choices=["oat", "wind", "random"])
+    parser.add_argument("study", choices=["oat", "wind", "random", "corners"])
     parser.add_argument("--mission", default=config.DEFAULT_MISSION,
                         help="folder under missions/")
     parser.add_argument("--n", type=int, default=40, help="number of random cases")
@@ -101,13 +126,15 @@ def main():
     parser.add_argument("--jobs", type=int, default=3, help="cases flown at the same time")
     parser.add_argument("--first-instance", type=int, default=5)
     args = parser.parse_args()
+    if args.jobs < 1 or args.n < 1:
+        parser.error("--jobs and --n must be positive")
 
     cfg = config.load(args.mission)
     cases = {"oat": lambda: oat_cases(cfg), "wind": wind_cases,
-             "random": lambda: random_cases(cfg, args.n, args.seed)}[args.study]()
+             "random": lambda: random_cases(cfg, args.n, args.seed), "corners": corner_cases}[args.study]()
     study = args.name or (f"random_seed{args.seed}" if args.study == "random" else args.study)
     common = {k: float(v) for k, v in (item.split("=", 1) for item in args.set)}
-    out = config.REPO / "out" / args.mission
+    out = config.REPO / "out" / args.mission / MODEL_REVISION
     (out / study).mkdir(parents=True, exist_ok=True)
 
     instances = queue.Queue()

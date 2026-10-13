@@ -7,6 +7,10 @@ environment:
   wind_speed_mps: 0.0
   wind_from_deg: 0.0          # 0 headwind, 90 from the left, 180 tailwind, 270 from the right
   wind_gust_pct: 0.0          # slow sinusoidal variation of the speed, fraction of the mean
+  wind_vertical_mps: 0.0     # positive upwards in Gazebo
+  wind_vertical_gust_mps: 0.0 # standard deviation of vertical gust noise
+  motor_voltage_end_ratio: 0.9 # ASSUMED scripted voltage decline; thrust scales as ratio^2
+  motor_voltage_decay_s: 600.0 # seconds from Gazebo world time zero, not a battery/energy model
 
 # Range of each swept quantity: [low, high]. psi_vtol/sim/sweep.py uses these for the
 # one-at-a-time and the random study. Values the airframe team has given are not swept, except
@@ -26,8 +30,16 @@ sweep:
   pusher_y_m: [-0.02, 0.02]
   pusher_z_m: [-0.06, 0.06]
   wing_incidence_deg: [0.0, 4.0]
-  wing_cd0: [0.04, 0.16]
-  wing_cp_x_m: [-0.14, 0.0]
+  wing_cd0: [0.015, 0.06]
+  wing_cp_x_m: [-0.06, 0.06]
+  wing_cm0: [-0.15, -0.05]
+  lift_drag_at_full_rpm: [0.08, 0.24]
+  pusher_zero_thrust_mps: [25.0, 50.0]
+  front_rotor_efficiency: [0.65, 1.0]
+  rear_rotor_efficiency: [0.65, 1.0]
+  body_side_cd: [0.7, 1.4]
+  motor_voltage_end_ratio: [0.8, 1.0]
+  wind_vertical_gust_mps: [0.0, 1.0]
   tail_arm_m: [0.52, 0.72]
   tail_incidence_deg: [-2.0, 2.0]
   side_area_m2: [0.10, 0.20]

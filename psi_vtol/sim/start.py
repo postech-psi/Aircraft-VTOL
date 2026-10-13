@@ -8,9 +8,10 @@
 Ctrl-C stops PX4 and Gazebo. The PX4 log stays under the run folder that is printed.
 """
 import argparse
-import shutil
+import json
 import signal
 from pathlib import Path
+import uuid
 
 from psi_vtol import config
 from psi_vtol.sim import gz_model, run_case
@@ -31,9 +32,12 @@ def main():
     cfg["sim"]["speed_factor"] = 1      # the ROS 2 nodes run on the wall clock
     p = run_case.case_values(cfg, {k: float(v) for k, v in
                                    (item.split("=", 1) for item in args.set)})
-    case_dir = Path(cfg["sim"]["run_root"]) / args.case
-    shutil.rmtree(case_dir, ignore_errors=True)
-    case_dir.mkdir(parents=True)
+    plugin = gz_model.config_plugin_path(cfg) / "libpsi-aerodynamics.so"
+    if not plugin.is_file():
+        raise SystemExit(f"Build the Gazebo plugin first: {plugin}; see docs/03_simulation.md")
+    case_dir = Path(cfg["sim"]["run_root"]) / args.case / ("run-" + uuid.uuid4().hex[:12])
+    case_dir.mkdir(parents=True, exist_ok=False)
+    (case_dir / "manifest.json").write_text(json.dumps(run_case.provenance(cfg, p), indent=2))
 
     # Ctrl-C or kill, also when started in the background: stop PX4 and Gazebo on the way out
     for sig in (signal.SIGINT, signal.SIGTERM):
@@ -45,6 +49,7 @@ def main():
             raise SystemExit("no heartbeat from PX4")
         for name, value in gz_model.px4_params(cfg).items():
             link.set_param(name, value)
+        (case_dir / "effective_params.json").write_text(json.dumps(link.parameter_snapshot(), indent=2))
         print(f"PX4 is up with the parameters set. Run files: {case_dir}", flush=True)
         while proc.poll() is None:      # keeps the ground-station heartbeat going
             link.pump(0.2)

@@ -9,8 +9,8 @@
 #   ASSUMED  placeholder; replace when the airframe team supplies the number
 #   MEASURED measured on the built vehicle or on the bench (none yet)
 # Nothing is measured on a built vehicle. eCalc is a calculation, not a bench test.
-# A run that passes with these numbers shows the control concept is workable for a vehicle
-# of this kind. It does not qualify the real vehicle.
+# A passing run is conditional evidence within these assumptions and tested conditions.
+# It does not validate this model against measurements or qualify the real vehicle.
 #
 # Frames: body x forward, y left, z up (Gazebo). Lengths in metres from the nominal CG,
 # which is also the point PX4's motor geometry is referred to.
@@ -37,6 +37,10 @@ lift_moment_m: 0.030        # DERIVED reaction torque per newton of thrust: eCal
 lift_tau_up_s: 0.04         # ASSUMED motor time constants
 lift_tau_down_s: 0.06
 lift_mismatch_pct: 0.0      # motor 0 gets +p %, motor 1 gets -p % of thrust
+lift_drag_at_full_rpm: 0.159642 # ASSUMED N/(m/s) per rotor at full RPM; formerly hidden
+lift_zero_thrust_mps: 25.0 # ASSUMED axial speed at zero thrust at full RPM; CT(J) surrogate
+front_rotor_efficiency: 1.0 # ASSUMED installed/static thrust ratio, sweep interference
+rear_rotor_efficiency: 1.0
 
 # --- pusher --------------------------------------------------------------------------
 pusher_thrust_max_n: 25.0   # ASSUMED
@@ -44,6 +48,8 @@ pusher_moment_m: 0.015      # ASSUMED reaction torque per newton of thrust
 pusher_x_m: -0.40           # ASSUMED: behind the 0.71 m body (GIVEN), body centred on the CG
 pusher_y_m: 0.0             # thrust line offset to the left
 pusher_z_m: 0.0             # thrust line offset above the CG
+pusher_zero_thrust_mps: 35.0 # ASSUMED; dynamic propeller data must replace this
+pusher_drag_at_full_rpm: 0.02 # ASSUMED transverse drag N/(m/s), separate from lift rotors
 
 # --- wing: NACA 4415, 1700 x 250 mm (GIVEN), 1.5 kg (GIVEN) ---------------------------
 wing_span_m: 1.70
@@ -52,12 +58,12 @@ wing_incidence_deg: 0.0     # ASSUMED
 wing_alpha0_deg: 4.0        # zero-lift angle of NACA 4415 is about -4 deg (textbook value)
 wing_cla_2d: 6.0            # section lift slope per rad (textbook value)
 wing_stall_deg: 14.0        # ASSUMED section stall angle
-wing_cd0: 0.08              # ASSUMED whole-aircraft drag coefficient on the wing area
-wing_cp_x_m: -0.08          # ASSUMED where the wing lift acts; aft of the CG is negative.
-                            # This one number stands for the wing's pitching moment.
-                            # -0.08: CG at the quarter chord, and 8 cm for the nose-down
-                            # moment of the cambered airfoil (moment coefficient about -0.10).
+wing_cd0: 0.025             # ASSUMED wing profile drag only; body/rotor drag are separate
+wing_efficiency: 0.85       # ASSUMED Oswald factor; induced drag CL^2/(pi*e*AR)
+wing_cm0: -0.10             # ASSUMED cambered-wing nose-down moment at aerodynamic centre
+wing_cp_x_m: 0.0           # ASSUMED aerodynamic centre position; not a substitute for Cm0
 wing_cp_z_m: 0.05           # ASSUMED
+wing_stall_blend_deg: 8.0  # ASSUMED width of blend to separated flat-plate aerodynamics
 
 # --- rear plate (GIVEN): a flat plate between the booms, 475 x 150 mm; no fin. ---------
 # Aerodynamically a small fixed horizontal tail.
@@ -66,11 +72,18 @@ tail_arm_m: 0.62            # DERIVED: its trailing edge is 1065 mm behind the f
                             # (GIVEN); quarter chord, CG at the centre of the motors
 tail_incidence_deg: 0.0     # ASSUMED: in line with the booms
 tail_cla: 3.5               # lift slope per rad of a flat plate of this aspect ratio
+tail_chord_m: 0.15          # GIVEN
+tail_cd0: 0.02              # ASSUMED
 
 # --- side area ------------------------------------------------------------------------
 # The fuselage, booms and pusher still feel a side wind. One side-force surface stands for
-# them; where it acts decides which way it turns the nose.
+# them; quadratic drag stays active in pure crosswind and reverse flow.
 side_area_m2: 0.15          # DERIVED: side of the 0.71 m x 0.215 m body (GIVEN)
-side_cla: 1.0               # ASSUMED side-force slope per rad
 side_cp_x_m: 0.0            # ASSUMED: ahead of the CG (+) turns the nose away from the
                             # wind, behind it (-) turns the nose into the wind
+body_forward_area_m2: 0.0441 # DERIVED frontal area: 0.205 x 0.215 m
+body_vertical_area_m2: 0.1456 # DERIVED plan area: 0.710 x 0.205 m
+body_forward_cd: 0.6        # ASSUMED quadratic drag, valid in both flow directions
+body_side_cd: 1.0           # ASSUMED; uses side_area_m2 and side_cp_x_m
+body_vertical_cd: 1.0      # ASSUMED
+angular_damping_nm_per_radps: 0.02 # ASSUMED small dissipative moment on all axes

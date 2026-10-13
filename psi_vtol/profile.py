@@ -116,7 +116,10 @@ class Profile:
     def _accel(self, t, pos, vel, armed):
         """The "transition": the commanded speed rises at the acceleration limit."""
         speed = min(self.cruise, self.accel * (t - self._t0))
-        return self._forward(speed, t), t - self._t0 > self.cruise / self.accel
+        elapsed = t - self._t0 > self.cruise / self.accel
+        along = vel[0] * self._cos0 + vel[1] * self._sin0
+        reached = abs(along - self.cruise) <= max(0.5, 0.1 * self.cruise)
+        return self._forward(speed, t), elapsed and reached
 
     def _cruise(self, t, pos, vel, armed):
         return self._last, t - self._t0 > self.cruise_s

@@ -1,6 +1,8 @@
 # PX4
 
-펌웨어는 고치지 않고 stock 그대로 씁니다. 이 폴더에는 버전과 파라미터만 있습니다.
+현재 기준선은 stock PX4 v1.17.0입니다. 이 폴더에는 버전과 파라미터만 있습니다.
+custom PX4는 [검토 문서](../docs/07_research_and_custom_px4.md)에 구현 순서를 정리했으며 아직 구현하지 않았습니다.
+Gazebo의 custom 공력 플러그인은 PX4 펌웨어 수정과 별개입니다.
 
 ## 버전
 
@@ -50,3 +52,12 @@ ros2 topic list | grep /fmu/
 | `sim_only` | RC와 데이터 링크 failsafe를 끄는 시뮬레이션용 설정 | **올리지 않음** |
 
 모터 위치(`CA_ROTORn_PX`, `_PY`)는 `vehicle/psi_qp.yaml`의 치수에서 계산합니다.
+
+전체 기하와 `concept`/`per_vehicle`을 QGC 형식 후보 파일로 만들 수 있습니다.
+
+```bash
+python3 -m psi_vtol.px4_setup --output /tmp/psi_candidate.params
+```
+
+측정 전 가정값이며 출력 핀·센서 보정·failsafe는 포함하지 않습니다. 모터 순서, 좌표, 설정·확인
+순서는 [제어 문서](../docs/02_control_concept.md)를 따릅니다. SITL airframe 4004를 실기 airframe ID로 쓰지 않습니다.
