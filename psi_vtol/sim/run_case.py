@@ -113,9 +113,13 @@ class Link:
         key = name.encode()
 
         def reply(send):
-            deadline = time.monotonic() + 5.0
-            send()
+            # PX4 drops requests that arrive while it is still starting, and UDP may lose any
+            # message, so ask again every second until the deadline.
+            deadline, asked = time.monotonic() + 5.0, -math.inf
             while time.monotonic() < deadline:
+                if time.monotonic() - asked >= 1.0:
+                    send()
+                    asked = time.monotonic()
                 msg = self.pump(0.05)
                 if msg is not None and msg.get_type() == "PARAM_VALUE" and msg.param_id == name:
                     return msg
