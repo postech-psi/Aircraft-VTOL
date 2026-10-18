@@ -7,6 +7,8 @@
     python3 -m psi_vtol.plots --braking "Old" out/old/*.json --braking "Eased" out/new/*.json
     python3 -m psi_vtol.plots --wind a/wind.json "10 m/s, straight" --wind b/wind.json "5 m/s, square"
     python3 -m psi_vtol.plots --oat out/2026_year_end/aeroprop-v2/oat.json
+    python3 -m psi_vtol.plots --speeds out/2026_year_end/aeroprop-v2/scenarios.json
+    python3 -m psi_vtol.plots --silence out/point.json "Point" out/velocity.json "Velocity"
 
 Figures go to missions/<mission>/figures/<model revision>/ as PNG and PDF. The pusher-thrust
 figure is drawn from the cruise segments of the wind studies given with --wind.
@@ -206,16 +208,18 @@ def takeoff_frame(flight):
 
 
 def flight_parts(phases):
-    """[start, end, label] for the take-off, each leg of the route and the landing."""
+    """[start, end, label] for the take-off, each leg of the route, the landing and a failsafe."""
     parts = []
     for name, (a, b) in sorted(phases.items(), key=lambda item: item[1][0]):
         kind = name.rstrip("0123456789")
         number = int(name[len(kind):] or (2 if kind == "hover" else 1))
         if name in ("climb", "hover1"):
             label = "Take-off"
-        elif kind in ("descend", "land"):
+        elif kind in ("align", "descend", "land"):
             label = "Landing"
-        else:                       # hover<i+1> ends leg i
+        elif kind in ("stop", "px4"):
+            label = "Failsafe"
+        else:                       # hover<i+1> ends leg i; corner<i> turns from leg i
             label = f"Leg {number - 1 if kind == 'hover' else number}"
         if parts and parts[-1][2] == label:
             parts[-1][1] = b
@@ -287,7 +291,7 @@ def flight(record, label, compare=None, compare_label=None, name="fig1_flight"):
     track.legend(loc="upper center", bbox_to_anchor=(0.5, -0.11), ncol=1)
 
     parts = flight_parts(ph)
-    turns = [(a - t0, b - t0) for n, (a, b) in ph.items() if n.startswith("turn")]
+    turns = [(a - t0, b - t0) for n, (a, b) in ph.items() if n.startswith(("turn", "corner"))]
     for ax in axes:
         ax.grid(axis="x", visible=False)
         for i, (a, b, _) in enumerate(parts):
@@ -357,7 +361,8 @@ def flight(record, label, compare=None, compare_label=None, name="fig1_flight"):
             f"{len(fl.get('legs', [])) or 1} legs at {v['cruise_mps']:g} m/s, {wind}. Landed "
             f"{f.get('touchdown_err_m', math.nan):.2f} m from the take-off point; largest tilt "
             f"{f.get('tilt_max_deg', math.nan):.0f}°.\nOn the right, alternate legs are shaded; the "
-            "darker strips are the turns, flown in a hover.")
+            + ("darker strips are the corners, flown banked without stopping."
+               if v.get("fly_through", 0) >= 0.5 else "darker strips are the turns, flown in a hover."))
     save(fig, name)
 
 
@@ -454,6 +459,100 @@ def braking(groups, name="fig7_braking"):
             "Every slow-down of the 50 m square at 5 m/s, no wind, each run flown with no other simulation "
             "on the machine.\nThe eased braking takes longer (7.9 s instead of 5 s from 5 m/s) and is "
             "never harder than the old one.")
+    save(fig, name)
+
+
+def _route_s(record):
+    """Seconds from the first speed-up to the hover over the last waypoint."""
+    ph = record["flight"]["phases"]
+    last = max((name for name in ph if name.startswith("hover")), key=lambda n: int(n[5:]))
+    return ph[last][0] - ph["accel1"][0]
+
+
+def speeds(records, name="fig9_speeds"):
+    """What the cruise speed buys and costs on the square, in each route mode (no wind, no event)."""
+    modes = [(1, "Flown through the corners", BLUE, "o"), (0, "Stopped at each corner", ORANGE, "s")]
+    panels = [("Time from the first speed-up\nto the last waypoint (s)", _route_s),
+              ("Fastest flown (m/s)", lambda r: r["figures"].get("true_airspeed_max_mps", math.nan)),
+              ("Largest roll or pitch\nin forward flight (°)",
+               lambda r: max(r["figures"].get("fwd_roll_max_deg", math.nan),
+                             r["figures"].get("fwd_pitch_max_deg", math.nan))),
+              ("Farthest from the\nplanned path (m)", lambda r: r["figures"].get("cross_track_max_m", math.nan))]
+    fig, axes = plt.subplots(2, 2, figsize=(7.4, 5.2), sharex=True,
+                             gridspec_kw={"hspace": 0.32, "wspace": 0.34})
+    calm = [r for r in records if not r.get("event") and "wind_speed_mps" not in r["overrides"]
+            and r["figures"]]
+    for ax, (ylabel, value) in zip(axes.flat, panels):
+        for through, label, color, mark in modes:
+            rows = sorted((r["overrides"]["cruise_mps"], value(r)) for r in calm
+                          if r["overrides"].get("fly_through") == through)
+            x, y = zip(*rows)
+            ax.plot(x, y, color=color, marker=mark, ms=5, label=label,
+                    markeredgecolor=SURFACE, markeredgewidth=1.0)
+        ax.set_ylabel(ylabel)
+        ax.set_ylim(0, None)
+        ax.grid(axis="x", visible=False)
+    axes[0, 1].plot([3, 7], [3, 7], color=MUTED, lw=0.9, ls=(0, (3, 2)))
+    axes[0, 1].text(4.6, 4.3, "planned cruise", fontsize=7, color=INK2, ha="left", va="top")
+    for ax in axes[1]:
+        ax.set_xlabel("Planned cruise speed (m/s)")
+        ax.set_xticks([3, 4, 5, 6, 7])
+    axes[0, 0].legend(loc="center right")
+    fails = [r["case"] for r in calm if not r["passed"]]
+    footnote(fig, SIM_NOTE + ("" if not fails else "  Failed: " + ", ".join(fails)))
+    through = {r["overrides"]["cruise_mps"]: r for r in calm if r["overrides"].get("fly_through") == 1}
+    stop = {r["overrides"]["cruise_mps"]: r for r in calm if r["overrides"].get("fly_through") == 0}
+    heading(fig, f"Flying through the corners halves the square ({_route_s(through[5.0]):.0f} s against "
+            f"{_route_s(stop[5.0]):.0f} s at 5 m/s); above 5 m/s it gains little",
+            "The 50 m square, no wind, each run alone. The corners of 15 m radius are taken at most "
+            "sqrt(1.7 m/s² × 15 m) = 5 m/s,\nso a faster cruise is only reached on the first and last "
+            "leg, and the middle legs speed up and slow down without a cruise.")
+    save(fig, name)
+
+
+def silence(runs, name="fig10_silence"):
+    """Pitch and speed after the setpoints stop in cruise, for each way of sending them.
+
+    runs: [(label, record)], each a run with a silence event; the last is the current one.
+    """
+    fig, axes = plt.subplots(2, 1, figsize=(7.4, 4.6), sharex=True, gridspec_kw={"hspace": 0.12})
+    peaks = []
+    for (label, record), color in zip(runs, (ORANGE, BLUE)):
+        fl = record["flight"]
+        t0 = fl["event"]["t"]
+        d = ulog_topics(record, ["vehicle_attitude", "vehicle_local_position"])
+        att, pos = d["vehicle_attitude"], d["vehicle_local_position"]
+        _, pitch, _ = metrics._euler_deg(att)
+        ta, tp = att["timestamp"] * 1e-6 - t0, pos["timestamp"] * 1e-6 - t0
+        ka, kp = (ta >= -1) & (ta <= 8), (tp >= -1) & (tp <= 8)
+        axes[0].plot(ta[ka], pitch[ka], color=color, label=label)
+        axes[1].plot(tp[kp], np.hypot(pos["vx"][kp], pos["vy"][kp]), color=color, label=label)
+        hold = fl["phases"]["px4"][0] - t0
+        for ax in axes:
+            ax.axvline(hold, color=color, lw=0.9, ls=(0, (3, 2)))
+        peaks.append(float(np.nanmax(np.abs(pitch[ka]))))
+    limit = metrics.LIMITS["tilt_max_deg"]
+    axes[0].axhline(limit, color=CRITICAL, lw=0.9)
+    axes[0].text(7.9, limit, f"pass limit {limit:g}°", fontsize=7, color=INK2, va="bottom", ha="right")
+    axes[1].text(7.9, 4.6, "dashed: PX4 calls the link lost and holds", fontsize=7, color=INK2,
+                 ha="right", va="top")
+    for ax in axes:
+        ax.axvline(0, color=INK2, lw=0.9)
+        ax.grid(axis="x", visible=False)
+    axes[0].text(0.08, 0.95, "last setpoint", transform=axes[0].get_xaxis_transform(), fontsize=7.2,
+                 color=INK2, va="top")
+    axes[0].set_ylim(-6, limit + 6)
+    axes[0].set_ylabel("Pitch, nose up (°)")
+    axes[1].set_ylabel("Horizontal\nspeed (m/s)")
+    axes[1].set_ylim(0, None)
+    axes[1].set_xlabel("Time since the last setpoint (s)")
+    axes[0].legend(loc="center right")
+    footnote(fig, SIM_NOTE)
+    heading(fig, f"When the Jetson goes silent at 5 m/s, the last setpoint decides: {peaks[0]:.0f}° "
+            f"nose-up with its point in it, {peaks[-1]:.0f}° without",
+            "The 50 m square, no wind; the setpoints stop 1.5 s into the second leg. PX4 calls the link "
+            "lost after 1 s (COM_OF_LOSS_T)\nand holds. Until then it flies the last setpoint: with a "
+            "point, it brakes back to a point already passed; with only a velocity, it flies on.")
     save(fig, name)
 
 
@@ -775,6 +874,7 @@ def main():
                         help="subfolder of figures/ to write into")
     parser.add_argument("--flight", help="a run_case result JSON: ground track and time history")
     parser.add_argument("--flight-label", default="Square mission")
+    parser.add_argument("--flight-name", default="fig1_flight", help="file name of that figure")
     parser.add_argument("--compare", help="a second result JSON, drawn on the ground track")
     parser.add_argument("--compare-label", default="Another run")
     parser.add_argument("--oscillation", nargs=3, metavar=("CLEAN", "BAD", "LEG"),
@@ -785,6 +885,9 @@ def main():
     parser.add_argument("--wind", nargs=2, action="append", default=[], metavar=("JSON", "LABEL"),
                         help="a wind study's records and its label; may be given twice")
     parser.add_argument("--oat", help="the one-at-a-time study's records")
+    parser.add_argument("--speeds", help="the scenario study's records: each cruise speed, both modes")
+    parser.add_argument("--silence", nargs=4, metavar=("JSON", "LABEL", "JSON", "LABEL"),
+                        help="two runs with a silence event, the current way of sending last")
     args = parser.parse_args()
     CFG = config.load(args.mission)
     FIGURES = config.REPO / "missions" / args.mission / "figures" / args.model_revision
@@ -793,7 +896,7 @@ def main():
     wing_share_curve()
     if args.flight:
         flight(load(args.flight), args.flight_label,
-               load(args.compare) if args.compare else None, args.compare_label)
+               load(args.compare) if args.compare else None, args.compare_label, args.flight_name)
     if args.oscillation:
         clean, bad, leg = args.oscillation
         oscillation(load(clean), load(bad), int(leg))
@@ -807,6 +910,10 @@ def main():
         pusher_thrust(sets)
     if args.oat:
         margins(load(args.oat))
+    if args.speeds:
+        speeds(load(args.speeds))
+    if args.silence:
+        silence([(args.silence[1], load(args.silence[0])), (args.silence[3], load(args.silence[2]))])
 
 
 if __name__ == "__main__":
