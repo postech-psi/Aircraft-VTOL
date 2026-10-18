@@ -48,9 +48,9 @@ flowchart LR
 
 | 상황 | 동작 |
 |---|---|
-| 단계가 `FAILED`를 보고하거나 `/mission/abort`에 `ABORT` 수신 | mission_manager가 `FAILSAFE`로 가고, mux가 기체를 부드럽게 멈춤(HOLD). 6초 뒤 아직 offboard면 PX4에 넘김: 푸셔 고장(`FAILED:pusher...`)이면 Land, 아니면 Hold |
-| 앞으로 나가지 못함(가속 3초 뒤 0.5 m/s 미만) 또는 계획보다 1.5 m/s 넘게 느린 채 계속 느려짐 | PATH가 `FAILED:pusher: no forward speed ...` 또는 `FAILED:pusher: losing speed ...`. 위처럼 멈춘 뒤 그 자리에 착륙 |
-| 기준점보다 8 m 넘게 뒤처짐 | PATH가 `FAILED:falling behind the route ...`. 멈춘 뒤 PX4 Hold |
+| 단계가 `FAILED`를 보고하거나 `/mission/abort`에 `ABORT` 수신 | mission_manager가 `FAILSAFE`로 가고, mux가 기체를 부드럽게 멈춤(HOLD). 6초 뒤 아직 offboard면 PX4에 넘김: 앞으로 갈 수 없는 고장(`psi_vtol.profile.needs_land`: 푸셔 고장, 크게 뒤처짐)이면 Land, 아니면 Hold |
+| 앞으로 나가지 못함(가속 3초 뒤 0.5 m/s 미만) 또는 계획보다 1.5 m/s 넘게 느린 채 속도를 얻지 못함 | PATH가 `FAILED:pusher: no forward speed ...` 또는 `FAILED:pusher: not speeding up ...`. 위처럼 멈춘 뒤 그 자리에 착륙 |
+| 기준점보다 8 m 넘게 뒤처짐 | PATH가 `FAILED:falling behind the route ...`. 앞으로 갈 수 없다는 뜻이므로 역시 멈춘 뒤 착륙 |
 | 단계 노드의 status가 2초 동안 오지 않음 | `FAILSAFE` |
 | 조종사나 PX4 failsafe가 offboard에서 빼냄 | 노드가 `FAILED:left offboard in <단계>`를 보고. 그 뒤는 조종사와 PX4가 맡음 |
 | 단계가 시간 상한을 넘김 | `FAILED:timeout in <단계>` |

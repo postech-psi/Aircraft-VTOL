@@ -1,0 +1,1969 @@
+{
+ "date": "2026-10-18",
+ "scope": "PX4 v1.17.0 SITL + Gazebo; assumed vehicle coefficients; not flight data",
+ "study": "python3 -m psi_vtol.sim.sweep scenarios, one case at a time; 50 m square",
+ "environment": {
+  "repository_commit": "99b35e891797bd28557a9012fa8a45131433353a",
+  "repository_dirty": true,
+  "px4_commit": "d6f12ad1c4f70ad3230afd7d86e971421e02fef4",
+  "px4_dirty": false,
+  "runtime_image": "no Docker: Ubuntu 24.04 + conda-forge gz-harmonic (gz-sim 8.10.0), PX4 v1.17.0 built locally",
+  "runtime_platform": "Linux-6.18.44-fc-v139-x86_64-with-glibc2.39",
+  "gazebo_versions": "8.10.0",
+  "plugin_sha256": "e4d40272dce7e186624d120490ab13e4f45c8f053f21be63894bd25ff08a5ebb"
+ },
+ "scenarios": [
+  {
+   "case": "through_v3",
+   "overrides": {
+    "fly_through": 1.0,
+    "cruise_mps": 3.0
+   },
+   "event": null,
+   "passed": true,
+   "reasons": [],
+   "safe": true,
+   "figures": {
+    "tilt_max_deg": 9.18,
+    "fwd_roll_max_deg": 5.3681,
+    "fwd_pitch_max_deg": 9.18,
+    "alt_err_max_m": 0.1571,
+    "cross_track_max_m": 0.1955,
+    "cruise_speed_err_mps": 0.1016,
+    "true_airspeed_max_mps": 3.0896,
+    "pusher_max_cmd": 0.4047,
+    "pusher_sat_frac": 0.0,
+    "lift_max_cmd": 0.6385,
+    "lift_sat_frac": 0.0,
+    "torque_unachieved_frac": 0.0,
+    "touchdown_err_m": 0.0423,
+    "touchdown_speed_mps": 0.6741,
+    "wing_lift_fraction_max": 0.0207
+   },
+   "phases_s": {
+    "climb": 12.07,
+    "hover1": 6.03,
+    "accel1": 3.7,
+    "cruise1": 9.46,
+    "corner1": 8.56,
+    "cruise2": 5.97,
+    "corner2": 8.53,
+    "cruise3": 5.97,
+    "corner3": 8.56,
+    "cruise4": 9.46,
+    "decel4": 3.7,
+    "hover5": 6.03,
+    "align": 2.0,
+    "descend": 10.97,
+    "land": 11.97
+   },
+   "response_met": true,
+   "response": ""
+  },
+  {
+   "case": "through_v4",
+   "overrides": {
+    "fly_through": 1.0,
+    "cruise_mps": 4.0
+   },
+   "event": null,
+   "passed": true,
+   "reasons": [],
+   "safe": true,
+   "figures": {
+    "tilt_max_deg": 9.6335,
+    "fwd_roll_max_deg": 9.6335,
+    "fwd_pitch_max_deg": 6.9197,
+    "alt_err_max_m": 0.1608,
+    "cross_track_max_m": 0.1048,
+    "cruise_speed_err_mps": 0.0979,
+    "true_airspeed_max_mps": 4.1223,
+    "pusher_max_cmd": 0.4734,
+    "pusher_sat_frac": 0.0,
+    "lift_max_cmd": 0.668,
+    "lift_sat_frac": 0.0,
+    "torque_unachieved_frac": 0.0,
+    "touchdown_err_m": 0.0614,
+    "touchdown_speed_mps": 0.5462,
+    "wing_lift_fraction_max": 0.0336
+   },
+   "phases_s": {
+    "climb": 11.93,
+    "hover1": 6.03,
+    "accel1": 4.7,
+    "cruise1": 6.07,
+    "corner1": 6.57,
+    "cruise2": 4.3,
+    "corner2": 6.6,
+    "cruise3": 4.3,
+    "corner3": 6.57,
+    "cruise4": 6.06,
+    "decel4": 4.7,
+    "hover5": 6.0,
+    "align": 2.0,
+    "descend": 10.73,
+    "land": 11.44
+   },
+   "response_met": true,
+   "response": ""
+  },
+  {
+   "case": "through_v5",
+   "overrides": {
+    "fly_through": 1.0,
+    "cruise_mps": 5.0
+   },
+   "event": null,
+   "passed": true,
+   "reasons": [],
+   "safe": true,
+   "figures": {
+    "tilt_max_deg": 13.708,
+    "fwd_roll_max_deg": 13.708,
+    "fwd_pitch_max_deg": 6.8584,
+    "alt_err_max_m": 0.1628,
+    "cross_track_max_m": 0.2508,
+    "cruise_speed_err_mps": 0.1489,
+    "true_airspeed_max_mps": 5.2125,
+    "pusher_max_cmd": 0.5052,
+    "pusher_sat_frac": 0.0,
+    "lift_max_cmd": 0.7085,
+    "lift_sat_frac": 0.0,
+    "torque_unachieved_frac": 0.0,
+    "touchdown_err_m": 0.0173,
+    "touchdown_speed_mps": 0.4103,
+    "wing_lift_fraction_max": 0.0536
+   },
+   "phases_s": {
+    "climb": 11.97,
+    "hover1": 6.03,
+    "accel1": 5.7,
+    "cruise1": 3.8,
+    "corner1": 5.44,
+    "cruise2": 3.26,
+    "corner2": 5.44,
+    "cruise3": 3.27,
+    "corner3": 5.43,
+    "cruise4": 3.8,
+    "decel4": 5.67,
+    "hover5": 6.03,
+    "align": 2.04,
+    "descend": 10.7,
+    "land": 10.43
+   },
+   "response_met": true,
+   "response": ""
+  },
+  {
+   "case": "through_v6",
+   "overrides": {
+    "fly_through": 1.0,
+    "cruise_mps": 6.0
+   },
+   "event": null,
+   "passed": true,
+   "reasons": [],
+   "safe": true,
+   "figures": {
+    "tilt_max_deg": 13.1938,
+    "fwd_roll_max_deg": 13.1938,
+    "fwd_pitch_max_deg": 5.2169,
+    "alt_err_max_m": 0.1557,
+    "cross_track_max_m": 0.2454,
+    "cruise_speed_err_mps": 0.1513,
+    "true_airspeed_max_mps": 6.0576,
+    "pusher_max_cmd": 0.5554,
+    "pusher_sat_frac": 0.0,
+    "lift_max_cmd": 0.6973,
+    "lift_sat_frac": 0.0,
+    "torque_unachieved_frac": 0.0,
+    "touchdown_err_m": 0.0433,
+    "touchdown_speed_mps": 0.5475,
+    "wing_lift_fraction_max": 0.0696
+   },
+   "phases_s": {
+    "climb": 11.86,
+    "hover1": 6.03,
+    "accel1": 6.7,
+    "cruise1": 0.63,
+    "decel1": 1.63,
+    "corner1": 5.5,
+    "accel2": 1.43,
+    "decel2": 1.47,
+    "corner2": 5.5,
+    "accel3": 1.44,
+    "decel3": 1.46,
+    "corner3": 5.5,
+    "accel4": 1.63,
+    "cruise4": 0.6,
+    "decel4": 6.7,
+    "hover5": 6.0,
+    "align": 2.03,
+    "descend": 10.84,
+    "land": 11.03
+   },
+   "response_met": true,
+   "response": ""
+  },
+  {
+   "case": "through_v7",
+   "overrides": {
+    "fly_through": 1.0,
+    "cruise_mps": 7.0
+   },
+   "event": null,
+   "passed": true,
+   "reasons": [],
+   "safe": true,
+   "figures": {
+    "tilt_max_deg": 11.9283,
+    "fwd_roll_max_deg": 11.9283,
+    "fwd_pitch_max_deg": 5.9476,
+    "alt_err_max_m": 0.218,
+    "cross_track_max_m": 0.333,
+    "lag_max_m": 0.2743,
+    "true_airspeed_max_mps": 6.255,
+    "pusher_max_cmd": 0.5634,
+    "pusher_sat_frac": 0.0,
+    "lift_max_cmd": 0.6785,
+    "lift_sat_frac": 0.0,
+    "torque_unachieved_frac": 0.0,
+    "touchdown_err_m": 0.0741,
+    "touchdown_speed_mps": 0.4357,
+    "wing_lift_fraction_max": 0.0963
+   },
+   "phases_s": {
+    "climb": 12.0,
+    "hover1": 6.03,
+    "accel1": 6.96,
+    "decel1": 1.9,
+    "corner1": 5.63,
+    "accel2": 1.39,
+    "decel2": 1.4,
+    "corner2": 5.64,
+    "accel3": 1.37,
+    "decel3": 1.4,
+    "corner3": 5.63,
+    "accel4": 1.9,
+    "decel4": 6.97,
+    "hover5": 6.03,
+    "align": 2.0,
+    "descend": 10.76,
+    "land": 10.0
+   },
+   "response_met": true,
+   "response": ""
+  },
+  {
+   "case": "stop_v3",
+   "overrides": {
+    "fly_through": 0.0,
+    "cruise_mps": 3.0
+   },
+   "event": null,
+   "passed": true,
+   "reasons": [],
+   "safe": true,
+   "figures": {
+    "tilt_max_deg": 8.2663,
+    "fwd_roll_max_deg": 1.0898,
+    "fwd_pitch_max_deg": 8.2663,
+    "alt_err_max_m": 0.4112,
+    "cross_track_max_m": 0.0829,
+    "cruise_speed_err_mps": 0.0445,
+    "true_airspeed_max_mps": 3.094,
+    "pusher_max_cmd": 0.4413,
+    "pusher_sat_frac": 0.0,
+    "lift_max_cmd": 0.5734,
+    "lift_sat_frac": 0.0,
+    "torque_unachieved_frac": 0.0,
+    "touchdown_err_m": 0.0346,
+    "touchdown_speed_mps": 0.3434,
+    "wing_lift_fraction_max": 0.0213
+   },
+   "phases_s": {
+    "climb": 11.96,
+    "hover1": 6.03,
+    "accel1": 3.7,
+    "cruise1": 12.97,
+    "decel1": 3.7,
+    "hover2": 6.03,
+    "turn2": 6.43,
+    "accel2": 3.7,
+    "cruise2": 12.97,
+    "decel2": 3.7,
+    "hover3": 6.0,
+    "turn3": 6.5,
+    "accel3": 3.7,
+    "cruise3": 13.0,
+    "decel3": 3.7,
+    "hover4": 6.03,
+    "turn4": 6.46,
+    "accel4": 3.73,
+    "cruise4": 12.94,
+    "decel4": 3.7,
+    "hover5": 6.03,
+    "align": 2.0,
+    "descend": 10.6,
+    "land": 10.43
+   },
+   "response_met": true,
+   "response": ""
+  },
+  {
+   "case": "stop_v4",
+   "overrides": {
+    "fly_through": 0.0,
+    "cruise_mps": 4.0
+   },
+   "event": null,
+   "passed": true,
+   "reasons": [],
+   "safe": true,
+   "figures": {
+    "tilt_max_deg": 7.8304,
+    "fwd_roll_max_deg": 1.7397,
+    "fwd_pitch_max_deg": 7.8304,
+    "alt_err_max_m": 0.1844,
+    "cross_track_max_m": 0.0664,
+    "cruise_speed_err_mps": 0.0972,
+    "true_airspeed_max_mps": 4.1022,
+    "pusher_max_cmd": 0.4618,
+    "pusher_sat_frac": 0.0,
+    "lift_max_cmd": 0.5706,
+    "lift_sat_frac": 0.0,
+    "torque_unachieved_frac": 0.0,
+    "touchdown_err_m": 0.0573,
+    "touchdown_speed_mps": 0.5769,
+    "wing_lift_fraction_max": 0.036
+   },
+   "phases_s": {
+    "climb": 12.33,
+    "hover1": 6.04,
+    "accel1": 4.73,
+    "cruise1": 7.8,
+    "decel1": 4.67,
+    "hover2": 6.03,
+    "turn2": 6.46,
+    "accel2": 4.7,
+    "cruise2": 7.8,
+    "decel2": 4.7,
+    "hover3": 6.03,
+    "turn3": 6.43,
+    "accel3": 4.7,
+    "cruise3": 7.83,
+    "decel3": 4.67,
+    "hover4": 6.03,
+    "turn4": 6.5,
+    "accel4": 4.74,
+    "cruise4": 7.79,
+    "decel4": 4.7,
+    "hover5": 6.03,
+    "align": 2.0,
+    "descend": 10.87,
+    "land": 11.4
+   },
+   "response_met": true,
+   "response": ""
+  },
+  {
+   "case": "stop_v5",
+   "overrides": {
+    "fly_through": 0.0,
+    "cruise_mps": 5.0
+   },
+   "event": null,
+   "passed": true,
+   "reasons": [],
+   "safe": true,
+   "figures": {
+    "tilt_max_deg": 7.9595,
+    "fwd_roll_max_deg": 2.2644,
+    "fwd_pitch_max_deg": 7.9595,
+    "alt_err_max_m": 0.1658,
+    "cross_track_max_m": 0.1108,
+    "lag_max_m": 0.2147,
+    "cruise_speed_err_mps": 0.1688,
+    "true_airspeed_max_mps": 5.1107,
+    "pusher_max_cmd": 0.5296,
+    "pusher_sat_frac": 0.0,
+    "lift_max_cmd": 0.5755,
+    "lift_sat_frac": 0.0,
+    "torque_unachieved_frac": 0.0,
+    "touchdown_err_m": 0.0362,
+    "touchdown_speed_mps": 0.5149,
+    "wing_lift_fraction_max": 0.0581
+   },
+   "phases_s": {
+    "climb": 12.16,
+    "hover1": 6.03,
+    "accel1": 5.7,
+    "cruise1": 4.3,
+    "decel1": 5.7,
+    "hover2": 6.0,
+    "turn2": 6.5,
+    "accel2": 5.73,
+    "cruise2": 4.27,
+    "decel2": 5.73,
+    "hover3": 6.04,
+    "turn3": 6.43,
+    "accel3": 5.7,
+    "cruise3": 4.3,
+    "decel3": 5.73,
+    "hover4": 6.03,
+    "turn4": 6.44,
+    "accel4": 5.7,
+    "cruise4": 4.3,
+    "decel4": 5.73,
+    "hover5": 6.03,
+    "align": 2.0,
+    "descend": 10.77,
+    "land": 10.66
+   },
+   "response_met": true,
+   "response": ""
+  },
+  {
+   "case": "stop_v6",
+   "overrides": {
+    "fly_through": 0.0,
+    "cruise_mps": 6.0
+   },
+   "event": null,
+   "passed": true,
+   "reasons": [],
+   "safe": true,
+   "figures": {
+    "tilt_max_deg": 6.3093,
+    "fwd_roll_max_deg": 1.7608,
+    "fwd_pitch_max_deg": 6.3093,
+    "alt_err_max_m": 0.2109,
+    "cross_track_max_m": 0.1432,
+    "lag_max_m": 0.2406,
+    "cruise_speed_err_mps": 0.1585,
+    "true_airspeed_max_mps": 5.97,
+    "pusher_max_cmd": 0.5878,
+    "pusher_sat_frac": 0.0,
+    "lift_max_cmd": 0.5716,
+    "lift_sat_frac": 0.0,
+    "torque_unachieved_frac": 0.0,
+    "touchdown_err_m": 0.0365,
+    "touchdown_speed_mps": 0.5142,
+    "wing_lift_fraction_max": 0.0752
+   },
+   "phases_s": {
+    "climb": 12.2,
+    "hover1": 6.0,
+    "accel1": 6.56,
+    "cruise1": 2.0,
+    "decel1": 6.54,
+    "hover2": 6.03,
+    "turn2": 6.5,
+    "accel2": 6.57,
+    "cruise2": 2.0,
+    "decel2": 6.53,
+    "hover3": 6.0,
+    "turn3": 6.46,
+    "accel3": 6.57,
+    "cruise3": 2.0,
+    "decel3": 6.54,
+    "hover4": 6.03,
+    "turn4": 6.46,
+    "accel4": 6.56,
+    "cruise4": 2.0,
+    "decel4": 6.54,
+    "hover5": 6.03,
+    "align": 2.0,
+    "descend": 10.77,
+    "land": 11.1
+   },
+   "response_met": true,
+   "response": ""
+  },
+  {
+   "case": "stop_v7",
+   "overrides": {
+    "fly_through": 0.0,
+    "cruise_mps": 7.0
+   },
+   "event": null,
+   "passed": true,
+   "reasons": [],
+   "safe": true,
+   "figures": {
+    "tilt_max_deg": 7.189,
+    "fwd_roll_max_deg": 2.1309,
+    "fwd_pitch_max_deg": 7.189,
+    "alt_err_max_m": 0.2135,
+    "cross_track_max_m": 0.1046,
+    "lag_max_m": 0.2729,
+    "cruise_speed_err_mps": 0.1726,
+    "true_airspeed_max_mps": 6.008,
+    "pusher_max_cmd": 0.5635,
+    "pusher_sat_frac": 0.0,
+    "lift_max_cmd": 0.5679,
+    "lift_sat_frac": 0.0,
+    "torque_unachieved_frac": 0.0,
+    "touchdown_err_m": 0.0638,
+    "touchdown_speed_mps": 0.3931,
+    "wing_lift_fraction_max": 0.0839
+   },
+   "phases_s": {
+    "climb": 11.76,
+    "hover1": 6.03,
+    "accel1": 6.57,
+    "cruise1": 2.0,
+    "decel1": 6.53,
+    "hover2": 6.0,
+    "turn2": 6.43,
+    "accel2": 6.57,
+    "cruise2": 2.0,
+    "decel2": 6.53,
+    "hover3": 6.04,
+    "turn3": 6.43,
+    "accel3": 6.57,
+    "cruise3": 2.0,
+    "decel3": 6.54,
+    "hover4": 6.03,
+    "turn4": 6.46,
+    "accel4": 6.56,
+    "cruise4": 2.0,
+    "decel4": 6.54,
+    "hover5": 6.03,
+    "align": 2.0,
+    "descend": 10.67,
+    "land": 10.7
+   },
+   "response_met": true,
+   "response": ""
+  },
+  {
+   "case": "through_v5_wind6_from0",
+   "overrides": {
+    "wind_speed_mps": 6.0,
+    "wind_gust_pct": 0.3,
+    "wind_from_deg": 0.0
+   },
+   "event": null,
+   "passed": true,
+   "reasons": [],
+   "safe": true,
+   "figures": {
+    "tilt_max_deg": 13.3684,
+    "fwd_roll_max_deg": 13.3684,
+    "fwd_pitch_max_deg": 7.6377,
+    "alt_err_max_m": 0.3344,
+    "cross_track_max_m": 0.2958,
+    "lag_max_m": 0.5304,
+    "cruise_speed_err_mps": 0.2341,
+    "true_airspeed_max_mps": 11.4783,
+    "pusher_max_cmd": 0.8749,
+    "pusher_sat_frac": 0.0,
+    "lift_max_cmd": 0.7339,
+    "lift_sat_frac": 0.0,
+    "torque_unachieved_frac": 0.0,
+    "touchdown_err_m": 0.1315,
+    "touchdown_speed_mps": 0.5454,
+    "wing_lift_fraction_max": 0.2377
+   },
+   "phases_s": {
+    "climb": 12.3,
+    "hover1": 6.0,
+    "accel1": 5.73,
+    "cruise1": 3.77,
+    "corner1": 5.43,
+    "cruise2": 3.27,
+    "corner2": 5.43,
+    "cruise3": 3.27,
+    "corner3": 5.43,
+    "cruise4": 3.8,
+    "decel4": 5.67,
+    "hover5": 6.03,
+    "align": 2.04,
+    "descend": 11.3,
+    "land": 11.54
+   },
+   "response_met": true,
+   "response": ""
+  },
+  {
+   "case": "through_v5_wind6_from90",
+   "overrides": {
+    "wind_speed_mps": 6.0,
+    "wind_gust_pct": 0.3,
+    "wind_from_deg": 90.0
+   },
+   "event": null,
+   "passed": true,
+   "reasons": [],
+   "safe": true,
+   "figures": {
+    "tilt_max_deg": 18.6902,
+    "fwd_roll_max_deg": 18.6902,
+    "fwd_pitch_max_deg": 3.6629,
+    "alt_err_max_m": 0.2832,
+    "cross_track_max_m": 0.2712,
+    "lag_max_m": 0.5667,
+    "cruise_speed_err_mps": 0.1908,
+    "true_airspeed_max_mps": 12.5848,
+    "pusher_max_cmd": 0.7005,
+    "pusher_sat_frac": 0.0,
+    "lift_max_cmd": 0.8484,
+    "lift_sat_frac": 0.0,
+    "torque_unachieved_frac": 0.0,
+    "touchdown_err_m": 0.1893,
+    "touchdown_speed_mps": 0.3947,
+    "wing_lift_fraction_max": 0.2054
+   },
+   "phases_s": {
+    "climb": 12.13,
+    "hover1": 6.04,
+    "accel1": 5.73,
+    "cruise1": 3.77,
+    "corner1": 5.43,
+    "cruise2": 3.27,
+    "corner2": 5.44,
+    "cruise3": 3.26,
+    "corner3": 5.44,
+    "cruise4": 3.77,
+    "decel4": 5.73,
+    "hover5": 6.03,
+    "align": 25.03,
+    "descend": 11.04,
+    "land": 9.9
+   },
+   "response_met": true,
+   "response": ""
+  },
+  {
+   "case": "through_v5_wind6_from180",
+   "overrides": {
+    "wind_speed_mps": 6.0,
+    "wind_gust_pct": 0.3,
+    "wind_from_deg": 180.0
+   },
+   "event": null,
+   "passed": true,
+   "reasons": [],
+   "safe": true,
+   "figures": {
+    "tilt_max_deg": 17.263,
+    "fwd_roll_max_deg": 17.263,
+    "fwd_pitch_max_deg": 5.9959,
+    "alt_err_max_m": 0.2075,
+    "cross_track_max_m": 0.2854,
+    "lag_max_m": 0.5635,
+    "cruise_speed_err_mps": 0.1523,
+    "true_airspeed_max_mps": 12.6752,
+    "pusher_max_cmd": 0.7099,
+    "pusher_sat_frac": 0.0,
+    "lift_max_cmd": 0.8212,
+    "lift_sat_frac": 0.0,
+    "torque_unachieved_frac": 0.0,
+    "touchdown_err_m": 0.055,
+    "touchdown_speed_mps": 0.6299,
+    "wing_lift_fraction_max": 0.1968
+   },
+   "phases_s": {
+    "climb": 12.23,
+    "hover1": 6.04,
+    "accel1": 5.73,
+    "cruise1": 3.77,
+    "corner1": 5.43,
+    "cruise2": 3.27,
+    "corner2": 5.43,
+    "cruise3": 3.26,
+    "corner3": 5.44,
+    "cruise4": 3.77,
+    "decel4": 5.73,
+    "hover5": 6.0,
+    "align": 25.03,
+    "descend": 11.0,
+    "land": 11.87
+   },
+   "response_met": true,
+   "response": ""
+  },
+  {
+   "case": "through_v5_wind6_from270",
+   "overrides": {
+    "wind_speed_mps": 6.0,
+    "wind_gust_pct": 0.3,
+    "wind_from_deg": 270.0
+   },
+   "event": null,
+   "passed": true,
+   "reasons": [],
+   "safe": true,
+   "figures": {
+    "tilt_max_deg": 21.7702,
+    "fwd_roll_max_deg": 21.7702,
+    "fwd_pitch_max_deg": 11.9199,
+    "alt_err_max_m": 0.4324,
+    "cross_track_max_m": 0.3993,
+    "lag_max_m": 0.2822,
+    "cruise_speed_err_mps": 0.1385,
+    "true_airspeed_max_mps": 12.5639,
+    "pusher_max_cmd": 0.7573,
+    "pusher_sat_frac": 0.0,
+    "lift_max_cmd": 0.8093,
+    "lift_sat_frac": 0.0,
+    "torque_unachieved_frac": 0.0,
+    "touchdown_err_m": 0.147,
+    "touchdown_speed_mps": 0.4827,
+    "wing_lift_fraction_max": 0.1806
+   },
+   "phases_s": {
+    "climb": 12.0,
+    "hover1": 6.0,
+    "accel1": 5.73,
+    "cruise1": 3.77,
+    "corner1": 5.43,
+    "cruise2": 3.27,
+    "corner2": 5.43,
+    "cruise3": 3.26,
+    "corner3": 5.43,
+    "cruise4": 3.8,
+    "decel4": 5.67,
+    "hover5": 6.03,
+    "align": 25.03,
+    "descend": 11.17,
+    "land": 10.96
+   },
+   "response_met": true,
+   "response": ""
+  },
+  {
+   "case": "through_v7_wind6_from0",
+   "overrides": {
+    "wind_speed_mps": 6.0,
+    "wind_gust_pct": 0.3,
+    "cruise_mps": 7.0,
+    "wind_from_deg": 0.0
+   },
+   "event": null,
+   "passed": true,
+   "reasons": [],
+   "safe": true,
+   "figures": {
+    "tilt_max_deg": 14.5084,
+    "fwd_roll_max_deg": 14.5084,
+    "fwd_pitch_max_deg": 10.2198,
+    "alt_err_max_m": 0.2843,
+    "cross_track_max_m": 0.2794,
+    "lag_max_m": 0.5482,
+    "true_airspeed_max_mps": 11.4013,
+    "pusher_max_cmd": 0.8617,
+    "pusher_sat_frac": 0.0,
+    "lift_max_cmd": 0.6942,
+    "lift_sat_frac": 0.0,
+    "torque_unachieved_frac": 0.0,
+    "touchdown_err_m": 0.0998,
+    "touchdown_speed_mps": 0.4753,
+    "wing_lift_fraction_max": 0.2317
+   },
+   "phases_s": {
+    "climb": 12.0,
+    "hover1": 6.03,
+    "accel1": 6.96,
+    "decel1": 1.9,
+    "corner1": 5.63,
+    "accel2": 1.4,
+    "decel2": 1.4,
+    "corner2": 5.64,
+    "accel3": 1.37,
+    "decel3": 1.4,
+    "corner3": 5.63,
+    "accel4": 1.9,
+    "decel4": 6.96,
+    "hover5": 6.03,
+    "align": 2.0,
+    "descend": 11.1,
+    "land": 10.63
+   },
+   "response_met": true,
+   "response": ""
+  },
+  {
+   "case": "through_v3_wind6_from90",
+   "overrides": {
+    "wind_speed_mps": 6.0,
+    "wind_gust_pct": 0.3,
+    "cruise_mps": 3.0,
+    "wind_from_deg": 90.0
+   },
+   "event": null,
+   "passed": true,
+   "reasons": [],
+   "safe": true,
+   "figures": {
+    "tilt_max_deg": 11.2742,
+    "fwd_roll_max_deg": 11.2742,
+    "fwd_pitch_max_deg": 3.5965,
+    "alt_err_max_m": 0.2448,
+    "cross_track_max_m": 0.2036,
+    "lag_max_m": 0.2759,
+    "cruise_speed_err_mps": 0.1277,
+    "true_airspeed_max_mps": 10.8427,
+    "pusher_max_cmd": 0.5614,
+    "pusher_sat_frac": 0.0,
+    "lift_max_cmd": 0.7124,
+    "lift_sat_frac": 0.0,
+    "torque_unachieved_frac": 0.0,
+    "touchdown_err_m": 0.0082,
+    "touchdown_speed_mps": 0.5757,
+    "wing_lift_fraction_max": 0.1638
+   },
+   "phases_s": {
+    "climb": 12.27,
+    "hover1": 6.03,
+    "accel1": 3.73,
+    "cruise1": 9.44,
+    "corner1": 8.56,
+    "cruise2": 5.97,
+    "corner2": 8.57,
+    "cruise3": 5.93,
+    "corner3": 8.57,
+    "cruise4": 9.46,
+    "decel4": 3.7,
+    "hover5": 6.03,
+    "align": 25.04,
+    "descend": 11.19,
+    "land": 11.53
+   },
+   "response_met": true,
+   "response": ""
+  },
+  {
+   "case": "abort_cruise",
+   "overrides": {},
+   "event": "abort@cruise2+1.5",
+   "passed": false,
+   "reasons": [
+    "mission aborted",
+    "aerodynamic telemetry missing or incomplete",
+    "touchdown_err_m missing"
+   ],
+   "safe": true,
+   "figures": {
+    "tilt_max_deg": 14.0668,
+    "fwd_roll_max_deg": 14.0668,
+    "fwd_pitch_max_deg": 0.6431,
+    "alt_err_max_m": 0.1847,
+    "cross_track_max_m": 0.3007,
+    "lag_max_m": 0.2587,
+    "cruise_speed_err_mps": 0.1688,
+    "true_airspeed_max_mps": 5.1117,
+    "pusher_max_cmd": 0.4814,
+    "pusher_sat_frac": 0.0,
+    "lift_max_cmd": 0.7079,
+    "lift_sat_frac": 0.0,
+    "torque_unachieved_frac": 0.0,
+    "touchdown_speed_mps": 0.569,
+    "stop_tilt_max_deg": 10.6761,
+    "stop_distance_m": 9.9908,
+    "px4_tilt_max_deg": 1.8555,
+    "wing_lift_fraction_max": 0.062
+   },
+   "phases_s": {
+    "climb": 11.9,
+    "hover1": 6.03,
+    "accel1": 5.7,
+    "cruise1": 3.8,
+    "corner1": 5.43,
+    "cruise2": 1.5,
+    "stop": 4.9,
+    "px4": 42.73
+   },
+   "response_met": true,
+   "response": "handed to Hold, then ['Offboard', 'Hold', 'Land', 'Hold']",
+   "failsafe": {
+    "reason": "mission aborted",
+    "t": 67.432,
+    "speed_mps": 5.0727894194751215,
+    "handed_to": "Hold"
+   },
+   "px4_modes": [
+    "Offboard",
+    "Hold",
+    "Land",
+    "Hold"
+   ],
+   "event_at": {
+    "phase": "cruise2",
+    "speed_mps": 5.07
+   }
+  },
+  {
+   "case": "abort_corner",
+   "overrides": {},
+   "event": "abort@corner2+2",
+   "passed": false,
+   "reasons": [
+    "mission aborted",
+    "aerodynamic telemetry missing or incomplete",
+    "touchdown_err_m missing"
+   ],
+   "safe": true,
+   "figures": {
+    "tilt_max_deg": 13.4479,
+    "fwd_roll_max_deg": 13.4479,
+    "fwd_pitch_max_deg": 0.4433,
+    "alt_err_max_m": 0.1343,
+    "cross_track_max_m": 0.3514,
+    "lag_max_m": 0.2274,
+    "cruise_speed_err_mps": 0.1361,
+    "true_airspeed_max_mps": 5.1275,
+    "pusher_max_cmd": 0.4854,
+    "pusher_sat_frac": 0.0,
+    "lift_max_cmd": 0.7099,
+    "lift_sat_frac": 0.0,
+    "torque_unachieved_frac": 0.0,
+    "touchdown_speed_mps": 0.4236,
+    "stop_tilt_max_deg": 11.1326,
+    "stop_distance_m": 9.7276,
+    "px4_tilt_max_deg": 1.3444,
+    "wing_lift_fraction_max": 0.0758
+   },
+   "phases_s": {
+    "climb": 11.97,
+    "hover1": 6.01,
+    "accel1": 5.7,
+    "cruise1": 3.8,
+    "corner1": 5.43,
+    "cruise2": 3.27,
+    "corner2": 2.0,
+    "stop": 4.86,
+    "px4": 40.97
+   },
+   "response_met": true,
+   "response": "handed to Hold, then ['Offboard', 'Hold', 'Land', 'Hold']",
+   "failsafe": {
+    "reason": "mission aborted",
+    "t": 71.364,
+    "speed_mps": 5.01661177202931,
+    "handed_to": "Hold"
+   },
+   "px4_modes": [
+    "Offboard",
+    "Hold",
+    "Land",
+    "Hold"
+   ],
+   "event_at": {
+    "phase": "corner2",
+    "speed_mps": 5.02
+   }
+  },
+  {
+   "case": "abort_v7",
+   "overrides": {
+    "cruise_mps": 7.0
+   },
+   "event": "abort@accel2+2",
+   "passed": false,
+   "reasons": [
+    "mission aborted",
+    "aerodynamic telemetry missing or incomplete",
+    "touchdown_err_m missing"
+   ],
+   "safe": true,
+   "figures": {
+    "tilt_max_deg": 11.2361,
+    "fwd_roll_max_deg": 11.2361,
+    "fwd_pitch_max_deg": 5.7202,
+    "alt_err_max_m": 0.1628,
+    "cross_track_max_m": 0.3423,
+    "lag_max_m": 0.3143,
+    "true_airspeed_max_mps": 6.2959,
+    "pusher_max_cmd": 0.5505,
+    "pusher_sat_frac": 0.0,
+    "lift_max_cmd": 0.6784,
+    "lift_sat_frac": 0.0,
+    "torque_unachieved_frac": 0.0,
+    "touchdown_speed_mps": 0.7113,
+    "stop_tilt_max_deg": 10.421,
+    "stop_distance_m": 12.9829,
+    "px4_tilt_max_deg": 1.8494,
+    "wing_lift_fraction_max": 0.092
+   },
+   "phases_s": {
+    "climb": 12.27,
+    "hover1": 6.03,
+    "accel1": 6.97,
+    "decel1": 1.9,
+    "corner1": 5.63,
+    "accel2": 1.4,
+    "decel2": 0.0,
+    "stop": 5.4,
+    "px4": 43.4
+   },
+   "response_met": true,
+   "response": "handed to Hold, then ['Offboard', 'Hold', 'Land', 'Hold']",
+   "failsafe": {
+    "reason": "mission aborted",
+    "t": 66.092,
+    "speed_mps": 5.8368676111920985,
+    "handed_to": "Hold"
+   },
+   "px4_modes": [
+    "Offboard",
+    "Hold",
+    "Land",
+    "Hold"
+   ],
+   "event_at": {
+    "phase": "decel2",
+    "speed_mps": 5.84
+   }
+  },
+  {
+   "case": "silence_cruise",
+   "overrides": {},
+   "event": "silence@cruise2+1.5",
+   "passed": false,
+   "reasons": [
+    "setpoints stopped in cruise2",
+    "aerodynamic telemetry missing or incomplete",
+    "touchdown_err_m missing"
+   ],
+   "safe": true,
+   "figures": {
+    "tilt_max_deg": 14.0114,
+    "fwd_roll_max_deg": 14.0114,
+    "fwd_pitch_max_deg": 0.5988,
+    "alt_err_max_m": 0.1455,
+    "cross_track_max_m": 0.273,
+    "lag_max_m": 0.1993,
+    "cruise_speed_err_mps": 0.1329,
+    "true_airspeed_max_mps": 5.1227,
+    "pusher_max_cmd": 0.4974,
+    "pusher_sat_frac": 0.0,
+    "lift_max_cmd": 0.7057,
+    "lift_sat_frac": 0.0,
+    "torque_unachieved_frac": 0.0,
+    "touchdown_speed_mps": 0.5755,
+    "px4_tilt_max_deg": 11.374,
+    "wing_lift_fraction_max": 0.071
+   },
+   "phases_s": {
+    "climb": 11.8,
+    "hover1": 6.03,
+    "accel1": 5.7,
+    "cruise1": 3.8,
+    "corner1": 5.44,
+    "cruise2": 1.53,
+    "px4": 42.0
+   },
+   "response_met": true,
+   "response": "PX4 flew ['Hold', 'Land', 'Offboard']",
+   "px4_modes": [
+    "Hold",
+    "Land",
+    "Offboard"
+   ],
+   "event_at": {
+    "phase": "cruise2",
+    "speed_mps": 5.05
+   }
+  },
+  {
+   "case": "silence_v7",
+   "overrides": {
+    "cruise_mps": 7.0
+   },
+   "event": "silence@accel2+2",
+   "passed": false,
+   "reasons": [
+    "setpoints stopped in decel2",
+    "aerodynamic telemetry missing or incomplete",
+    "touchdown_err_m missing"
+   ],
+   "safe": true,
+   "figures": {
+    "tilt_max_deg": 12.3697,
+    "fwd_roll_max_deg": 12.3697,
+    "fwd_pitch_max_deg": 4.3759,
+    "alt_err_max_m": 0.1803,
+    "cross_track_max_m": 0.1857,
+    "lag_max_m": 0.2857,
+    "true_airspeed_max_mps": 6.2387,
+    "pusher_max_cmd": 0.566,
+    "pusher_sat_frac": 0.0,
+    "lift_max_cmd": 0.6703,
+    "lift_sat_frac": 0.0,
+    "torque_unachieved_frac": 0.0,
+    "touchdown_speed_mps": 0.5015,
+    "px4_tilt_max_deg": 11.8711,
+    "wing_lift_fraction_max": 0.1312
+   },
+   "phases_s": {
+    "climb": 12.27,
+    "hover1": 6.0,
+    "accel1": 6.96,
+    "decel1": 1.9,
+    "corner1": 5.64,
+    "accel2": 1.4,
+    "decel2": 0.0,
+    "px4": 42.0
+   },
+   "response_met": true,
+   "response": "PX4 flew ['Hold', 'Land', 'Offboard']",
+   "px4_modes": [
+    "Hold",
+    "Land",
+    "Offboard"
+   ],
+   "event_at": {
+    "phase": "decel2",
+    "speed_mps": 5.88
+   }
+  },
+  {
+   "case": "silence_corner_wind6",
+   "overrides": {
+    "wind_speed_mps": 6.0,
+    "wind_gust_pct": 0.3,
+    "wind_from_deg": 90.0
+   },
+   "event": "silence@corner1+2",
+   "passed": false,
+   "reasons": [
+    "setpoints stopped in corner1",
+    "aerodynamic telemetry missing or incomplete",
+    "touchdown_err_m missing"
+   ],
+   "safe": true,
+   "figures": {
+    "tilt_max_deg": 16.6053,
+    "fwd_roll_max_deg": 8.3782,
+    "fwd_pitch_max_deg": 3.3765,
+    "alt_err_max_m": 0.1016,
+    "cross_track_max_m": 0.1023,
+    "lag_max_m": 0.2654,
+    "cruise_speed_err_mps": 0.1553,
+    "true_airspeed_max_mps": 8.3343,
+    "pusher_max_cmd": 0.4671,
+    "pusher_sat_frac": 0.0,
+    "lift_max_cmd": 0.7268,
+    "lift_sat_frac": 0.0,
+    "torque_unachieved_frac": 0.0,
+    "touchdown_speed_mps": 0.5394,
+    "px4_tilt_max_deg": 16.6053,
+    "wing_lift_fraction_max": 0.0567
+   },
+   "phases_s": {
+    "climb": 12.03,
+    "hover1": 6.04,
+    "accel1": 5.73,
+    "cruise1": 3.77,
+    "corner1": 2.0,
+    "px4": 42.0
+   },
+   "response_met": true,
+   "response": "PX4 flew ['Hold', 'Land', 'Offboard']",
+   "px4_modes": [
+    "Hold",
+    "Land",
+    "Offboard"
+   ],
+   "event_at": {
+    "phase": "corner1",
+    "speed_mps": 4.82
+   }
+  },
+  {
+   "case": "pusher_off_hover",
+   "overrides": {},
+   "event": "pusher_off@hover1+2",
+   "passed": false,
+   "reasons": [
+    "pusher: not speeding up, at 0.1 m/s of 1.6 in accel1",
+    "aerodynamic telemetry missing or incomplete",
+    "pusher_sat_frac 0.42 > 0.1",
+    "touchdown_err_m missing"
+   ],
+   "safe": true,
+   "figures": {
+    "tilt_max_deg": 7.8709,
+    "fwd_roll_max_deg": 0.3213,
+    "fwd_pitch_max_deg": 0.2934,
+    "alt_err_max_m": 0.1801,
+    "cross_track_max_m": 0.0181,
+    "lag_max_m": 1.1807,
+    "true_airspeed_max_mps": 2.838,
+    "pusher_max_cmd": 0.9,
+    "pusher_sat_frac": 0.4211,
+    "lift_max_cmd": 0.5647,
+    "lift_sat_frac": 0.0,
+    "torque_unachieved_frac": 0.0,
+    "touchdown_speed_mps": 0.4882,
+    "stop_tilt_max_deg": 0.3205,
+    "stop_distance_m": 0.0894,
+    "px4_tilt_max_deg": 7.8709,
+    "wing_lift_fraction_max": 0.0155
+   },
+   "phases_s": {
+    "climb": 12.4,
+    "hover1": 6.03,
+    "accel1": 1.94,
+    "stop": 1.3,
+    "px4": 27.33
+   },
+   "response_met": true,
+   "response": "pusher: not speeding up, at 0.1 m/s of 1.6 in accel1, handed to Land",
+   "failsafe": {
+    "reason": "pusher: not speeding up, at 0.1 m/s of 1.6 in accel1",
+    "t": 52.916000000000004,
+    "speed_mps": 0.06487741733697908,
+    "handed_to": "Land"
+   },
+   "px4_modes": [
+    "Offboard",
+    "Land",
+    "Offboard"
+   ],
+   "event_at": {
+    "phase": "hover1",
+    "speed_mps": 0.04
+   }
+  },
+  {
+   "case": "pusher_off_cruise",
+   "overrides": {},
+   "event": "pusher_off@cruise2+1",
+   "passed": false,
+   "reasons": [
+    "pusher: not speeding up, at 3.5 m/s of 5.0 in corner2",
+    "aerodynamic telemetry missing or incomplete",
+    "pusher_sat_frac 0.10 > 0.1",
+    "cruise_speed_err_mps 1.51 > 1.0",
+    "touchdown_err_m missing"
+   ],
+   "safe": true,
+   "figures": {
+    "tilt_max_deg": 16.3955,
+    "fwd_roll_max_deg": 14.3156,
+    "fwd_pitch_max_deg": 0.5024,
+    "alt_err_max_m": 0.3981,
+    "cross_track_max_m": 0.271,
+    "lag_max_m": 2.8636,
+    "cruise_speed_err_mps": 1.5068,
+    "true_airspeed_max_mps": 5.1349,
+    "pusher_max_cmd": 0.9,
+    "pusher_sat_frac": 0.1013,
+    "lift_max_cmd": 0.7158,
+    "lift_sat_frac": 0.0,
+    "torque_unachieved_frac": 0.0,
+    "touchdown_speed_mps": 0.5679,
+    "stop_tilt_max_deg": 16.3955,
+    "stop_distance_m": 4.9841,
+    "px4_tilt_max_deg": 4.0326,
+    "wing_lift_fraction_max": 0.0524
+   },
+   "phases_s": {
+    "climb": 11.9,
+    "hover1": 6.03,
+    "accel1": 5.74,
+    "cruise1": 3.76,
+    "corner1": 5.44,
+    "cruise2": 3.27,
+    "corner2": 5.43,
+    "cruise3": 0.0,
+    "stop": 3.86,
+    "px4": 27.57
+   },
+   "response_met": true,
+   "response": "pusher: not speeding up, at 3.5 m/s of 5.0 in corner2, handed to Land",
+   "failsafe": {
+    "reason": "pusher: not speeding up, at 3.5 m/s of 5.0 in corner2",
+    "t": 74.36,
+    "speed_mps": 3.5276016596033988,
+    "handed_to": "Land"
+   },
+   "px4_modes": [
+    "Offboard",
+    "Land",
+    "Offboard"
+   ],
+   "event_at": {
+    "phase": "cruise2",
+    "speed_mps": 5.13
+   }
+  },
+  {
+   "case": "pusher_off_v7",
+   "overrides": {
+    "cruise_mps": 7.0
+   },
+   "event": "pusher_off@accel2+1",
+   "passed": false,
+   "reasons": [
+    "pusher: not speeding up, at 3.5 m/s of 5.0 in corner2",
+    "aerodynamic telemetry missing or incomplete",
+    "touchdown_err_m missing"
+   ],
+   "safe": true,
+   "figures": {
+    "tilt_max_deg": 17.5046,
+    "fwd_roll_max_deg": 11.8215,
+    "fwd_pitch_max_deg": 3.9583,
+    "alt_err_max_m": 0.2086,
+    "cross_track_max_m": 0.2699,
+    "lag_max_m": 2.3378,
+    "true_airspeed_max_mps": 6.2448,
+    "pusher_max_cmd": 0.9,
+    "pusher_sat_frac": 0.0889,
+    "lift_max_cmd": 0.6682,
+    "lift_sat_frac": 0.0,
+    "torque_unachieved_frac": 0.0,
+    "touchdown_speed_mps": 0.3629,
+    "stop_tilt_max_deg": 17.5046,
+    "stop_distance_m": 5.2768,
+    "px4_tilt_max_deg": 2.2098,
+    "wing_lift_fraction_max": 0.0733
+   },
+   "phases_s": {
+    "climb": 12.4,
+    "hover1": 6.03,
+    "accel1": 6.97,
+    "decel1": 1.9,
+    "corner1": 5.63,
+    "accel2": 1.4,
+    "decel2": 1.37,
+    "corner2": 5.23,
+    "stop": 3.9,
+    "px4": 26.17
+   },
+   "response_met": true,
+   "response": "pusher: not speeding up, at 3.5 m/s of 5.0 in corner2, handed to Land",
+   "failsafe": {
+    "reason": "pusher: not speeding up, at 3.5 m/s of 5.0 in corner2",
+    "t": 73.296,
+    "speed_mps": 3.5812258101566083,
+    "handed_to": "Land"
+   },
+   "px4_modes": [
+    "Offboard",
+    "Land",
+    "Offboard"
+   ],
+   "event_at": {
+    "phase": "accel2",
+    "speed_mps": 5.62
+   }
+  },
+  {
+   "case": "pusher_off_headwind6",
+   "overrides": {
+    "wind_speed_mps": 6.0,
+    "wind_gust_pct": 0.3,
+    "wind_from_deg": 0.0
+   },
+   "event": "pusher_off@cruise1+1",
+   "passed": false,
+   "reasons": [
+    "pusher: not speeding up, at 3.5 m/s of 5.0 in corner1",
+    "aerodynamic telemetry missing or incomplete",
+    "touchdown_err_m missing"
+   ],
+   "safe": true,
+   "figures": {
+    "tilt_max_deg": 17.388,
+    "fwd_roll_max_deg": 12.5186,
+    "fwd_pitch_max_deg": 1.1672,
+    "alt_err_max_m": 0.2429,
+    "cross_track_max_m": 0.2079,
+    "lag_max_m": 1.2699,
+    "cruise_speed_err_mps": 0.141,
+    "true_airspeed_max_mps": 12.1699,
+    "pusher_max_cmd": 0.9,
+    "pusher_sat_frac": 0.0756,
+    "lift_max_cmd": 0.6451,
+    "lift_sat_frac": 0.0,
+    "torque_unachieved_frac": 0.0,
+    "touchdown_speed_mps": 0.6779,
+    "stop_tilt_max_deg": 15.742,
+    "stop_distance_m": 4.5557,
+    "px4_tilt_max_deg": 17.388,
+    "wing_lift_fraction_max": 0.1837
+   },
+   "phases_s": {
+    "climb": 12.5,
+    "hover1": 6.0,
+    "accel1": 5.73,
+    "cruise1": 3.77,
+    "corner1": 2.37,
+    "stop": 3.86,
+    "px4": 27.77
+   },
+   "response_met": true,
+   "response": "pusher: not speeding up, at 3.5 m/s of 5.0 in corner1, handed to Land",
+   "failsafe": {
+    "reason": "pusher: not speeding up, at 3.5 m/s of 5.0 in corner1",
+    "t": 62.836,
+    "speed_mps": 3.5245442342060276,
+    "handed_to": "Land"
+   },
+   "px4_modes": [
+    "Offboard",
+    "Land",
+    "Offboard"
+   ],
+   "event_at": {
+    "phase": "cruise1",
+    "speed_mps": 5.1
+   }
+  },
+  {
+   "case": "pusher_off_stop_mode",
+   "overrides": {
+    "fly_through": 0.0
+   },
+   "event": "pusher_off@cruise2+1",
+   "passed": false,
+   "reasons": [
+    "pusher: not speeding up, at -0.7 m/s of 1.6 in accel3",
+    "aerodynamic telemetry missing or incomplete",
+    "cross_track_max_m 5.64 > 3.0",
+    "touchdown_err_m missing"
+   ],
+   "safe": true,
+   "figures": {
+    "tilt_max_deg": 18.8878,
+    "fwd_roll_max_deg": 3.3607,
+    "fwd_pitch_max_deg": 6.6394,
+    "alt_err_max_m": 1.1939,
+    "cross_track_max_m": 5.6405,
+    "lag_max_m": 6.9027,
+    "cruise_speed_err_mps": 0.278,
+    "true_airspeed_max_mps": 5.196,
+    "pusher_max_cmd": 0.9,
+    "pusher_sat_frac": 0.0571,
+    "lift_max_cmd": 0.6395,
+    "lift_sat_frac": 0.0,
+    "torque_unachieved_frac": 0.0,
+    "touchdown_speed_mps": 0.5501,
+    "stop_tilt_max_deg": 0.3894,
+    "stop_distance_m": 1.3847,
+    "px4_tilt_max_deg": 18.8878,
+    "wing_lift_fraction_max": 0.0558
+   },
+   "phases_s": {
+    "climb": 11.93,
+    "hover1": 6.03,
+    "accel1": 5.7,
+    "cruise1": 4.3,
+    "decel1": 5.7,
+    "hover2": 6.03,
+    "turn2": 6.46,
+    "accel2": 5.72,
+    "cruise2": 4.28,
+    "decel2": 5.7,
+    "hover3": 6.03,
+    "turn3": 6.4,
+    "accel3": 1.93,
+    "stop": 2.0,
+    "px4": 27.77
+   },
+   "response_met": true,
+   "response": "pusher: not speeding up, at -0.7 m/s of 1.6 in accel3, handed to Land",
+   "failsafe": {
+    "reason": "pusher: not speeding up, at -0.7 m/s of 1.6 in accel3",
+    "t": 107.792,
+    "speed_mps": 0.7166982662242422,
+    "handed_to": "Land"
+   },
+   "px4_modes": [
+    "Offboard",
+    "Land",
+    "Offboard"
+   ],
+   "event_at": {
+    "phase": "cruise2",
+    "speed_mps": 5.16
+   }
+  },
+  {
+   "case": "battery_cruise",
+   "overrides": {},
+   "event": "battery@cruise2+1",
+   "passed": false,
+   "reasons": [
+    "PX4 left offboard in corner2: Critical battery\t | Failsafe activated: entering Hold for 5 seconds\t",
+    "aerodynamic telemetry missing or incomplete",
+    "touchdown_err_m missing"
+   ],
+   "safe": true,
+   "figures": {
+    "tilt_max_deg": 14.3437,
+    "fwd_roll_max_deg": 14.3437,
+    "fwd_pitch_max_deg": 11.0633,
+    "alt_err_max_m": 0.1903,
+    "cross_track_max_m": 0.6879,
+    "lag_max_m": 0.4024,
+    "cruise_speed_err_mps": 0.1235,
+    "true_airspeed_max_mps": 5.1208,
+    "pusher_max_cmd": 0.5045,
+    "pusher_sat_frac": 0.0,
+    "lift_max_cmd": 0.8091,
+    "lift_sat_frac": 0.0,
+    "torque_unachieved_frac": 0.0,
+    "touchdown_speed_mps": 0.4098,
+    "px4_tilt_max_deg": 13.7008,
+    "wing_lift_fraction_max": 0.0761
+   },
+   "phases_s": {
+    "climb": 12.46,
+    "hover1": 6.0,
+    "accel1": 5.73,
+    "cruise1": 3.77,
+    "corner1": 5.43,
+    "cruise2": 3.27,
+    "corner2": 5.33,
+    "px4": 43.0
+   },
+   "response_met": true,
+   "response": "PX4 flew ['Hold', 'Return', 'Offboard'], down 0.0 m from home",
+   "px4_modes": [
+    "Hold",
+    "Return",
+    "Offboard"
+   ],
+   "event_at": {
+    "phase": "cruise2",
+    "speed_mps": 5.05
+   }
+  },
+  {
+   "case": "transition_hover",
+   "overrides": {},
+   "event": "transition@hover1+2",
+   "passed": true,
+   "reasons": [],
+   "safe": true,
+   "figures": {
+    "tilt_max_deg": 14.2751,
+    "fwd_roll_max_deg": 14.2751,
+    "fwd_pitch_max_deg": 9.3601,
+    "alt_err_max_m": 0.1606,
+    "cross_track_max_m": 0.2587,
+    "lag_max_m": 0.2214,
+    "cruise_speed_err_mps": 0.3263,
+    "true_airspeed_max_mps": 5.3061,
+    "pusher_max_cmd": 0.0,
+    "pusher_sat_frac": 0.0,
+    "lift_max_cmd": 0.7455,
+    "lift_sat_frac": 0.0,
+    "torque_unachieved_frac": 0.0,
+    "touchdown_err_m": 0.0202,
+    "touchdown_speed_mps": 0.5451,
+    "wing_lift_fraction_max": 0.062
+   },
+   "phases_s": {
+    "climb": 12.03,
+    "hover1": 6.03,
+    "accel1": 5.7,
+    "cruise1": 3.8,
+    "corner1": 5.43,
+    "cruise2": 3.27,
+    "corner2": 5.43,
+    "cruise3": 3.27,
+    "corner3": 5.4,
+    "cruise4": 3.8,
+    "decel4": 5.7,
+    "hover5": 6.03,
+    "align": 2.0,
+    "descend": 10.73,
+    "land": 11.37
+   },
+   "response_met": true,
+   "response": "completed",
+   "event_at": {
+    "phase": "hover1",
+    "speed_mps": 0.01
+   }
+  },
+  {
+   "case": "transition_cruise",
+   "overrides": {},
+   "event": "transition@cruise2+1",
+   "passed": true,
+   "reasons": [],
+   "safe": true,
+   "figures": {
+    "tilt_max_deg": 13.3286,
+    "fwd_roll_max_deg": 13.3286,
+    "fwd_pitch_max_deg": 8.9117,
+    "alt_err_max_m": 0.1788,
+    "cross_track_max_m": 0.3392,
+    "lag_max_m": 0.2972,
+    "cruise_speed_err_mps": 0.3451,
+    "true_airspeed_max_mps": 5.3113,
+    "pusher_max_cmd": 0.4807,
+    "pusher_sat_frac": 0.0,
+    "lift_max_cmd": 0.7485,
+    "lift_sat_frac": 0.0,
+    "torque_unachieved_frac": 0.0,
+    "touchdown_err_m": 0.0284,
+    "touchdown_speed_mps": 0.6604,
+    "wing_lift_fraction_max": 0.064
+   },
+   "phases_s": {
+    "climb": 12.1,
+    "hover1": 6.03,
+    "accel1": 5.7,
+    "cruise1": 3.8,
+    "corner1": 5.44,
+    "cruise2": 3.26,
+    "corner2": 5.43,
+    "cruise3": 3.27,
+    "corner3": 5.44,
+    "cruise4": 3.76,
+    "decel4": 5.71,
+    "hover5": 6.03,
+    "align": 2.0,
+    "descend": 10.93,
+    "land": 11.1
+   },
+   "response_met": true,
+   "response": "completed",
+   "event_at": {
+    "phase": "cruise2",
+    "speed_mps": 5.09
+   }
+  }
+ ],
+ "earlier_versions": {
+  "silence_point_and_velocity": {
+   "case": "silence_point_and_velocity",
+   "overrides": {
+    "cruise_mps": 5.0
+   },
+   "event": "silence@cruise2+1.5",
+   "passed": false,
+   "reasons": [
+    "setpoints stopped in cruise2",
+    "aerodynamic telemetry missing or incomplete",
+    "touchdown_err_m missing"
+   ],
+   "safe": true,
+   "figures": {
+    "tilt_max_deg": 29.2752,
+    "fwd_roll_max_deg": 13.4478,
+    "fwd_pitch_max_deg": 0.4892,
+    "alt_err_max_m": 0.1645,
+    "cross_track_max_m": 0.304,
+    "cruise_speed_err_mps": 0.1125,
+    "true_airspeed_max_mps": 5.1004,
+    "pusher_max_cmd": 0.498,
+    "pusher_sat_frac": 0.0,
+    "lift_max_cmd": 0.7076,
+    "lift_sat_frac": 0.0,
+    "torque_unachieved_frac": 0.0,
+    "touchdown_speed_mps": 0.5431,
+    "px4_tilt_max_deg": 13.3864,
+    "wing_lift_fraction_max": 0.0996
+   },
+   "phases_s": {
+    "climb": 11.8,
+    "hover1": 6.03,
+    "accel1": 5.74,
+    "cruise1": 3.76,
+    "corner1": 5.43,
+    "cruise2": 1.5,
+    "px4": 42.0
+   },
+   "px4_modes": [
+    "Hold",
+    "Land",
+    "Offboard"
+   ],
+   "event_at": {
+    "phase": "cruise2",
+    "speed_mps": 5.02
+   }
+  },
+  "silence_point_and_velocity_0.5s": {
+   "case": "silence_point_and_velocity_0.5s",
+   "overrides": {
+    "cruise_mps": 5.0
+   },
+   "event": "silence@cruise2+1.5",
+   "passed": false,
+   "reasons": [
+    "setpoints stopped in cruise2",
+    "aerodynamic telemetry missing or incomplete",
+    "touchdown_err_m missing"
+   ],
+   "safe": true,
+   "figures": {
+    "tilt_max_deg": 21.3563,
+    "fwd_roll_max_deg": 13.0426,
+    "fwd_pitch_max_deg": 0.4022,
+    "alt_err_max_m": 0.1756,
+    "cross_track_max_m": 0.2026,
+    "cruise_speed_err_mps": 0.1211,
+    "true_airspeed_max_mps": 5.1029,
+    "pusher_max_cmd": 0.5363,
+    "pusher_sat_frac": 0.0,
+    "lift_max_cmd": 0.7007,
+    "lift_sat_frac": 0.0,
+    "torque_unachieved_frac": 0.0,
+    "touchdown_speed_mps": 0.4155,
+    "px4_tilt_max_deg": 11.6107,
+    "wing_lift_fraction_max": 0.0985
+   },
+   "phases_s": {
+    "climb": 12.1,
+    "hover1": 6.0,
+    "accel1": 5.73,
+    "cruise1": 3.77,
+    "corner1": 5.43,
+    "cruise2": 1.5,
+    "px4": 41.0
+   },
+   "px4_modes": [
+    "Hold",
+    "Land",
+    "Offboard"
+   ],
+   "event_at": {
+    "phase": "cruise2",
+    "speed_mps": 5.03
+   }
+  },
+  "silence_velocity_only": {
+   "case": "silence_velocity_only",
+   "overrides": {},
+   "event": "silence@cruise2+1.5",
+   "passed": false,
+   "reasons": [
+    "setpoints stopped in cruise2",
+    "aerodynamic telemetry missing or incomplete",
+    "touchdown_err_m missing"
+   ],
+   "safe": true,
+   "figures": {
+    "tilt_max_deg": 13.4283,
+    "fwd_roll_max_deg": 13.4283,
+    "fwd_pitch_max_deg": 0.4975,
+    "alt_err_max_m": 0.1532,
+    "cross_track_max_m": 0.2765,
+    "cruise_speed_err_mps": 0.1522,
+    "true_airspeed_max_mps": 5.1624,
+    "pusher_max_cmd": 0.489,
+    "pusher_sat_frac": 0.0,
+    "lift_max_cmd": 0.7008,
+    "lift_sat_frac": 0.0,
+    "torque_unachieved_frac": 0.0,
+    "touchdown_speed_mps": 0.3325,
+    "px4_tilt_max_deg": 11.5414,
+    "wing_lift_fraction_max": 0.074
+   },
+   "phases_s": {
+    "climb": 11.9,
+    "hover1": 6.03,
+    "accel1": 5.73,
+    "cruise1": 3.77,
+    "corner1": 5.44,
+    "cruise2": 1.53,
+    "px4": 41.0
+   },
+   "px4_modes": [
+    "Hold",
+    "Land",
+    "Offboard"
+   ],
+   "event_at": {
+    "phase": "cruise2",
+    "speed_mps": 5.0
+   }
+  },
+  "pusher_off_v7_old_check": {
+   "case": "pusher_off_v7_old_check",
+   "overrides": {
+    "cruise_mps": 7.0
+   },
+   "event": "pusher_off@accel2+1",
+   "passed": false,
+   "reasons": [
+    "falling behind the route by 8 m in decel3",
+    "aerodynamic telemetry missing or incomplete",
+    "tilt_max_deg 48.05 > 30.0",
+    "pusher_sat_frac 0.18 > 0.1",
+    "touchdown_err_m missing"
+   ],
+   "safe": false,
+   "figures": {
+    "tilt_max_deg": 48.0488,
+    "fwd_roll_max_deg": 12.7161,
+    "fwd_pitch_max_deg": 3.4624,
+    "alt_err_max_m": 0.2553,
+    "cross_track_max_m": 0.683,
+    "lag_max_m": 8.0783,
+    "true_airspeed_max_mps": 6.2159,
+    "pusher_max_cmd": 0.9,
+    "pusher_sat_frac": 0.184,
+    "lift_max_cmd": 0.6726,
+    "lift_sat_frac": 0.0,
+    "torque_unachieved_frac": 0.0,
+    "touchdown_speed_mps": 0.3704,
+    "stop_tilt_max_deg": 14.4376,
+    "stop_distance_m": 3.4921,
+    "px4_tilt_max_deg": 48.0488,
+    "wing_lift_fraction_max": 0.0694
+   },
+   "phases_s": {
+    "climb": 11.77,
+    "hover1": 6.03,
+    "accel1": 6.97,
+    "decel1": 1.9,
+    "corner1": 5.63,
+    "accel2": 1.4,
+    "decel2": 1.4,
+    "corner2": 5.64,
+    "accel3": 1.37,
+    "decel3": 0.7,
+    "stop": 3.43,
+    "px4": 40.77
+   },
+   "failsafe": {
+    "reason": "falling behind the route by 8 m in decel3",
+    "t": 74.408,
+    "speed_mps": 2.8683791137926726,
+    "handed_to": "Hold"
+   },
+   "px4_modes": [
+    "Offboard",
+    "Hold",
+    "Land",
+    "Hold"
+   ],
+   "event_at": {
+    "phase": "accel2",
+    "speed_mps": 5.62
+   }
+  },
+  "pusher_off_stop_mode_old_check": {
+   "case": "pusher_off_stop_mode_old_check",
+   "overrides": {
+    "fly_through": 0.0
+   },
+   "event": "pusher_off@cruise2+1",
+   "passed": false,
+   "reasons": [
+    "falling behind the route by 8 m in accel3",
+    "aerodynamic telemetry missing or incomplete",
+    "tilt_max_deg 48.04 > 30.0",
+    "cross_track_max_m 5.67 > 3.0",
+    "touchdown_err_m missing"
+   ],
+   "safe": false,
+   "figures": {
+    "tilt_max_deg": 48.0388,
+    "fwd_roll_max_deg": 3.2017,
+    "fwd_pitch_max_deg": 7.2325,
+    "alt_err_max_m": 0.1787,
+    "cross_track_max_m": 5.666,
+    "lag_max_m": 8.0769,
+    "cruise_speed_err_mps": 0.1786,
+    "true_airspeed_max_mps": 5.0682,
+    "pusher_max_cmd": 0.9,
+    "pusher_sat_frac": 0.0733,
+    "lift_max_cmd": 0.5633,
+    "lift_sat_frac": 0.0,
+    "torque_unachieved_frac": 0.0,
+    "touchdown_speed_mps": 0.3408,
+    "stop_tilt_max_deg": 0.9525,
+    "stop_distance_m": 1.1474,
+    "px4_tilt_max_deg": 48.0388,
+    "wing_lift_fraction_max": 0.0543
+   },
+   "phases_s": {
+    "climb": 12.13,
+    "hover1": 6.03,
+    "accel1": 5.7,
+    "cruise1": 4.3,
+    "decel1": 5.7,
+    "hover2": 6.03,
+    "turn2": 6.43,
+    "accel2": 5.74,
+    "cruise2": 4.26,
+    "decel2": 5.74,
+    "hover3": 6.03,
+    "turn3": 6.4,
+    "accel3": 2.54,
+    "stop": 1.9,
+    "px4": 41.07
+   },
+   "failsafe": {
+    "reason": "falling behind the route by 8 m in accel3",
+    "t": 109.396,
+    "speed_mps": 0.572229767275059,
+    "handed_to": "Hold"
+   },
+   "px4_modes": [
+    "Offboard",
+    "Hold",
+    "Land",
+    "Hold"
+   ],
+   "event_at": {
+    "phase": "cruise2",
+    "speed_mps": 5.08
+   }
+  },
+  "transition_cruise_3s_timeout": {
+   "case": "transition_cruise_3s_timeout",
+   "overrides": {},
+   "event": "transition@cruise2+1",
+   "passed": true,
+   "reasons": [],
+   "safe": true,
+   "figures": {
+    "tilt_max_deg": 24.6306,
+    "fwd_roll_max_deg": 24.6306,
+    "fwd_pitch_max_deg": 9.9748,
+    "alt_err_max_m": 0.188,
+    "cross_track_max_m": 0.2814,
+    "lag_max_m": 0.3134,
+    "cruise_speed_err_mps": 0.4802,
+    "true_airspeed_max_mps": 5.4425,
+    "pusher_max_cmd": 0.4957,
+    "pusher_sat_frac": 0.0,
+    "lift_max_cmd": 1.0,
+    "lift_sat_frac": 0.0048,
+    "torque_unachieved_frac": 0.0,
+    "touchdown_err_m": 0.0295,
+    "touchdown_speed_mps": 0.5042,
+    "wing_lift_fraction_max": 0.0664
+   },
+   "phases_s": {
+    "climb": 12.03,
+    "hover1": 6.04,
+    "accel1": 5.73,
+    "cruise1": 3.77,
+    "corner1": 5.43,
+    "cruise2": 3.28,
+    "corner2": 5.4,
+    "cruise3": 3.3,
+    "corner3": 5.4,
+    "cruise4": 3.8,
+    "decel4": 5.7,
+    "hover5": 6.03,
+    "align": 2.0,
+    "descend": 10.77,
+    "land": 11.33
+   },
+   "event_at": {
+    "phase": "cruise2",
+    "speed_mps": 5.09
+   }
+  }
+ },
+ "notes": {
+  "earlier_versions": "the same cases before a fix, for the comparisons in report section 9",
+  "silence_*": "setpoints stopped 1.5 s into leg 2 at 5 m/s, COM_OF_LOSS_T 1 s (0.5 s where named)"
+ }
+}
