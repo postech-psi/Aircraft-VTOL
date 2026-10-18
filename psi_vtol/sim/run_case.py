@@ -27,11 +27,13 @@ os.environ.setdefault("MAVLINK20", "1")
 from pymavlink import mavutil  # noqa: E402
 
 from psi_vtol import config  # noqa: E402
-from psi_vtol.profile import Profile  # noqa: E402
+from psi_vtol.profile import Profile, Stop, for_px4  # noqa: E402
 from psi_vtol.sim import gz_model, metrics  # noqa: E402
 
 OFFBOARD = 6                    # PX4 custom main mode
 AUTO, AUTO_LOITER, AUTO_LAND = 4, 3, 6     # PX4 custom main mode, and sub modes of AUTO
+MODE_NAMES = {(1, 0): "Manual", (2, 0): "Altitude", (3, 0): "Position", (4, 3): "Hold",
+              (4, 4): "Mission", (4, 5): "Return", (4, 6): "Land", (6, 0): "Offboard"}
 # SET_POSITION_TARGET_LOCAL_NED type mask: a set bit means "ignore this field". Bits 0 to 8 are
 # x, y, z, vx, vy, vz, ax, ay, az; bit 10 is the yaw and bit 11 the yaw rate.
 YAW_IGNORED, YAW_RATE_IGNORED = 1 << 10, 1 << 11
@@ -52,7 +54,7 @@ class Link:
         self.vel = None
         self.att = None             # roll, pitch, yaw [rad]
         self.armed = False
-        self.main_mode = None
+        self.main_mode = self.sub_mode = None
         self.texts = []
         self._last_send = 0.0
         self._last_heartbeat = 0.0
@@ -60,6 +62,9 @@ class Link:
         self.last_position_received = self.last_attitude_received = time.monotonic()
         self.applied_params = {}
         self.last_position_boot_ms = self.last_attitude_boot_ms = -1
+
+    def mode_name(self):
+        return MODE_NAMES.get((self.main_mode, self.sub_mode), f"{self.main_mode}.{self.sub_mode}")
 
     def pump(self, timeout=0.02):
         """Read one message and keep the setpoint stream alive (PX4 leaves offboard without it)."""
@@ -81,11 +86,12 @@ class Link:
             elif kind == "HEARTBEAT" and msg.get_srcComponent() == 1:
                 self.armed = bool(msg.base_mode & mavutil.mavlink.MAV_MODE_FLAG_SAFETY_ARMED)
                 self.main_mode = (msg.custom_mode >> 16) & 0xFF
+                self.sub_mode = (msg.custom_mode >> 24) & 0xFF if self.main_mode == AUTO else 0
             elif kind == "STATUSTEXT":
                 self.texts.append(msg.text)
         now = time.monotonic()
         if self.setpoint is not None and now - self._last_send >= 0.01:
-            sp = self.setpoint
+            sp = for_px4(self.setpoint, self.pos)
             fields = (sp.x, sp.y, sp.z, sp.vx, sp.vy, sp.vz, sp.ax, sp.ay, sp.az)
             mask = sum(1 << i for i, v in enumerate(fields) if math.isnan(v))
             mask |= (YAW_IGNORED if math.isnan(sp.yaw) else 0) | (
@@ -166,14 +172,97 @@ def wind_ne(p, yaw0):
             -p["wind_speed_mps"] * (math.cos(a) * sin0 - math.sin(a) * cos0))
 
 
-def fly(p, params, instance, wall_limit_s=420.0):
-    """Fly the profile. Returns what happened, with the phase times metrics.compute() needs."""
+# Events a case can inject, at a phase plus seconds ("abort@cruise2+1.5"), to see what a real
+# flight could meet. GPS loss cannot be injected: PX4 v1.17 simulates no GPS failure in Gazebo,
+# and its motor failure injection only blanks the ESC telemetry, so the pusher is stopped in
+# the aerodynamics plugin instead.
+EVENTS = {
+    "abort": "the mission is aborted: the onboard failsafe stops the vehicle and hands it to Hold",
+    "silence": "the setpoints stop, as if the Jetson died: PX4's offboard-loss failsafe acts",
+    "transition": "a fixed-wing transition is commanded, as from a button or a switch",
+    "pusher_off": "the pusher stops producing thrust (Gazebo; PX4 is not told)",
+    "battery": "the battery runs down to its critical level within seconds: PX4's battery failsafe acts",
+}
+# PX4's simulated battery drains only while armed, down to SIM_BAT_MIN_PCT. The event lowers that
+# floor to between the critical (BAT_CRIT_THR, 7 %) and the emergency level (BAT_EMERGEN_THR, 5 %).
+BATTERY_FLOOR_PCT, BATTERY_DRAIN_S = 6.0, 10.0
+HOLD_WATCH_S = 15.0     # how long PX4's Hold is followed before the run lands it, as a pilot would
+LAND_WATCH_S = 120.0    # how long a landing by PX4 may take
+VTOL_FW = 4             # MAV_VTOL_STATE_FW
+
+
+def parse_event(text):
+    """'name@phase+seconds' -> (name, phase, seconds)."""
+    name, _, when = text.partition("@")
+    phase, _, offset = when.partition("+")
+    if name not in EVENTS or not phase:
+        raise ValueError(f"event {text!r}: expected one of {sorted(EVENTS)} as name@phase+seconds")
+    return name, phase, float(offset or 0.0)
+
+
+def fly(p, params, instance, wall_limit_s=420.0, event=None, gz_env=None):
+    """Fly the profile. Returns what happened, with the phase times metrics.compute() needs.
+
+    When the profile reports a fault, a phase overruns or the event aborts the mission, the
+    runner does what the onboard nodes do: stop smoothly (profile.Stop), then hand the vehicle to
+    PX4's Hold, or its Land for a pusher fault. It follows PX4 until the vehicle is down: a Hold
+    for HOLD_WATCH_S, then a Land, as the pilot would command. gz_env: the environment of the
+    Gazebo this flight runs in, for events that act on the simulation.
+    """
     result = {"completed": False, "fail_reason": None, "phases": {}, "alt_m": p["alt_m"],
               "cruise_mps": p["cruise_mps"]}
     link = Link(instance)
     flight = None
     result["applied_params"] = link.applied_params
     wall_start = time.monotonic()
+
+    def watch(reason, land_after_s=HOLD_WATCH_S):
+        """Follow PX4 while it flies on its own, and stop the run with reason once it is down. A
+        Hold is landed after land_after_s (None: never); PX4's other modes are left to it."""
+        t_start, land_asked, held_at = link.t, land_after_s is None, link.pos
+        result["phases"]["px4"] = [t_start, t_start]
+        modes = result["px4_modes"] = [link.mode_name()]       # the modes PX4 flew, in order
+        while link.armed and link.t - t_start < (land_after_s or 0.0) + LAND_WATCH_S:
+            link.pump()
+            result["phases"]["px4"][1] = link.t
+            if link.mode_name() != modes[-1]:
+                modes.append(link.mode_name())
+            if time.monotonic() - wall_start > wall_limit_s:
+                reason += "; wall-clock limit while PX4 flew"
+                break
+            if max(abs(link.att[0]), abs(link.att[1])) > math.radians(60):
+                reason += "; tumbled"
+                break
+            if not land_asked and link.mode_name() == "Hold" and link.t - t_start >= land_after_s:
+                result["land_commanded_t"] = link.t
+                link.command(mavutil.mavlink.MAV_CMD_DO_SET_MODE, 1, AUTO, AUTO_LAND)
+                land_asked = True
+        result["after"] = {"armed": link.armed, "mode": link.main_mode,
+                           "height_m": home[2] - link.pos[2], "texts": link.texts[-6:],
+                           "landed": not link.armed,
+                           "drift_m": math.hypot(link.pos[0] - held_at[0], link.pos[1] - held_at[1]),
+                           "from_home_m": math.hypot(link.pos[0] - home[0], link.pos[1] - home[1])}
+        raise Abort(reason)
+
+    def failsafe(reason):
+        """What setpoint_mux and mission_manager do: stop without a step, then hand over."""
+        brake = Stop(link.t, link.pos, link.vel, link.att[2])
+        result["failsafe"] = {"reason": reason, "t": link.t, "speed_mps": math.hypot(*link.vel[:2])}
+        if flight._t0 is not None:
+            result["phases"][flight.phase] = [flight._t0, link.t]
+        result["phases"]["stop"] = [link.t, link.t]
+        while not brake.stopped(link.t - 1.0):
+            link.setpoint = brake.setpoint(link.t)
+            link.pump()
+            result["phases"]["stop"][1] = link.t
+            if max(abs(link.att[0]), abs(link.att[1])) > math.radians(60):
+                raise Abort(f"{reason}; tumbled while stopping")
+        land = reason.startswith("pusher")
+        result["failsafe"]["handed_to"] = "Land" if land else "Hold"
+        for _ in range(3):
+            link.command(mavutil.mavlink.MAV_CMD_DO_SET_MODE, 1, AUTO, AUTO_LAND if land else AUTO_LOITER)
+        watch(reason, land_after_s=None if land else HOLD_WATCH_S)
+
     try:
         if link.conn.wait_heartbeat(timeout=90) is None:
             raise Abort("no heartbeat from PX4")
@@ -190,6 +279,7 @@ def fly(p, params, instance, wall_limit_s=420.0):
         flight = Profile(p, home, yaw0, wind_ne(p, yaw0))
         result["phases"] = flight.times
         result["legs"] = [{k: leg[k] for k in ("start", "end", "heading", "speed")} for leg in flight.legs]
+        result["path"] = [[round(n, 2), round(e, 2)] for n, e in flight.polyline(1.0)]
 
         # --- arm and take off: PX4 wants the setpoint stream before it accepts offboard -------
         link.setpoint = flight.takeoff_setpoint()
@@ -207,11 +297,35 @@ def fly(p, params, instance, wall_limit_s=420.0):
                 link.command(mavutil.mavlink.MAV_CMD_COMPONENT_ARM_DISARM, 1)
                 t_ask = link.t
 
-        land_asked = False
+        land_asked = event_phase = False
         while True:
-            link.setpoint = flight.update(link.t, link.pos, link.vel, link.armed)
+            what = flight.phase
+            event_phase = event_phase or (event is not None and what == event[1])
+            if (event_phase and "event" not in result and flight._t0 is not None
+                    and (what != event[1] or link.t - flight._t0 >= event[2])):
+                # at the offset into its phase, or as the phase ends if it is shorter
+                result["event"] = {"name": event[0], "phase": what, "t": link.t,
+                                   "speed_mps": math.hypot(*link.vel[:2])}
+                if event[0] == "abort":
+                    failsafe("mission aborted")
+                if event[0] == "silence":
+                    link.setpoint = None
+                    result["phases"][what] = [flight._t0, link.t]
+                    while link.main_mode == OFFBOARD and link.t - result["event"]["t"] < 30.0:
+                        link.pump()
+                    watch(f"setpoints stopped in {what}")
+                if event[0] == "transition":
+                    link.command(mavutil.mavlink.MAV_CMD_DO_VTOL_TRANSITION, VTOL_FW)
+                if event[0] == "pusher_off":
+                    pusher_off(instance, gz_env)
+                if event[0] == "battery":
+                    link.set_param("SIM_BAT_MIN_PCT", BATTERY_FLOOR_PCT)
+                    link.set_param("SIM_BAT_DRAIN", BATTERY_DRAIN_S)
+            link.setpoint = flight.update(link.t, link.pos, link.vel, link.armed, link.att)
             if flight.done:
                 break
+            if flight.fault:
+                failsafe(flight.fault)
             what = flight.phase
             if what == "land" and not land_asked:
                 link.command(mavutil.mavlink.MAV_CMD_DO_SET_MODE, 1, AUTO, AUTO_LAND)
@@ -223,14 +337,15 @@ def fly(p, params, instance, wall_limit_s=420.0):
             if time.monotonic() - wall_start > wall_limit_s:
                 raise Abort(f"wall-clock limit during {what}")
             if flight.overdue(link.t):
-                raise Abort(f"timeout in {what}")
+                failsafe(f"timeout in {what}")
             if max(abs(link.att[0]), abs(link.att[1])) > math.radians(60):
                 raise Abort(f"tumbled in {what}")
             if what not in ("climb", "land"):
                 if not link.armed:
                     raise Abort(f"disarmed in {what}")
                 if link.main_mode != OFFBOARD:
-                    raise Abort(f"left offboard in {what}")
+                    result["phases"][what] = [flight._t0, link.t]
+                    watch(f"PX4 left offboard in {what}: " + " | ".join(link.texts[-2:]))
                 if home[2] - link.pos[2] < 1.0:
                     raise Abort(f"hit the ground in {what}")
         result["touchdown_err_m"] = math.hypot(link.pos[0] - flight.hold[0],
@@ -241,10 +356,21 @@ def fly(p, params, instance, wall_limit_s=420.0):
         result["fail_reason"] = str(stop)
         if flight is not None and flight._t0 is not None:
             result["aborted_phase"] = flight.phase
-            result["phases"][flight.phase] = [flight._t0, link.t]
+            result["phases"].setdefault(flight.phase, [flight._t0, link.t])
+    if flight is not None:
+        result["lag_max_m"] = flight.lag_max
     result["texts"] = link.texts[-12:]
     time.sleep(1.0)                 # let the logger close the file after the disarm
     return result
+
+
+def pusher_off(instance, gz_env):
+    """Stop the pusher's thrust in the aerodynamics plugin (simulation/gazebo/AeroSystem.cc)."""
+    topic = f"/model/{gz_model.MODEL_NAME}_{instance}/rotor_off"
+    for _ in range(2):          # gz transport may drop the first message of a new publisher
+        subprocess.Popen(["gz", "topic", "-t", topic, "-m", "gz.msgs.StringMsg",
+                          "-p", 'data: "rotor_pusher_joint"'], env=gz_env,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
 def launch(case_dir, env_add, cfg, instance):
@@ -263,9 +389,11 @@ def launch(case_dir, env_add, cfg, instance):
         ("GZ_PARTITION", "PX4_SIM_MODEL", "PX4_GZ_WORLD", "PX4_SIM_SPEED_FACTOR",
          "GZ_SIM_SYSTEM_PLUGIN_PATH")}, indent=2))
     log = open(case_dir / "px4.log", "w")
-    return subprocess.Popen([str(build / "bin/px4"), "-i", str(instance), "-d", str(build / "etc")],
+    proc = subprocess.Popen([str(build / "bin/px4"), "-i", str(instance), "-d", str(build / "etc")],
                             cwd=case_dir, env=env, stdout=log, stderr=subprocess.STDOUT,
                             stdin=subprocess.DEVNULL, start_new_session=True)
+    proc.gz_env = env           # for events that act on this Gazebo
+    return proc
 
 
 def stop(proc, case_dir):
@@ -300,7 +428,8 @@ def case_values(cfg, overrides):
     return p
 
 
-def run(cfg, overrides, case_id, instance):
+def run(cfg, overrides, case_id, instance, event=None):
+    """Fly one case. event: (name, phase, seconds) from parse_event, or None."""
     p = case_values(cfg, overrides)
     plugin = gz_model.config_plugin_path(cfg) / "libpsi-aerodynamics.so"
     if not plugin.is_file():
@@ -313,7 +442,7 @@ def run(cfg, overrides, case_id, instance):
     alongside = other_simulators()
     proc = launch(case_dir, gz_model.write_case(case_dir, p, cfg), cfg, instance)
     try:
-        flight = fly(p, gz_model.px4_params(cfg, p), instance)
+        flight = fly(p, gz_model.px4_params(cfg, p), instance, event=event, gz_env=proc.gz_env)
         flight["other_simulators"] = max(alongside, other_simulators() - 1)
     finally:
         stop(proc, case_dir)
@@ -340,7 +469,10 @@ def run(cfg, overrides, case_id, instance):
     except (OSError, ValueError, KeyError) as error:
         flight["aero_log_error"] = repr(error)
     passed, reasons = metrics.verdict(flight, figures)
-    record = {"case": case_id, "passed": passed, "reasons": reasons, "overrides": overrides,
+    safe, unsafe = metrics.outcome(flight, figures)
+    record = {"case": case_id, "passed": passed, "reasons": reasons, "safe": safe,
+              "safe_reasons": unsafe, "overrides": overrides,
+              "event": None if event is None else "{}@{}+{:g}".format(*event),
               "model_revision": gz_model.MODEL_REVISION, "manifest": str(case_dir / "manifest.json"),
               "derived": gz_model.derived(p), "flight": flight, "figures": figures,
               "log": str(logs[-1]) if logs else None}
@@ -407,18 +539,22 @@ def main():
     parser.add_argument("--instance", type=int, default=5,
                         help="PX4 instance number; sets the MAVLink port (14540 + instance)")
     parser.add_argument("--json", help="also write the record to this file")
+    parser.add_argument("--event", metavar="NAME@PHASE+SECONDS",
+                        help="inject an event: " + "; ".join(f"{k}: {v}" for k, v in EVENTS.items()))
     args = parser.parse_args()
 
     cfg = config.load(args.mission)
     try:
         cfg["px4_params"].update(config.assignments(args.px4))
         overrides = config.assignments(args.set)
+        event = parse_event(args.event) if args.event else None
     except ValueError as error:
         parser.error(str(error))
-    record = run(cfg, overrides, args.case, args.instance)
+    record = run(cfg, overrides, args.case, args.instance, event)
     if args.json:
         Path(args.json).write_text(json.dumps(record, indent=1))
-    print(json.dumps({k: record[k] for k in ("case", "passed", "reasons", "figures")}, indent=1))
+    print(json.dumps({k: record[k] for k in ("case", "passed", "reasons", "safe", "safe_reasons",
+                                             "figures")}, indent=1))
     print("derived:", json.dumps(record["derived"]))
     print("phases:", json.dumps(record["flight"]["phases"]))
     for line in record["flight"]["px4_warnings"]:

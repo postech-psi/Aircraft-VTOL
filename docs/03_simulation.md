@@ -37,6 +37,24 @@ bash simulation/docker_run.sh python3 -m psi_vtol.sim.run_case --px4 MC_YAW_P=0.
 `--set`으로 기체 값을 바꿔도 PX4에 알려 주는 모터 기하는 기준값 그대로입니다. 실제 기체가 PX4가 아는
 것과 다른 상황을 흉내 내기 위해서입니다.
 
+비행 중에 일이 생기게 하려면 `--event 이름@단계+초`를 씁니다. 그 단계에 들어가고 정한 초가 지나면(단계가
+그보다 짧으면 단계가 끝날 때) 일어납니다.
+
+```bash
+bash simulation/docker_run.sh python3 -m psi_vtol.sim.run_case --event pusher_off@cruise2+1
+```
+
+| 이름 | 일어나는 일 |
+|---|---|
+| `abort` | 임무 중단. 탑재 failsafe처럼 부드럽게 멈춘 뒤 PX4 Hold로 넘김 |
+| `silence` | setpoint가 끊김(Jetson이 죽은 경우). PX4의 offboard 상실 동작이 처리 |
+| `transition` | 고정익 천이 명령(버튼이나 스위치를 잘못 누른 경우) |
+| `pusher_off` | 푸셔 추력이 0이 됨. 공력 플러그인이 끄고, PX4에는 알리지 않음 |
+| `battery` | 배터리가 몇 초 만에 위험 수준(7%)까지 떨어짐. 비상 수준(5%)에는 닿지 않음. PX4의 배터리 failsafe가 처리 |
+
+PX4 v1.17의 고장 주입은 ESC 텔레메트리만 지우고 모터는 그대로 돌기 때문에, 푸셔는 플러그인에서 끕니다
+(`/model/psi_qp_<instance>/rotor_off` 토픽에 joint 이름). GPS 상실은 Gazebo에서 주입할 수 없습니다.
+
 ## 2. 한 번의 실행 과정
 
 1. 기체·PX4·임무 YAML을 읽어 케이스 값을 정합니다.
@@ -47,7 +65,13 @@ bash simulation/docker_run.sh python3 -m psi_vtol.sim.run_case --px4 MC_YAW_P=0.
    흐릅니다.
 5. PX4 ULog와 플러그인이 쓴 `aero.csv`를 읽어 지표를 계산하고 합격 여부를 정합니다.
 
-비행 중에 다음 중 하나가 일어나면 즉시 중단하고 실패로 기록합니다.
+프로파일이 경로를 따라가지 못함을 알아채거나, 단계가 시간 상한을 넘기거나, 임무가 중단되면 runner는 탑재
+노드와 같은 일을 합니다. 기체를 부드럽게 멈추고(`profile.Stop`) PX4 Hold에 넘기며, 푸셔 고장이면 Land에
+넘깁니다. 그 뒤 기체가 내려올 때까지 따라갑니다. Hold는 15초 지켜본 뒤 조종자가 하듯 Land를 명령하고,
+Return이나 Land는 PX4에 맡깁니다. PX4가 스스로 offboard에서 빠졌을 때도 같습니다. 이런 실행은 임무를 마치지 못했으므로 실패지만, 따로
+`safe`(전복 없이, tilt 30° 이하로, 1 m/s 이하로 착지)를 기록합니다.
+
+다음 중 하나가 일어나면 즉시 중단하고 실패로 기록합니다.
 
 - 단계 시간 상한 초과([비행 순서](02_control_concept.md#1-비행-순서))
 - roll 또는 pitch 60° 초과
@@ -142,7 +166,7 @@ Gazebo WindEffects가 world의 바람을 바꾸고 플러그인이 그 값을 �
 | 전류, ESC 제한, 발열, 배터리 SOC | 비행 시간, 효율, 열 여유 |
 | 프로펠러 자이로 효과, 구조 진동 | 진동과 구조 모드의 영향 |
 | 지면 효과, 착륙 다리와 충격 | 착륙 충격과 구조 하중 |
-| 센서·액추에이터 고장, 통신 지연 분포 | 고장 시 동작, 실패 확률 |
+| 푸셔 외의 모터 고장, 센서 고장, 통신 지연 분포 | 그런 고장 시 동작, 실패 확률 |
 | 대기속도에 따른 자동 속도 제한, custom 제어 | stock PX4보다 나은 제어의 효과 |
 | 목적지 좌표, 거리 기준 제동, 장애물 회피, vision | 목적지 도착 정확도, 정밀 착륙 |
 
@@ -159,17 +183,20 @@ Gazebo WindEffects가 world의 바람을 바꾸고 플러그인이 그 값을 �
 |---|---|---|
 | roll 또는 pitch 절댓값 | ≤ 30° | 상승 시작부터 착륙 끝까지 |
 | 고도 오차 | ≤ 3 m | 첫 호버부터 마지막 경유점 호버 끝까지 |
-| 리프트 모터 상한/하한 도달 비율 | 각각 ≤ 5% | 각 구간의 가속–감속, 어느 모터든 ≥ 0.98 / ≤ 0.05 |
-| 푸셔 포화 비율 | ≤ 10% | 각 구간의 가속–감속, 명령 ≥ 0.88 |
-| 토크 미달 비율 / 최장 연속 시간 | ≤ 10% / ≤ 1초 | 각 구간의 가속–감속 |
-| 기수 오차(요구 기수 대비) | ≤ 20° | 각 구간의 가속–감속 |
-| 구간 직선에서 벗어난 거리 | ≤ 3 m | 각 구간의 가속–감속 |
+| 리프트 모터 상한/하한 도달 비율 | 각각 ≤ 5% | 각 구간의 가속–감속과 모서리, 어느 모터든 ≥ 0.98 / ≤ 0.05 |
+| 푸셔 포화 비율 | ≤ 10% | 각 구간의 가속–감속과 모서리, 명령 ≥ 0.88 |
+| 토크 미달 비율 / 최장 연속 시간 | ≤ 10% / ≤ 1초 | 각 구간의 가속–감속과 모서리 |
+| 기수 오차(요구 기수 대비) | ≤ 20° | 각 구간의 가속–감속과 모서리 |
+| 계획한 경로(모서리 곡선 포함)에서 벗어난 거리 | ≤ 3 m | 각 구간의 가속–감속, 모서리 |
 | 순항 속도 오차(그 구간의 속도 대비) | ≤ 1 m/s | 각 구간 순항의 마지막 5초 |
 | 착륙 위치 오차(마지막 경유점 기준) / 속력 | ≤ 2 m / ≤ 1 m/s | land detector가 처음 접지를 알린 시점 / 그 전 3초의 최대 속력 |
 | ULog / 공력 로그 최대 공백 | ≤ 1초 / ≤ 0.5초 | ULog는 비행 구간, 공력은 전체 |
 | 주익 수직 힘 / 무게 | ≤ 40% | 공력 로그 전체 |
 
-이 밖에 임무 완료, land detector의 착륙 확인, 비행 전체를 덮는 `aero.csv`가 있어야 합니다.
+이 밖에 임무 완료, land detector의 착륙 확인, 비행 전체를 덮는 `aero.csv`가 있어야 합니다. 계획에 순항
+단계가 하나도 없으면(정사각형을 6 m/s 이상으로 통과 비행하면 모서리 사이에서 가속과 감속만 함) 순항 속도
+오차는 보지 않습니다. 대신 기체가 기준점보다 가장 많이 뒤처진 거리(`lag_max_m`)를 기록합니다. 판정에는
+쓰지 않고, 8 m를 넘으면 프로파일이 비행 중에 고장으로 처리합니다.
 
 지표를 읽을 때 알아 둘 점:
 
@@ -178,7 +205,7 @@ Gazebo WindEffects가 world의 바람을 바꾸고 플러그인이 그 값을 �
 - 포화 비율은 명령값을 기준으로 하므로 N 단위의 추력 여유와는 다릅니다.
 - 착륙 속력은 land detector가 처음 접지(`ground_contact`, 없으면 `maybe_landed`나 `landed`)를 알리기
   전 3초 동안의 최대 EKF 속력입니다. PX4는 기체가 멈춘 뒤에야 접지를 알리므로 그 순간의 속력은 거의
-  0입니다. 정상적인 Land라면 하강 속도(`MPC_LAND_SPEED` 0.7 m/s) 근처가 나옵니다. 2026-10-13
+  0입니다. 정상적인 Land라면 하강 속도(`MPC_LAND_SPEED` 0.5 m/s) 근처가 나옵니다. 2026-10-13
   실행까지는 접지를 알린 순간의 속력을 썼기 때문에 그 기록(0.03–0.11 m/s)은 충격 속도가 아닙니다.
 - 고도 오차는 상승이 끝난 뒤부터 하강 전까지만 봅니다. 상승·하강 중 수직 추종은 단계 도달 여부, 시간 상한, 전 구간
   tilt로만 감시합니다.
@@ -190,6 +217,7 @@ bash simulation/docker_run.sh python3 -m psi_vtol.sim.sweep oat
 bash simulation/docker_run.sh python3 -m psi_vtol.sim.sweep wind
 bash simulation/docker_run.sh python3 -m psi_vtol.sim.sweep corners
 bash simulation/docker_run.sh python3 -m psi_vtol.sim.sweep random --n 100 --seed 1
+bash simulation/docker_run.sh python3 -m psi_vtol.sim.sweep scenarios
 bash simulation/docker_run.sh python3 -m psi_vtol.plots
 ```
 
@@ -205,6 +233,7 @@ bash simulation/docker_run.sh python3 -m psi_vtol.plots
 | `wind` | 2/4/6/8 m/s × 8방향 × 기수 유지 정책 2가지 | 64 |
 | `corners` | 여러 불리한 조건을 일부러 겹친 시험 | 7 |
 | `random` | 모든 값을 범위 안에서 균등하게 무작위로 | `--n` |
+| `scenarios` | 순항 3–7 m/s × 통과 비행/멈춰서 돌기, 돌풍 섞인 6 m/s 바람, 위 다섯 가지 사건 | 30 |
 
 - 범위는 `study.yaml`의 `sweep`에 있습니다. random은 이 순서대로 값을 뽑으므로 순서를 바꾸면 같은
   seed라도 다른 기체가 나옵니다.
@@ -212,6 +241,8 @@ bash simulation/docker_run.sh python3 -m psi_vtol.plots
   그대로라서 실패할 수 있습니다.
 - corner는 실패 조건을 찾으려는 시험이므로, 통과하도록 수치를 맞추지 않습니다.
 - random은 정한 범위에서 고르게 뽑은 표본이라 통과율을 실제 성공 확률로 읽을 수 없습니다.
+- scenarios의 사건 케이스는 임무 합격이 아니라 결과로 판정합니다. 안전하게 내려왔는지(`safe`)와, 그
+  사건에 대해 기대한 대응이 있었는지(`sweep.EXPECTED`, 예: 푸셔 고장이면 고장을 알아채고 Land)를 봅니다.
 
 ### 결과 파일
 
@@ -225,7 +256,7 @@ bash simulation/docker_run.sh python3 -m psi_vtol.plots
 | `runtime_env.json` | Gazebo partition 등 실행 환경 |
 | `px4.log`, `log/.../*.ulg` | PX4 콘솔 출력, ULog |
 | `aero.csv` | 약 20 Hz로 기록한 Gazebo 시간, 대기속도, 주익 수직 힘과 비율, 전압 비율, 로터별 추력 |
-| `result.json` | 단계 시간, 실효 파라미터 덤프, 지표, 실패 이유 |
+| `result.json` | 단계 시간, 실효 파라미터 덤프, 지표, 실패 이유. 사건이 있었으면 그 시각, failsafe 이유와 넘긴 모드, PX4가 거친 모드, `safe` |
 
 - 전체 파라미터 덤프는 30초 안에 다 받지 못하면 `complete: false`로 남습니다. 요청한 파라미터는 이와
   별개로 하나씩 응답값을 확인합니다.

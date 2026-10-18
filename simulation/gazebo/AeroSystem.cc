@@ -3,9 +3,12 @@
 #include <chrono>
 #include <fstream>
 #include <iomanip>
+#include <mutex>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <gz/msgs/stringmsg.pb.h>
 #include <gz/plugin/Register.hh>
 #include <gz/sim/Link.hh>
 #include <gz/sim/Model.hh>
@@ -13,6 +16,7 @@
 #include <gz/sim/components/JointVelocity.hh>
 #include <gz/sim/components/Wind.hh>
 #include <gz/sim/components/LinearVelocity.hh>
+#include <gz/transport/Node.hh>
 #include <sdf/Element.hh>
 
 namespace psi {
@@ -25,6 +29,7 @@ struct Rotor {
   std::string joint;
   Vec position{}, axis{};
   double maxSpeed{}, maxThrust{}, moment{}, sign{}, inflow{}, drag{}, interaction{};
+  bool off{false};  // failed: the stock motor model still spins it, this system cancels its thrust
   gz::sim::Entity entity{gz::sim::kNullEntity};
 };
 class AeroSystem final : public gz::sim::System,
@@ -66,6 +71,10 @@ class AeroSystem final : public gz::sim::System,
       if (r.entity==gz::sim::kNullEntity) throw std::runtime_error("PSI AeroSystem: missing rotor joint");
       rotors.push_back(r);
     }
+    // A rotor fails when its joint name is published here, e.g. by run_case --event pusher_off.
+    const auto topic="/model/"+model.Name(ecm)+"/rotor_off";
+    if (!node.Subscribe(topic,&AeroSystem::OnRotorOff,this))
+      throw std::runtime_error("PSI AeroSystem: cannot subscribe to "+topic);
     const auto output=get(e,"telemetry_path",std::string());
     if (!output.empty()) {
       telemetry.open(output);
@@ -98,16 +107,21 @@ class AeroSystem final : public gz::sim::System,
       total.force=total.force+f.force; total.torque=total.torque+f.torque;
       if (i<2) wingVertical+=rotation.RotateVector(vector(f.force)).Z();
     }
+    {
+      std::lock_guard<std::mutex> lock(failedMutex);
+      for (auto &r:rotors) r.off=failed.count(r.joint)>0;
+    }
     std::vector<double> thrusts;
     for (const auto &r:rotors) {
+      const double interaction=r.off ? 0. : r.interaction;
       auto joint=ecm.Component<gz::sim::components::JointVelocity>(r.entity);
       const double fraction=(joint && !joint->Data().empty()) ?
         std::clamp(std::abs(joint->Data()[0])*slowdown/r.maxSpeed,0.,1.) : 0.;
       const auto f=rotorCorrection(velocity,rate,r.position,r.axis,fraction,r.maxThrust,
-                                  r.moment,r.sign,r.inflow,voltage,r.interaction,r.drag);
+                                  r.moment,r.sign,r.inflow,voltage,interaction,r.drag);
       total.force=total.force+f.force; total.torque=total.torque+f.torque;
       thrusts.push_back(r.maxThrust*fraction*fraction*thrustFraction(fraction,
-        (velocity+rate.cross(r.position)).dot(r.axis),r.inflow,voltage,r.interaction));
+        (velocity+rate.cross(r.position)).dot(r.axis),r.inflow,voltage,interaction));
     }
     // AddWorldWrench uses the link origin. The physics engine accounts for the inertial CG offset.
     link.AddWorldWrench(ecm,rotation.RotateVector(vector(total.force)),rotation.RotateVector(vector(total.torque)));
@@ -118,6 +132,13 @@ class AeroSystem final : public gz::sim::System,
     }
   }
  private:
+  void OnRotorOff(const gz::msgs::StringMsg &msg) {
+    std::lock_guard<std::mutex> lock(failedMutex);
+    failed.insert(msg.data());
+  }
+  gz::transport::Node node;
+  std::mutex failedMutex;
+  std::set<std::string> failed;
   gz::sim::Link link;
   std::vector<Surface> surfaces;
   std::vector<Rotor> rotors;

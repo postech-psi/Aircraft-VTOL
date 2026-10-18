@@ -170,6 +170,33 @@ def test_runner_failure_never_reuses_old_success(monkeypatch, tmp_path):
     assert instances.get_nowait() == 5
 
 
+def test_an_event_reaches_the_runner(monkeypatch, tmp_path):
+    import queue
+    monkeypatch.setattr(config, "REPO", tmp_path)
+    (tmp_path / "out/test" / sweep.MODEL_REVISION / "scenarios").mkdir(parents=True)
+    commands = []
+    def run(cmd, **kwargs):
+        commands.append(cmd)
+        return SimpleNamespace(returncode=1, stderr="failed")
+    monkeypatch.setattr(sweep.subprocess, "run", run)
+    instances = queue.Queue()
+    instances.put(5)
+    sweep.run_one("abort", {"event": "abort@cruise2+1.5", "cruise_mps": 7.0}, {}, "test", instances,
+                  "scenarios")
+    cmd = commands[0]
+    assert cmd[cmd.index("--event") + 1] == "abort@cruise2+1.5"
+    assert cmd[cmd.index("--set") + 1] == "cruise_mps=7.0"
+
+
+def test_the_pusher_is_stopped_in_this_runs_gazebo(monkeypatch):
+    calls = []
+    monkeypatch.setattr(run_case.subprocess, "Popen", lambda cmd, **kw: calls.append((cmd, kw["env"])))
+    run_case.pusher_off(7, {"GZ_PARTITION": "psi_qp_7_x"})
+    cmd, env = calls[0]
+    assert cmd[cmd.index("-t") + 1] == "/model/psi_qp_7/rotor_off"
+    assert "rotor_pusher_joint" in cmd[-1] and env["GZ_PARTITION"] == "psi_qp_7_x"
+
+
 def test_parameter_requests_are_repeated_until_px4_answers(monkeypatch):
     """PX4 drops requests that arrive while it is still starting; MAVLink over UDP can lose any."""
     class Px4:

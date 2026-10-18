@@ -101,6 +101,17 @@ def aero_metrics(path):
             "voltage_ratio_min": min(float(r["voltage_ratio"]) for r in rows)}
 
 
+def _distance_to_path(north, east, path):
+    """Distance from each point to the nearest of the path's segments; path: (n, 2) array."""
+    a, b = path[:-1], path[1:]
+    d = b - a
+    length2 = np.maximum((d ** 2).sum(axis=1), 1e-12)
+    p = np.stack([north, east], axis=1)[:, None, :]
+    u = np.clip(((p - a) * d).sum(axis=2) / length2, 0.0, 1.0)
+    nearest = a + u[..., None] * d
+    return np.sqrt(((p - nearest) ** 2).sum(axis=2)).min(axis=1)
+
+
 def _mask(data, spans):
     m = np.zeros(len(data["timestamp"]), dtype=bool)
     for span in spans:
@@ -118,14 +129,15 @@ def compute(ulog_path, flight):
     # Spans of the phases flown, also of an aborted flight: its diagnostics are kept, and the
     # missing completion and landing still fail it.
     airborne = (ph["climb"][0], max(end for _, end in ph.values())) if "climb" in ph else None
-    route = [ph[name][1] for name in ph if name not in ("climb", "descend", "land")]
+    route = [ph[name][1] for name in ph if name not in ("climb", "descend", "land", "stop", "px4")]
     level = (ph["hover1"][0], max(route)) if "hover1" in ph else None
-    forward = {}            # leg number -> from the start of its speed-up to the end of its slow-down
-    for name in ph:
-        if name.startswith("accel") and name[5:].isdigit():
-            i = int(name[5:])
-            last = next(f"{k}{i}" for k in ("decel", "cruise", "accel") if f"{k}{i}" in ph)
-            forward[i] = (ph[name][0], ph[last][1])
+    forward = {}            # leg number -> from the first to the last moment it was flown forward
+    for name, (start, end) in ph.items():
+        kind = name.rstrip("0123456789")
+        if kind in ("accel", "cruise", "decel", "corner") and name[len(kind):].isdigit():
+            i = int(name[len(kind):])         # corner<i> is the turn from leg i to leg i+1
+            first, last = forward.get(i, (start, end))
+            forward[i] = (min(first, start), max(last, end))
     late = {i: (max(ph[f"cruise{i}"][0], ph[f"cruise{i}"][1] - 5.0), ph[f"cruise{i}"][1])
             for i in forward if f"cruise{i}" in ph}         # after the speed has settled
 
@@ -161,13 +173,18 @@ def compute(ulog_path, flight):
                 yaw_sp = np.unwrap(np.radians(_euler_deg(asked, "q_d")[2]))
                 yaw_sp = np.degrees(np.interp(att["timestamp"][m], asked["timestamp"], yaw_sp))
                 out["fwd_yaw_err_max_deg"] = float(np.abs(_wrap_deg(yaw[m] - yaw_sp)).max())
-        cross = []          # distance to the left or right of each leg's line
-        for i, span in forward.items():
-            m = _window(pos, span)
-            if m.any() and i <= len(legs):
-                leg = legs[i - 1]
-                dn, de = pos["x"][m] - leg["start"][0], pos["y"][m] - leg["start"][1]
-                cross.append(np.abs(-dn * math.sin(leg["heading"]) + de * math.cos(leg["heading"])).max())
+        cross = []          # distance from the path planned, corners included
+        if flight.get("path"):
+            m = _mask(pos, forward.values())
+            if m.any():
+                cross.append(_distance_to_path(pos["x"][m], pos["y"][m], np.asarray(flight["path"])).max())
+        else:               # older records: to the left or right of each leg's line
+            for i, span in forward.items():
+                m = _window(pos, span)
+                if m.any() and i <= len(legs):
+                    leg = legs[i - 1]
+                    dn, de = pos["x"][m] - leg["start"][0], pos["y"][m] - leg["start"][1]
+                    cross.append(np.abs(-dn * math.sin(leg["heading"]) + de * math.cos(leg["heading"])).max())
         if cross:
             out["cross_track_max_m"] = float(max(cross))
         m = _mask(mot, forward.values())
@@ -218,11 +235,27 @@ def compute(ulog_path, flight):
             m = _mask(air, late.values())
             if m.any():
                 out["cruise_airspeed_mps"] = float(np.nanmean(air["true_airspeed_m_s"][m]))
+    # a failsafe: the stop, and PX4 flying on its own until it is down
+    if "stop" in ph:
+        m = _window(att, ph["stop"])
+        if m.any():
+            out["stop_tilt_max_deg"] = float(np.abs(np.stack([roll[m], pitch[m]])).max())
+        m = _window(pos, ph["stop"])
+        if m.any():
+            i, j = np.flatnonzero(m)[[0, -1]]
+            out["stop_distance_m"] = float(math.hypot(pos["x"][j] - pos["x"][i], pos["y"][j] - pos["y"][i]))
+    if "px4" in ph:
+        m = _window(att, ph["px4"])
+        if m.any():
+            out["px4_tilt_max_deg"] = float(np.abs(np.stack([roll[m], pitch[m]])).max())
+    if "lag_max_m" in flight:
+        out["lag_max_m"] = flight["lag_max_m"]
     if "touchdown_err_m" in flight:
         out["touchdown_err_m"] = flight["touchdown_err_m"]
     landed = _topic(ulog, "vehicle_land_detected")
-    if landed is not None and "land" in ph:
-        m = _window(landed, ph["land"])
+    landing = ph.get("land") or ph.get("px4")
+    if landed is not None and landing:
+        m = _window(landed, landing)
         out["landed_confirmed"] = bool(m.any() and landed["landed"][m][-1])
         flags = [landed[f].astype(bool) for f in ("ground_contact", "maybe_landed", "landed") if f in landed]
         contact = m & np.logical_or.reduce(flags)
@@ -240,6 +273,24 @@ def compute(ulog_path, flight):
     return out
 
 
+def outcome(flight, figures):
+    """(safe, reasons): down on the ground unharmed, whether or not the mission was flown.
+
+    This is what an injected event is judged by: the mission cannot pass, but the failsafe can.
+    """
+    reasons = []
+    if "tumbled" in (flight["fail_reason"] or ""):
+        reasons.append(flight["fail_reason"])
+    if not figures.get("landed_confirmed", False):
+        reasons.append("touchdown not confirmed by land detector")
+    for name in ("tilt_max_deg", "touchdown_speed_mps"):
+        if not math.isfinite(figures.get(name, math.nan)):
+            reasons.append(f"{name} missing")
+        elif figures[name] > LIMITS[name]:
+            reasons.append(f"{name} {figures[name]:.2f} > {LIMITS[name]}")
+    return (not reasons, reasons)
+
+
 def verdict(flight, figures):
     """(passed, reasons)."""
     reasons = []
@@ -249,7 +300,11 @@ def verdict(flight, figures):
         reasons.append("touchdown not confirmed by land detector")
     if not figures.get("aero_covers_flight", False):
         reasons.append("aerodynamic telemetry missing or incomplete")
+    # a plan that only speeds up and slows down between corners has no cruise to judge
+    cruise = any(n.startswith("cruise") for n in flight.get("phases", {})) or not flight.get("phases")
     for name, limit in LIMITS.items():
+        if name == "cruise_speed_err_mps" and not cruise:
+            continue
         if name not in figures:
             reasons.append(f"{name} missing")
         elif not math.isfinite(figures[name]):

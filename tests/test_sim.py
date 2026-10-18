@@ -4,7 +4,7 @@ import xml.etree.ElementTree as ET
 import pytest
 
 from psi_vtol import config
-from psi_vtol.sim import gz_model, metrics, sweep
+from psi_vtol.sim import gz_model, metrics, run_case, sweep
 
 CFG = config.load()
 NOMINAL = CFG["nominal"]
@@ -79,12 +79,58 @@ def test_studies_cover_the_new_uncertainties():
     assert all(set(overrides) == set(CFG["sweep"]) for _, overrides in random)
 
 
+def test_scenarios_fly_every_speed_in_both_modes_and_each_event():
+    cases = dict(sweep.scenario_cases())
+    for through in (0, 1):
+        speeds = {c["cruise_mps"] for c in cases.values()
+                  if c.get("fly_through") == through and "event" not in c and "wind_speed_mps" not in c}
+        assert speeds == {3.0, 4.0, 5.0, 6.0, 7.0}
+    events = {c["event"].partition("@")[0] for c in cases.values() if "event" in c}
+    assert events == set(sweep.EXPECTED) == set(run_case.EVENTS)
+    for c in cases.values():
+        if "event" in c:
+            run_case.parse_event(c["event"])
+
+
+def test_an_event_case_is_judged_by_the_response_it_tests():
+    def record(event, **flight):
+        return {"event": event, "flight": {"event": {"name": event.partition("@")[0]}, **flight}}
+    assert sweep.expected_response({"event": None, "flight": {}}) == (True, "")
+    assert sweep.expected_response(record("abort@cruise2+1",
+        failsafe={"handed_to": "Hold"}, px4_modes=["Offboard", "Hold", "Land"]))[0]
+    assert not sweep.expected_response(record("abort@cruise2+1", failsafe={"handed_to": "Land"}))[0]
+    assert sweep.expected_response(record("silence@cruise2+1", px4_modes=["Hold", "Land"]))[0]
+    assert not sweep.expected_response(record("silence@cruise2+1", px4_modes=["Position"]))[0]
+    pusher = record("pusher_off@cruise2+1", failsafe={"reason": "pusher: losing speed", "handed_to": "Land"})
+    assert sweep.expected_response(pusher)[0]
+    assert not sweep.expected_response(record("pusher_off@cruise2+1",
+        failsafe={"reason": "falling behind the route", "handed_to": "Hold"}))[0]
+    assert sweep.expected_response(record("transition@hover1+2", completed=True))[0]
+    assert sweep.expected_response(record("battery@cruise2+1", px4_modes=["Offboard", "Return"],
+                                          after={"from_home_m": 0.4}))[0]
+    assert not sweep.expected_response(record("battery@cruise2+1", px4_modes=["Land"],
+                                              after={"from_home_m": 40.0}))[0]
+    assert not sweep.expected_response({"event": "abort@cruise9+1", "flight": {}})[0]   # never fired
+
+
+def test_a_failsafe_is_safe_when_it_ends_on_the_ground_unharmed():
+    down = {"landed_confirmed": True, "tilt_max_deg": 12.0, "touchdown_speed_mps": 0.5}
+    assert metrics.outcome({"fail_reason": "mission aborted"}, down) == (True, [])
+    assert not metrics.outcome({"fail_reason": "mission aborted; tumbled"}, down)[0]
+    assert not metrics.outcome({"fail_reason": None}, dict(down, landed_confirmed=False))[0]
+    assert not metrics.outcome({"fail_reason": None}, dict(down, touchdown_speed_mps=1.5))[0]
+
+
 def test_verdict_needs_a_complete_flight_inside_every_limit():
     good = dict({name: 0.0 for name in metrics.LIMITS}, landed_confirmed=True, aero_covers_flight=True)
     assert metrics.verdict({"completed": True}, good) == (True, [])
     assert not metrics.verdict({"completed": False, "fail_reason": "tumbled in cruise"}, good)[0]
     assert not metrics.verdict({"completed": True}, dict(good, tilt_max_deg=31.0))[0]
     assert not metrics.verdict({"completed": True}, {})[0]      # a missing figure is not a pass
+    no_cruise = {"completed": True, "phases": {"accel1": [0, 5], "decel1": [5, 10]}}
+    assert metrics.verdict(no_cruise, {k: v for k, v in good.items() if k != "cruise_speed_err_mps"})[0]
+    cruise = {"completed": True, "phases": {"accel1": [0, 5], "cruise1": [5, 8]}}
+    assert not metrics.verdict(cruise, {k: v for k, v in good.items() if k != "cruise_speed_err_mps"})[0]
 
 
 @pytest.mark.parametrize("name", list(metrics.LIMITS))

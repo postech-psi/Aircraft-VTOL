@@ -198,6 +198,7 @@ class Profile:
         self.hold = None            # the point aligned over, descended over and landed on
         self.done = False
         self.fault = None
+        self.lag_max = 0.0          # farthest the vehicle has been behind the reference [m]
         self._t0 = self._run_t0 = None      # start of the current phase, and of its stretch
         self._along = []            # (t, along-track speed) of the last second in a stretch
         self._slowing_since = None
@@ -380,6 +381,7 @@ class Profile:
         # faults seen from the position: not moving forward at all, losing speed for no reason,
         # or far behind the point. The first two mean no forward thrust: the pusher.
         lag = (n - pos[0]) * c + (e - pos[1]) * sn
+        self.lag_max = max(self.lag_max, lag)
         along = vel[0] * c + vel[1] * sn
         self._along = [(ti, u) for ti, u in self._along if t - ti <= 1.0] + [(t, along)]
         decel = (self._along[0][1] - along) / max(t - self._along[0][0], 0.5)
