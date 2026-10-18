@@ -866,6 +866,105 @@ def wing_share_curve():
     save(fig, "fig5_wing_share")
 
 
+def route_plan(name="fig11_route_plan"):
+    """The planned route of the mission file: its path, curvature, speed and accelerations."""
+    from psi_vtol.profile import Profile
+    p = config.profile()
+    run = Profile(p, (0.0, 0.0, 0.0), 0.0).runs[0]       # facing north: forward is north
+    path, plan = run["path"], run["plan"]
+    t = np.linspace(0.0, plan.duration, 4000)
+    s, v, a = np.array([plan.state(x)[:3] for x in t]).T
+    curv = np.array([path.at(x)[3] for x in s])
+    lateral = v * v * curv
+    with np.errstate(divide="ignore"):
+        corner_limit = np.where(curv > 1e-6, np.sqrt(p["lateral_mps2"] / curv), np.nan)
+
+    fig = plt.figure(figsize=(11.0, 5.6))
+    cols = fig.add_gridspec(1, 2, width_ratios=[1.0, 1.5], wspace=0.22)
+    track = fig.add_subplot(cols[0])
+    rows = cols[1].subgridspec(3, 1, hspace=0.14)
+    axes = [fig.add_subplot(rows[0])]
+    axes += [fig.add_subplot(rows[i], sharex=axes[0]) for i in (1, 2)]
+
+    # the square from above: forward up, right to the right (route_m is forward, left)
+    corners = [(0.0, 0.0)] + [(f_, -l_) for f_, l_ in p["route_m"]]
+    fwd, right = zip(*corners)
+    track.plot(right, fwd, color=AXIS, lw=1.0, ls=(0, (3, 2)), label="Lines between the waypoints")
+    pts = np.array(path.polyline(0.2))
+    track.plot(pts[:, 1], pts[:, 0], color=BLUE, lw=1.8, label="Planned path")
+    start = 0.0
+    for kind, _, length, *_ in path.sections:
+        if kind == "turn":
+            for x in (start, start + length):
+                n, e, _, _ = path.at(x)
+                track.plot(e, n, "o", ms=4.5, color=BLUE, markeredgecolor=SURFACE, markeredgewidth=1.0)
+        start += length
+    for i, (f_, r_) in enumerate(corners[1:-1], 1):
+        track.plot(r_, f_, "o", ms=13, color=SURFACE, markeredgecolor=INK2, markeredgewidth=1.0, zorder=5)
+        track.text(r_, f_, str(i), ha="center", va="center", fontsize=7.5, color=INK, zorder=6)
+    track.plot(0, 0, "s", ms=7, color=INK, zorder=6)
+    track.annotate("Take-off and landing", (0, 0), xytext=(8, 8), textcoords="offset points",
+                   fontsize=7.5, color=INK2)
+    middle = path.at(path.sections[0][2] + path.sections[1][2] / 2)
+    track.annotate(f"A corner of {p['turn_radius_m']:g} m radius,\nentered and left at the dots",
+                   (middle[1], middle[0]), xytext=(28, -36), textcoords="offset points", ha="left",
+                   fontsize=7.5, color=INK2, arrowprops=dict(arrowstyle="-", color=MUTED, lw=0.8))
+    track.set_aspect("equal")
+    track.set_xlabel("To the right of the take-off heading (m)")
+    track.set_ylabel("Forward along the take-off heading (m)")
+    track.margins(0.12)
+    track.legend(loc="center", bbox_to_anchor=(0.5, 0.42))
+
+    for ax in axes:                         # the corners, shaded on every panel
+        for label, _, t0, _, _, duration, _ in plan.pieces:
+            if label == "corner":
+                ax.axvspan(t0, t0 + duration, color=GRID, lw=0, zorder=0)
+        ax.grid(axis="x", visible=False)
+        ax.tick_params(axis="x", labelbottom=ax is axes[-1])
+        ax.yaxis.set_label_coords(-0.07, 0.5)
+
+    ax = axes[0]
+    ax.plot(t, curv, color=BLUE)
+    ax.axhline(1 / p["turn_radius_m"], color=MUTED, lw=0.9, ls=(0, (3, 2)))
+    ax.text(plan.duration, 1 / p["turn_radius_m"], f"1 / {p['turn_radius_m']:g} m", fontsize=7,
+            color=INK2, ha="right", va="bottom")
+    ax.set_ylim(0, 1.45 / p["turn_radius_m"])
+    ax.set_ylabel("Curvature\n(1/m)")
+
+    ax = axes[1]
+    ax.plot(t, corner_limit, color=MUTED, lw=1.0, ls=(0, (3, 2)),
+            label=f"Corner limit: sqrt({p['lateral_mps2']:g} m/s² / curvature)")
+    ax.plot(t, v, color=BLUE, label="Planned speed")
+    ax.set_ylim(0, p["cruise_mps"] * 1.45)
+    ax.set_ylabel("Speed\n(m/s)")
+    ax.legend(loc="lower center", ncol=2)
+
+    ax = axes[2]
+    ax.plot(t, a, color=BLUE, label="Along the path")
+    ax.plot(t, lateral, color=ORANGE, label="Sideways, into the corner")
+    for level, text in ((p["lateral_mps2"], "sideways limit"), (p["accel_mps2"], "along limit"),
+                        (-p["accel_mps2"], "along limit")):
+        ax.axhline(level, color=MUTED, lw=0.9, ls=(0, (3, 2)))
+        ax.text(plan.duration * 0.985, level, text, fontsize=7, color=INK2, ha="right",
+                va="bottom" if level > 0 else "top")
+    ax.set_ylim(-1.6, 3.0)
+    ax.set_ylabel("Acceleration\n(m/s²)")
+    ax.set_xlabel("Time from the first speed-up (s)")
+    ax.set_xlim(0, plan.duration)
+    ax.legend(loc="upper center", ncol=2)
+
+    footnote(fig, "Computed from missions/2026_year_end/mission.yaml by psi_vtol/trajectory.py; "
+             "no simulation involved. Darker strips: the corners.")
+    heading(fig, f"The route is planned before take-off: straight legs, {p['turn_radius_m']:g} m corners "
+            "the bank eases into, and no step in speed",
+            f"The default square at {p['cruise_mps']:g} m/s. Each corner's curvature rises and falls over "
+            f"{max(1.0, p['cruise_mps'] * p['brake_ramp_s']):g} m, so the vehicle banks in gradually. "
+            f"Every speed change builds its acceleration up\nand takes it off over {p['brake_ramp_s']:g} s "
+            f"(at most {p['accel_mps2']:g} m/s² along, {p['lateral_mps2']:g} m/s² sideways), and the speed "
+            "reaches zero exactly on the last waypoint.")
+    save(fig, name)
+
+
 def main():
     global CFG, FIGURES
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
@@ -894,6 +993,7 @@ def main():
 
     vehicle_plan()
     wing_share_curve()
+    route_plan()
     if args.flight:
         flight(load(args.flight), args.flight_label,
                load(args.compare) if args.compare else None, args.compare_label, args.flight_name)
