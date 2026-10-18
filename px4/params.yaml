@@ -22,9 +22,8 @@ concept:
 # Values that belong to one vehicle. These are the simulated vehicle's, not the real one's.
 per_vehicle:
   VT_FWD_THRUST_SC: 2.75      # weight / pusher maximum thrust; real value from the pusher bench test
-  THR_MDL_FAC: 1.0            # static simulated thrust is quadratic; inflow/voltage losses are separate
-                              # eCalc suggests
-                              # about 0.35 for the real ones, to be confirmed on the bench
+  THR_MDL_FAC: 1.0            # simulated static thrust is quadratic; eCalc suggests about 0.35 for
+                              # the real motors, to be confirmed on the bench
   MC_YAWRATE_K: 3.0           # historical SITL tuning only; not a physical authority multiplier
 
 # Simulation housekeeping. NEVER load these on the Pixhawk: they switch off the RC and
