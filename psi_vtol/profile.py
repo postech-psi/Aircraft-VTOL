@@ -3,9 +3,9 @@
 Climb and hover, fly the route, then align over the last waypoint, descend and land on it.
 
 The route is flown on a planned reference (psi_vtol/trajectory.py): a point that moves along
-the path at a planned speed and stops exactly on the waypoint. PX4 gets its position, velocity
-and acceleration together, so it follows the point instead of chasing a speed, and the vehicle
-stops where the reference stops. Speed changes build up and fade out (brake_ramp_s), so the tilt
+the path at a planned speed and stops exactly on the waypoint. PX4 gets its velocity and
+acceleration, pulled towards the point (for_px4), so the vehicle follows the point instead of
+chasing a speed, and stops where the reference stops. Speed changes build up and fade out (brake_ramp_s), so the tilt
 setpoint never steps: a step in it pitched the nose to 7.2 degrees and cut the pusher within
 0.2 s in SITL. Two ways to fly the route:
 
@@ -47,10 +47,12 @@ MIN_TURN_RADIUS_M = 5.0         # a corner squeezed between short legs is not ma
 # Faults the profile can see from the position alone. The runner and the nodes act on them.
 LAG_FAULT_M = 8.0               # the vehicle this far behind the reference
 STALL_S, STALL_MPS = 3.0, 0.5   # this long into a speed-up and still slower than this
-# A pusher that stops in cruise: the vehicle coasts down on its drag while the plan holds speed.
-SLOWING_MPS = 1.5               # this much slower than planned,
-SLOWING_MPS2 = 0.1              # ... still losing speed at least this fast
-SLOWING_S = 2.0                 # ... for this long, while the plan is not slowing down
+# A pusher that stops in flight: the vehicle coasts down on its drag, or creeps along, whatever
+# the plan does. It is stuck when it is
+STUCK_MPS = 1.5                 # this much slower than planned,
+STUCK_GAP_MPS = 0.5             # further behind the plan than STUCK_S ago by this much,
+STUCK_GAIN_MPS = 0.1            # and has gained no more speed than this itself
+STUCK_S = 2.0
 # Landing: settle over the point and turn the nose into the wind before descending.
 ALIGN_M, ALIGN_MPS, ALIGN_HOLD_S = 0.3, 0.2, 2.0
 ALIGN_TIMEOUT_S = 25.0          # then descend anyway, if within ARRIVE_M
@@ -102,6 +104,18 @@ def for_px4(sp, pos):
     return replace(sp, x=NAN, y=NAN, vx=sp.vx + gain * north, vy=sp.vy + gain * east)
 
 
+def needs_land(reason):
+    """Whether a failsafe for this fault hands the stopped vehicle to PX4's Land, not its Hold.
+
+    Every fault that means the vehicle cannot make way forward: a pusher fault, or falling far
+    behind (a pusher that is weak or saturated). In Hold, pusher assist keeps the nose level and
+    PX4 holds a dead pusher at full; switched to Land after 15 s of that, the vehicle pitched to
+    48 deg in SITL. Land switches pusher assist off (VT_FWD_THRUST_EN 6), so the vehicle can tilt
+    to hold its place, and lands where it is.
+    """
+    return reason.startswith(("pusher", "falling behind"))
+
+
 def _wrap(angle):
     return math.atan2(math.sin(angle), math.cos(angle))
 
@@ -146,8 +160,8 @@ class Profile:
     corner<i> between legs i and i+1 (fly-through), and hover<j> over the waypoint it stops on.
     Then align, descend, land.
 
-    After update(), fault is None or why the flight cannot go on as planned. A fault starting
-    with "pusher" means the vehicle cannot move forward: land where it is.
+    After update(), fault is None or why the flight cannot go on as planned; needs_land(fault)
+    tells whether the vehicle should land where it is.
     """
 
     def __init__(self, p, home, yaw0, wind_ne=None, part="all"):
@@ -200,8 +214,7 @@ class Profile:
         self.fault = None
         self.lag_max = 0.0          # farthest the vehicle has been behind the reference [m]
         self._t0 = self._run_t0 = None      # start of the current phase, and of its stretch
-        self._along = []            # (t, along-track speed) of the last second in a stretch
-        self._slowing_since = None
+        self._speeds = []           # (t, along-track speed, planned speed) of the last STUCK_S
         self._last = self.takeoff_setpoint()
 
     def _legs(self, route, frame):
@@ -323,7 +336,7 @@ class Profile:
             self._point = leg["start"]
         if kind == "fly" and self._piece_of[self.phase][1] == 0:
             self._run_t0 = t                            # a stretch starts with its first piece
-            self._along, self._slowing_since = [], None
+            self._speeds = []
         if kind == "hover" and self.phase != "hover1":
             self._point = self.legs[int(self.phase[5:]) - 2]["end"]
         if self.phase == f"hover{len(self.legs) + 1}":
@@ -378,21 +391,22 @@ class Profile:
         else:
             self._yaw_cmd, self._t_yaw = _wrap(h), t
             setpoint.yaw, setpoint.yawspeed = self._yaw_cmd, v * curv
-        # faults seen from the position: not moving forward at all, losing speed for no reason,
-        # or far behind the point. The first two mean no forward thrust: the pusher.
+        # Faults: no forward speed at all, or stuck behind the plan, mean no forward thrust (the
+        # pusher). Stuck is not just slower than planned, which a slow speed-up also is, but
+        # gaining no speed while falling further behind, through any speed-up, corner or
+        # slow-down of the plan (at 7 m/s these follow each other within 1.4 s). Last, far behind.
         lag = (n - pos[0]) * c + (e - pos[1]) * sn
         self.lag_max = max(self.lag_max, lag)
         along = vel[0] * c + vel[1] * sn
-        self._along = [(ti, u) for ti, u in self._along if t - ti <= 1.0] + [(t, along)]
-        decel = (self._along[0][1] - along) / max(t - self._along[0][0], 0.5)
-        if v - along > SLOWING_MPS and decel > SLOWING_MPS2 and a > -0.05:
-            self._slowing_since = self._slowing_since if self._slowing_since is not None else t
-        else:
-            self._slowing_since = None
+        self._speeds = [x for x in self._speeds if t - x[0] <= STUCK_S] + [(t, along, v)]
+        t_ago, along_ago, v_ago = self._speeds[0]
+        stuck = (t - t_ago >= STUCK_S - 0.1 and v - along > STUCK_MPS
+                 and (v - along) - (v_ago - along_ago) >= STUCK_GAP_MPS
+                 and along - along_ago <= STUCK_GAIN_MPS)
         if tau > STALL_S and v > 2 * STALL_MPS and along < STALL_MPS:
             self.fault = f"pusher: no forward speed {tau:.0f} s into {self.phase}"
-        elif self._slowing_since is not None and t - self._slowing_since >= SLOWING_S:
-            self.fault = f"pusher: losing speed at {along:.1f} m/s of {v:.1f} in {self.phase}"
+        elif stuck:
+            self.fault = f"pusher: not speeding up, at {along:.1f} m/s of {v:.1f} in {self.phase}"
         elif lag > LAG_FAULT_M:
             self.fault = f"falling behind the route by {lag:.0f} m in {self.phase}"
         start, duration = run["plan"].pieces[k][2], run["plan"].pieces[k][5]

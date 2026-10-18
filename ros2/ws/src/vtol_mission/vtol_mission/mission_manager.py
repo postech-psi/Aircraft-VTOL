@@ -7,8 +7,8 @@ node on, and on /setpoint_mux/source, which lets that node's setpoints through t
 on when the node reports DONE on /<step>/status and goes to FAILSAFE when it reports FAILED.
 
 In FAILSAFE setpoint_mux brings the vehicle to a hover. Once it has stopped, the vehicle is handed
-to PX4: Land when it cannot move forward (a pusher fault: it could not fly home either), Hold
-otherwise, where PX4's own failsafes and the pilot take over. Only while PX4 still flies our
+to PX4: Land when it cannot move forward (a pusher fault, or far behind the route: it could not
+fly home either; psi_vtol.profile.needs_land), Hold otherwise, where PX4's own failsafes and the pilot take over. Only while PX4 still flies our
 setpoints: a pilot or a PX4 failsafe that has taken over keeps the vehicle.
 
 The steps are a parameter. A new kind of step (for example a vision landing) is a new node that
@@ -24,6 +24,7 @@ from px4_msgs.msg import VehicleCommand, VehicleStatus
 from rclpy.node import Node
 from std_msgs.msg import String
 
+from psi_vtol.profile import needs_land
 from vtol_mission import px4
 
 WAIT_START, MISSION_DONE, FAILSAFE = "WAIT_START", "MISSION_DONE", "FAILSAFE"
@@ -133,13 +134,13 @@ class MissionManager(Node):
             self.fail_mission(self.step_status.split(":", 1)[-1])
 
     def hand_over(self):
-        """Give the stopped vehicle to PX4's Land (pusher fault) or Hold, while still offboard."""
+        """Give the stopped vehicle to PX4's Land (no way forward) or Hold, while still offboard."""
         now = time.monotonic()
         if now - self.state_start < self.handover_s or now - self.handover_sent < 1.0:
             return
         if self.nav_state != VehicleStatus.NAVIGATION_STATE_OFFBOARD:
             return                  # already PX4's, the pilot's or never ours: leave it
-        land = self.failure.startswith("pusher")
+        land = needs_land(self.failure)
         self.get_logger().warn(f"FAILSAFE ({self.failure}): handing over to PX4 "
                                f"{'Land' if land else 'Hold'}.")
         msg = VehicleCommand()

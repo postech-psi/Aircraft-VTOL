@@ -11,6 +11,7 @@ and .json; each case's files and PX4 log stay under the run folder (PSI_RUN_ROOT
 """
 import argparse
 import csv
+import fnmatch
 import json
 import queue
 import random
@@ -120,6 +121,13 @@ def expected_response(record):
     return False, f"unknown event {event}"
 
 
+def case_ok(record):
+    """A case without an event passes its mission; one with an event ends safely, as expected."""
+    if record.get("event"):
+        return bool(record.get("safe")) and record.get("response_met", expected_response(record)[0])
+    return bool(record["passed"])
+
+
 def scenario_cases():
     """The flight as flown on the day: each cruise speed in both route modes, wind, and the
     failures the onboard software has a response for. Run alone (--jobs 1)."""
@@ -202,6 +210,9 @@ def main():
                              "spare: Gazebo does not wait for PX4, and on 4 CPUs runs beside "
                              "another simulation showed a 1 Hz wobble that runs alone never did")
     parser.add_argument("--first-instance", type=int, default=5)
+    parser.add_argument("--only", action="append", default=[], metavar="PATTERN",
+                        help="fly only the cases named like this (e.g. 'pusher_off*'), and put them "
+                             "in place of their earlier records in the study's table; may be repeated")
     args = parser.parse_args()
     if args.jobs < 1 or args.n < 1:
         parser.error("--jobs and --n must be positive")
@@ -211,6 +222,11 @@ def main():
              "random": lambda: random_cases(cfg, args.n, args.seed), "corners": corner_cases,
              "scenarios": scenario_cases}[args.study]()
     study = args.name or (f"random_seed{args.seed}" if args.study == "random" else args.study)
+    order = [case for case, _ in cases]
+    if args.only:
+        cases = [(c, o) for c, o in cases if any(fnmatch.fnmatch(c, pat) for pat in args.only)]
+        if not cases:
+            parser.error("--only matches no case of this study")
     try:
         common = config.assignments(args.set)
     except ValueError as error:
@@ -231,8 +247,10 @@ def main():
             records.append(record)
             f = record["figures"]
             if record.get("event"):             # judged by its outcome, not by the mission
-                verdict = "ok" if record.get("safe") and record["response_met"] else "BAD"
+                verdict = "ok" if case_ok(record) else "BAD"
                 notes = record["response"] + "".join(f"; {r}" for r in record.get("safe_reasons", []))
+                if not record["response_met"]:
+                    notes += f" (expected: {EXPECTED[record['event'].partition('@')[0]]})"
             else:
                 verdict, notes = ("pass" if record["passed"] else "FAIL"), "; ".join(record["reasons"])
             print(f"{record['case']:28s} {verdict:4s}"
@@ -242,6 +260,10 @@ def main():
                   f"  lift {f.get('lift_max_cmd', float('nan')):4.2f}"
                   f"  {notes}", flush=True)
 
+    if args.only and (out / f"{study}.json").exists():  # the cases flown again replace the old
+        flown = {r["case"]: r for r in records}
+        earlier = {r["case"]: r for r in json.loads((out / f"{study}.json").read_text())}
+        records = [flown.get(c) or earlier[c] for c in order if c in flown or c in earlier]
     (out / f"{study}.json").write_text(json.dumps(records, indent=1))
     with open(out / f"{study}.csv", "w", newline="") as handle:
         writer = csv.writer(handle)
@@ -252,8 +274,9 @@ def main():
                              json.dumps(r["overrides"]), r.get("event") or "",
                              int(bool(r.get("safe"))), int(r["response_met"]), r["response"]]
                             + [r["figures"].get(c, "") for c in COLUMNS])
-    passed = sum(r["passed"] for r in records)
-    print(f"\n{passed} of {len(records)} passed; table in {out / study}.csv")
+    good = sum(case_ok(r) for r in records)
+    print(f"\n{good} of {len(records)} as expected (a mission passed, or an event ended safely "
+          f"with its expected response); table in {out / study}.csv")
 
 
 if __name__ == "__main__":

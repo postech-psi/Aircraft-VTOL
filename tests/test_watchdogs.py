@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import pytest
 
 from psi_vtol import config
-from psi_vtol.profile import Profile, Stop, for_px4
+from psi_vtol.profile import Profile, Stop, for_px4, needs_land
 from psi_vtol.trajectory import stopping_distance
 
 
@@ -92,7 +92,8 @@ OFFBOARD, POSITION = 14, 2
 
 @pytest.mark.parametrize("failure, nav_state, expected", [
     ("pusher: no forward speed 3 s into accel1", OFFBOARD, 6),     # land where it is
-    ("falling behind the route by 8 m in cruise2", OFFBOARD, 3),   # PX4 Hold
+    ("falling behind the route by 8 m in cruise2", OFFBOARD, 6),   # no way forward: land too
+    ("timeout in hover3", OFFBOARD, 3),                             # PX4 Hold
     ("aborted: ABORT", POSITION, None),                            # the pilot has it: leave it
 ])
 def test_failsafe_hands_the_stopped_vehicle_to_px4(failure, nav_state, expected):
@@ -102,7 +103,7 @@ def test_failsafe_hands_the_stopped_vehicle_to_px4(failure, nav_state, expected)
                        VehicleCommand=VehicleCommand, PX4_MAIN_MODE_AUTO=4,
                        PX4_SUB_MODE_AUTO_LOITER=3, PX4_SUB_MODE_AUTO_LAND=6,
                        VehicleStatus=SimpleNamespace(NAVIGATION_STATE_OFFBOARD=OFFBOARD),
-                       px4=SimpleNamespace(now_us=lambda node: 0))
+                       px4=SimpleNamespace(now_us=lambda node: 0), needs_land=needs_land)
     sent = []
     state = SimpleNamespace(state_start=90., handover_s=6., handover_sent=0., failure=failure,
                             nav_state=nav_state, command_pub=SimpleNamespace(publish=sent.append),

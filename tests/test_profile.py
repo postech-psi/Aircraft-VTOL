@@ -344,7 +344,35 @@ def test_coasting_down_in_cruise_is_a_pusher_fault_before_it_falls_far_behind():
         pos[0], pos[1] = pos[0] + vel[0] * DT, pos[1] + vel[1] * DT
         lag = math.hypot(sp.x - pos[0], sp.y - pos[1])
         now += DT
-    assert profile.fault and profile.fault.startswith("pusher: losing speed")
+    assert profile.fault and profile.fault.startswith("pusher: ")
+    assert lag < LAG_FAULT_M
+
+
+def test_a_pusher_lost_at_7_mps_is_seen_through_the_corners_and_slow_downs():
+    """At 7 m/s the middle legs only speed up and slow down. A check that restarted with every
+    slow-down of the plan saw this as falling behind, and Hold without forward thrust followed:
+    switched to Land after it, the vehicle pitched to 48 deg in SITL."""
+    p = dict(P, cruise_mps=7.0)
+    profile = Profile(p, HOME, 0.0, part="path")
+    pos, vel, now = [HOME[0], HOME[1], HOME[2] - p["alt_m"]], [0.0, 0.0, 0.0], 100.0
+    while profile.phase != "corner1":                           # flown exactly so far
+        sp = profile.update(now, tuple(pos), tuple(vel))
+        if not math.isnan(sp.vx):
+            pos[:2], vel[:2] = [sp.x, sp.y], [sp.vx, sp.vy]
+        now += DT
+    assert "cruise2" not in profile.phases
+    lag = 0.0
+    for _ in range(int(30.0 / DT)):                             # the vehicle follows the path
+        sp = profile.update(now, tuple(pos), tuple(vel))        # but only coasts down on drag
+        if profile.fault:
+            break
+        speed = max(math.hypot(*vel[:2]) - 0.3 * DT, 0.0)
+        heading = math.atan2(sp.vy, sp.vx)
+        vel[:2] = [speed * math.cos(heading), speed * math.sin(heading)]
+        pos[0], pos[1] = pos[0] + vel[0] * DT, pos[1] + vel[1] * DT
+        lag = math.hypot(sp.x - pos[0], sp.y - pos[1])
+        now += DT
+    assert profile.fault and profile.fault.startswith("pusher: ")
     assert lag < LAG_FAULT_M
 
 

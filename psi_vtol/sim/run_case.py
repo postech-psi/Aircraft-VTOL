@@ -2,7 +2,7 @@
 """Fly one simulation case and write its figures.
 
 Starts PX4 SITL with a headless Gazebo, flies the mission profile (psi_vtol/profile.py) in
-offboard mode over MAVLink (the same position/velocity setpoints the ROS 2 nodes send), lands,
+offboard mode over MAVLink (the same setpoints the ROS 2 nodes send: profile.for_px4), lands,
 and reads the PX4 log. Runs in the project's Linux Docker image (docs/03_simulation.md).
 
     python3 -m psi_vtol.sim.run_case                             # the nominal vehicle
@@ -27,7 +27,7 @@ os.environ.setdefault("MAVLINK20", "1")
 from pymavlink import mavutil  # noqa: E402
 
 from psi_vtol import config  # noqa: E402
-from psi_vtol.profile import Profile, Stop, for_px4  # noqa: E402
+from psi_vtol.profile import Profile, Stop, for_px4, needs_land  # noqa: E402
 from psi_vtol.sim import gz_model, metrics  # noqa: E402
 
 OFFBOARD = 6                    # PX4 custom main mode
@@ -205,7 +205,7 @@ def fly(p, params, instance, wall_limit_s=420.0, event=None, gz_env=None):
 
     When the profile reports a fault, a phase overruns or the event aborts the mission, the
     runner does what the onboard nodes do: stop smoothly (profile.Stop), then hand the vehicle to
-    PX4's Hold, or its Land for a pusher fault. It follows PX4 until the vehicle is down: a Hold
+    PX4's Hold, or its Land when it cannot make way forward (profile.needs_land). It follows PX4 until the vehicle is down: a Hold
     for HOLD_WATCH_S, then a Land, as the pilot would command. gz_env: the environment of the
     Gazebo this flight runs in, for events that act on the simulation.
     """
@@ -257,7 +257,7 @@ def fly(p, params, instance, wall_limit_s=420.0, event=None, gz_env=None):
             result["phases"]["stop"][1] = link.t
             if max(abs(link.att[0]), abs(link.att[1])) > math.radians(60):
                 raise Abort(f"{reason}; tumbled while stopping")
-        land = reason.startswith("pusher")
+        land = needs_land(reason)
         result["failsafe"]["handed_to"] = "Land" if land else "Hold"
         for _ in range(3):
             link.command(mavutil.mavlink.MAV_CMD_DO_SET_MODE, 1, AUTO, AUTO_LAND if land else AUTO_LOITER)
