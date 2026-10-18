@@ -48,7 +48,7 @@ sweep:
   wind_speed_mps: [0.0, 8.0]
   wind_from_deg: [0.0, 360.0]
   wind_gust_pct: [0.0, 0.4]
-  cruise_mps: [6.0, 14.0]
+  cruise_mps: [3.0, 7.0]
   accel_mps2: [0.5, 2.0]
 
 sim:

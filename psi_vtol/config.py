@@ -10,6 +10,7 @@ Each kind of number has one file:
 Where PX4 is built and where run files go depend on the machine, so they come from the
 environment: PSI_PX4_ROOT and PSI_RUN_ROOT.
 """
+import json
 import os
 from pathlib import Path
 
@@ -21,6 +22,20 @@ DEFAULT_MISSION = "2026_year_end"
 
 def _read(path):
     return yaml.safe_load(Path(path).read_text(encoding="utf-8"))
+
+
+def assignments(items):
+    """NAME=VALUE overrides from the command line: a number, or a JSON list such as a route."""
+    values = {}
+    for item in items:
+        name, sep, text = item.partition("=")
+        if not sep or not name:
+            raise ValueError(f"expected NAME=VALUE, got {item!r}")
+        try:
+            values[name] = json.loads(text) if text.lstrip().startswith("[") else float(text)
+        except ValueError:
+            raise ValueError(f"{name}: {text!r} is neither a number nor a JSON list") from None
+    return values
 
 
 def profile(mission=DEFAULT_MISSION):

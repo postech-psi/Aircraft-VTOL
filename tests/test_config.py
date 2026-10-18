@@ -1,6 +1,7 @@
 """The data files hang together: every number the simulation needs is there, once."""
 from pathlib import Path
 
+import pytest
 import yaml
 
 from psi_vtol import config
@@ -47,3 +48,11 @@ def test_failsafe_switches_are_sim_only():
 def test_profile_is_what_the_ros_nodes_read():
     assert config.profile() == {k: config.load()["nominal"][k] for k in config.profile()}
     assert isinstance(config.REPO, Path)
+
+
+def test_command_line_values_are_numbers_or_json_lists():
+    assert config.assignments(["wind_speed_mps=4", "route_m=[[50, 0], [0, 0]]"]) == {
+        "wind_speed_mps": 4.0, "route_m": [[50, 0], [0, 0]]}
+    for bad in ("wind_speed_mps", "=4", "wind_speed_mps=fast", "route_m=[[50, 0]"):
+        with pytest.raises(ValueError):
+            config.assignments([bad])

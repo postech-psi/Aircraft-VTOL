@@ -30,8 +30,10 @@ def main():
 
     cfg = config.load(args.mission)
     cfg["sim"]["speed_factor"] = 1      # the ROS 2 nodes run on the wall clock
-    p = run_case.case_values(cfg, {k: float(v) for k, v in
-                                   (item.split("=", 1) for item in args.set)})
+    try:
+        p = run_case.case_values(cfg, config.assignments(args.set))
+    except (KeyError, ValueError) as error:
+        parser.error(str(error))
     plugin = gz_model.config_plugin_path(cfg) / "libpsi-aerodynamics.so"
     if not plugin.is_file():
         raise SystemExit(f"Build the Gazebo plugin first: {plugin}; see docs/03_simulation.md")

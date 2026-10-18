@@ -11,9 +11,9 @@ NOMINAL = CFG["nominal"]
 
 
 def test_derived_values_match_the_airframe_data():
-    d = gz_model.derived(NOMINAL)
+    d = gz_model.derived(dict(NOMINAL, cruise_mps=10.0))
     assert d["lift_thrust_to_weight"] == pytest.approx(1.9, abs=0.01)      # eCalc
-    assert d["wing_lift_fraction_cruise"] == pytest.approx(0.12, abs=0.01)  # 2026-10-08 report
+    assert d["wing_lift_fraction_cruise"] == pytest.approx(0.12, abs=0.01)  # 10 m/s, 2026-10-08 report
 
 
 def test_model_has_five_motors_and_all_angle_aero_without_double_counting_drag():

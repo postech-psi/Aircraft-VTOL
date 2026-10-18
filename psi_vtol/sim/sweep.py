@@ -68,8 +68,10 @@ def corner_cases():
     return [
         ("weak_pusher_headwind", {"pusher_thrust_max_n": 15., "pusher_zero_thrust_mps": 25.,
                                  "wind_speed_mps": 8., "wind_from_deg": 0.}),
+        # high lift needs speed, and speed needs a long leg: out and back over 300 m
         ("high_lift_braking", {"mass_kg": 6., "wing_incidence_deg": 4., "cruise_mps": 14.,
-                               "accel_mps2": 2., "wing_cm0": -.15}),
+                               "accel_mps2": 2., "wing_cm0": -.15,
+                               "route_m": [[300., 0.], [0., 0.]]}),
         ("heavy_low_voltage_front_loss", {"mass_kg": 8., "motor_voltage_end_ratio": .8,
              "motor_voltage_decay_s": 90., "front_rotor_efficiency": .65, "lift_thrust_max_n": 27.5}),
         ("heavy_low_voltage_rear_loss", {"mass_kg": 8., "motor_voltage_end_ratio": .8,
@@ -99,7 +101,7 @@ def run_one(case, overrides, common, mission, instances, study):
             if name.startswith("px4:"):         # a PX4 parameter rather than a vehicle value
                 cmd += ["--px4", f"{name[4:]}={value}"]
             else:
-                cmd += ["--set", f"{name}={value}"]
+                cmd += ["--set", f"{name}={json.dumps(value) if isinstance(value, list) else value}"]
         done = subprocess.run(cmd, capture_output=True, text=True, cwd=config.REPO)
         if done.returncode != 0 or not temporary.exists():
             temporary.unlink(missing_ok=True)
@@ -133,7 +135,10 @@ def main():
     cases = {"oat": lambda: oat_cases(cfg), "wind": wind_cases,
              "random": lambda: random_cases(cfg, args.n, args.seed), "corners": corner_cases}[args.study]()
     study = args.name or (f"random_seed{args.seed}" if args.study == "random" else args.study)
-    common = {k: float(v) for k, v in (item.split("=", 1) for item in args.set)}
+    try:
+        common = config.assignments(args.set)
+    except ValueError as error:
+        parser.error(str(error))
     out = config.REPO / "out" / args.mission / MODEL_REVISION
     (out / study).mkdir(parents=True, exist_ok=True)
 

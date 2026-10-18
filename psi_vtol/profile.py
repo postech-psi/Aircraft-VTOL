@@ -25,6 +25,7 @@ TURN_RATE = math.radians(20.0)  # how fast the commanded heading may change
 TURN_TIME_S = 9.0               # extra hover to turn the nose into the wind
 TURN_SETTLE_S = 2.0             # hover after a turn, for the heading to settle
 ARRIVE_M = 1.0                  # a hover over a waypoint ends only this close to it
+MIN_CRUISE_S = 2.0              # a short leg is flown slower, so it still holds its speed this long
 # The vehicle stops about a metre past a waypoint. A hover starts where it stopped and moves its
 # point onto the waypoint no faster than this: PX4 flies a step in the position setpoint with a
 # hard tilt (20 degrees for 1 m in SITL).
@@ -108,11 +109,14 @@ class Profile:
             d = ((end[0] - start[0]) / length, (end[1] - start[1]) / length)
             leg_heading = math.atan2(d[1], d[0])
             turn = abs(_wrap(leg_heading - heading))
+            # Speeding up and slowing down take v^2/a; MIN_CRUISE_S at v takes v*T. The fastest
+            # speed that fits both in the leg solves v^2/a + v*T = length.
+            a, T = self.accel, MIN_CRUISE_S
+            fits = (-a * T + math.sqrt((a * T) ** 2 + 4 * a * length)) / 2
             legs.append({"start": start, "end": end, "dir": d, "length": length,
                          "heading": leg_heading, "turn_rad": turn,
                          "turn": turn > math.radians(1.0) and not self.into_wind,
-                         # a short leg still has room to speed up and slow down again
-                         "speed": min(self.cruise, math.sqrt(self.accel * length))})
+                         "speed": min(self.cruise, fits)})
             start, heading = end, leg_heading
         if not legs:
             raise ValueError("the route has no waypoints")

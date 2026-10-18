@@ -373,7 +373,8 @@ def main():
     parser.add_argument("--mission", default=config.DEFAULT_MISSION,
                         help="folder under missions/")
     parser.add_argument("--set", action="append", default=[], metavar="NAME=VALUE",
-                        help="override one vehicle value; may be repeated")
+                        help="override one case value, e.g. wind_speed_mps=4 or "
+                             "route_m=[[50,0],[0,0]]; may be repeated")
     parser.add_argument("--px4", action="append", default=[], metavar="NAME=VALUE",
                         help="override one PX4 parameter; may be repeated")
     parser.add_argument("--case", default="single")
@@ -383,8 +384,11 @@ def main():
     args = parser.parse_args()
 
     cfg = config.load(args.mission)
-    cfg["px4_params"].update({k: float(v) for k, v in (item.split("=", 1) for item in args.px4)})
-    overrides = {k: float(v) for k, v in (item.split("=", 1) for item in args.set)}
+    try:
+        cfg["px4_params"].update(config.assignments(args.px4))
+        overrides = config.assignments(args.set)
+    except ValueError as error:
+        parser.error(str(error))
     record = run(cfg, overrides, args.case, args.instance)
     if args.json:
         Path(args.json).write_text(json.dumps(record, indent=1))

@@ -152,9 +152,10 @@ flowchart LR
 
 ## 4. 임무의 흐름
 
-`mission_manager`는 단계(노드) 단위로, `profile.py`는 그 안의 비행 단계(phase) 단위로 진행합니다. 아래는
-기본 경로(250 m 갔다가 돌아오기)의 경우입니다. 단계마다 시간 상한이 있고, 넘기거나 PX4가 offboard에서
-빠지면 `FAILED`를 보고해 `FAILSAFE`(그 자리 유지)로 갑니다.
+`mission_manager`는 단계(노드) 단위로, `profile.py`는 그 안의 비행 단계(phase) 단위로 진행합니다. PATH
+안에서는 경유점마다 회전–가속–순항–감속–호버를 반복하고, 단계 이름에는 구간 번호가 붙습니다(`accel1`,
+`hover2`, `turn2`, …). 기본 경로(한 변 50 m 정사각형, 오른쪽 회전)는 이 고리를 네 번 돕니다. 단계마다 시간
+상한이 있고, 넘기거나 PX4가 offboard에서 빠지면 `FAILED`를 보고해 `FAILSAFE`(그 자리 유지)로 갑니다.
 
 ```mermaid
 stateDiagram-v2
@@ -164,17 +165,14 @@ stateDiagram-v2
     state PATH {
         direction TB
         climb --> hover1
-        hover1 --> accel1
-        accel1 --> cruise1
-        cruise1 --> decel1
-        decel1 --> hover2
-        hover2 --> turn2: 250 m 지점 도착
-        turn2 --> accel2: 180° 회전
-        accel2 --> cruise2
-        cruise2 --> decel2
-        decel2 --> hover3
+        hover1 --> accel
+        accel --> cruise
+        cruise --> decel: 제동 거리 도달
+        decel --> hover: 경유점 위로
+        hover --> turn: 다음 경유점이 있음
+        turn --> accel: 기수를 다음 구간으로
     }
-    PATH --> LANDING: DONE
+    PATH --> LANDING: 마지막 경유점에서 DONE
     state LANDING {
         direction LR
         descend --> land: 지면 4 m 아래
