@@ -4,31 +4,35 @@ Companion computer에서 도는 미션 노드입니다. 패키지는 `ros2/ws/sr
 
 ## 1. 구성
 
-```mermaid
-flowchart LR
-    MM[mission_manager] -->|/mission/state| PN[path_node]
-    MM -->|/mission/state| LN[landing_node]
-    MM -->|/setpoint_mux/source| MUX[setpoint_mux]
-    PN -->|/path/trajectory_setpoint| MUX
-    LN -->|/landing/trajectory_setpoint| MUX
-    PN -->|/path/status| MM
-    LN -->|/landing/status| MM
-    MUX -->|/fmu/in/trajectory_setpoint| PX4
-    PX4 -->|위치, 상태| PN
-    PX4 -->|위치, 상태| LN
-```
+노드는 네 개입니다. 전체 흐름은 [0. 전체 구조](00_architecture.md#3-탑재-비행-소프트웨어)에 그림으로 있습니다.
 
 | 노드 | 파일 | 하는 일 |
 |---|---|---|
 | `mission_manager` | `mission_manager.py` | 임무를 단계 목록 순서대로 진행합니다. `WAIT_START → PATH → LANDING → MISSION_DONE`, 문제가 생기면 어디서든 `FAILSAFE` |
 | `setpoint_mux` | `setpoint_mux.py` | 지금 단계의 setpoint만 PX4로 보냅니다. PX4에 setpoint를 보내는 노드는 이것 하나입니다 |
-| `path_node` | `path_node.py` | 단계 `PATH`: 상승, 호버, 그리고 경로의 경유점마다 회전–가속–순항–감속–호버. 천이 명령은 보내지 않습니다 |
-| `landing_node` | `landing_node.py` | 단계 `LANDING`: 마지막 경유점(기본은 이륙 지점) 위에서 하강하다가 4 m 아래에서 PX4 Land 모드에 넘깁니다 |
+| `path_node` | `path_node.py` | 단계 `PATH`: arm하고 offboard로 바꾼 뒤 상승, 호버, 경로 비행. 경로는 통과 비행(기본)이나 멈춰서 돌기. 천이 명령은 보내지 않습니다 |
+| `landing_node` | `landing_node.py` | 단계 `LANDING`: 마지막 경유점(기본은 이륙 지점) 위에 자리를 잡고 기수를 바람 쪽으로 돌린 뒤 하강하다가, 4 m 아래에서 PX4 Land 모드에 넘깁니다 |
+
+| 토픽 | 보내는 쪽 | 받는 쪽 | 내용 |
+|---|---|---|---|
+| `/mission/start`, `/mission/abort` | 운용자 | mission_manager | 임무 시작, 중단 |
+| `/mission/state` | mission_manager | 단계 노드 | 지금 단계의 이름. 같은 이름의 노드만 활성 |
+| `/mission/status` | mission_manager | 운용자 | 임무 상태 |
+| `/setpoint_mux/source` | mission_manager | setpoint_mux | 통과시킬 단계 |
+| `/path/trajectory_setpoint`, `/landing/trajectory_setpoint` | 단계 노드 | setpoint_mux | 그 단계의 setpoint |
+| `/path/status`, `/landing/status` | 단계 노드 | mission_manager | `ACTIVE:…`, `DONE`, `FAILED:<이유>` |
+| `/setpoint_mux/status` | setpoint_mux | 운용자 | 지금 무엇을 보내는지 |
+| `/fmu/in/trajectory_setpoint`, `/fmu/in/offboard_control_mode` | setpoint_mux | PX4 | PX4가 따를 setpoint |
+| `/fmu/in/vehicle_command` | path_node, landing_node, mission_manager | PX4 | arm과 offboard(path_node), Land(landing_node), FAILSAFE의 Hold나 Land(mission_manager) |
+| `/fmu/out/vehicle_local_position_v1` | PX4 | 단계 노드, setpoint_mux | 위치, 속도, 기수 |
+| `/fmu/out/vehicle_attitude` | PX4 | 단계 노드 | 자세(회전이 끝났는지, 착륙 전 바람 방향) |
+| `/fmu/out/vehicle_status_v1` | PX4 | 단계 노드, mission_manager | arm 여부, 비행 모드 |
+
+PX4 쪽 토픽 이름은 노드 파라미터 `px4_topic.*`로 바꿀 수 있습니다(`px4.py`).
 
 `path_node`와 `landing_node`의 setpoint는 `psi_vtol/profile.py`가 만듭니다. 시뮬레이션이 비행한 것과
 같은 코드이고, 고도·속도·가속 한계·경로는
-[`missions/2026_year_end/mission.yaml`](../missions/2026_year_end/mission.yaml)에서 읽습니다. 전체 흐름은
-[0. 전체 구조](00_architecture.md#3-탑재-비행-소프트웨어)에 그림으로 있습니다.
+[`missions/2026_year_end/mission.yaml`](../missions/2026_year_end/mission.yaml)에서 읽습니다.
 
 ### 단계 노드의 규칙
 
