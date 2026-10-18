@@ -2,8 +2,9 @@
 
     python3 -m psi_vtol.px4_setup --output /tmp/psi_candidate.params
 
-Never exports sim_only. Output functions, sensor calibration and failsafes are board-specific
-and must be configured in QGroundControl as described in docs/02_control_concept.md.
+Never exports sim_only. It includes the failsafes of px4/params.yaml and the geofence and return
+height of the mission's route. Output functions and sensor calibration are board-specific and
+must be configured in QGroundControl as described in docs/02_control_concept.md.
 """
 import argparse
 from pathlib import Path
@@ -19,7 +20,7 @@ def candidate(mission=config.DEFAULT_MISSION):
     params = gz_model.px4_params(cfg)
     lines = ["# PSI candidate for PX4 v1.17.0; includes UNMEASURED vehicle assumptions.",
              "# Review motor geometry, thrust mapping, gains and all board-specific settings.",
-             "# Does not contain sim_only, output pin assignments or failsafe settings.",
+             "# Includes failsafes and the mission's geofence; no sim_only, no output pin assignments.",
              "# SYSID\tCOMPID\tNAME\tVALUE\tMAV_PARAM_TYPE"]
     for name, value in sorted(params.items()):
         lines.append(f"1\t1\t{name}\t{value}\t{6 if isinstance(value, int) else 9}")

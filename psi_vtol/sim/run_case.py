@@ -31,10 +31,10 @@ from psi_vtol.profile import Profile  # noqa: E402
 from psi_vtol.sim import gz_model, metrics  # noqa: E402
 
 OFFBOARD = 6                    # PX4 custom main mode
-AUTO, AUTO_LAND = 4, 6          # PX4 custom main and sub mode
-# SET_POSITION_TARGET_LOCAL_NED type mask: a set bit means "ignore this field". Bits 0 to 5 are
-# x, y, z, vx, vy, vz; these four are the acceleration and the yaw rate, never commanded.
-NEVER_COMMANDED = 64 | 128 | 256 | 2048
+AUTO, AUTO_LOITER, AUTO_LAND = 4, 3, 6     # PX4 custom main mode, and sub modes of AUTO
+# SET_POSITION_TARGET_LOCAL_NED type mask: a set bit means "ignore this field". Bits 0 to 8 are
+# x, y, z, vx, vy, vz, ax, ay, az; bit 10 is the yaw and bit 11 the yaw rate.
+YAW_IGNORED, YAW_RATE_IGNORED = 1 << 10, 1 << 11
 
 
 class Abort(Exception):
@@ -86,12 +86,15 @@ class Link:
         now = time.monotonic()
         if self.setpoint is not None and now - self._last_send >= 0.01:
             sp = self.setpoint
-            fields = (sp.x, sp.y, sp.z, sp.vx, sp.vy, sp.vz)
-            mask = NEVER_COMMANDED | sum(1 << i for i, v in enumerate(fields) if math.isnan(v))
+            fields = (sp.x, sp.y, sp.z, sp.vx, sp.vy, sp.vz, sp.ax, sp.ay, sp.az)
+            mask = sum(1 << i for i, v in enumerate(fields) if math.isnan(v))
+            mask |= (YAW_IGNORED if math.isnan(sp.yaw) else 0) | (
+                YAW_RATE_IGNORED if math.isnan(sp.yawspeed) else 0)
             self.conn.mav.set_position_target_local_ned_send(
                 0, self.conn.target_system, self.conn.target_component,
                 mavutil.mavlink.MAV_FRAME_LOCAL_NED, mask,
-                *(0.0 if math.isnan(v) else v for v in fields), 0, 0, 0, sp.yaw, 0)
+                *(0.0 if math.isnan(v) else v for v in fields),
+                0.0 if math.isnan(sp.yaw) else sp.yaw, 0.0 if math.isnan(sp.yawspeed) else sp.yawspeed)
             self._last_send = now
 
         if now - self._last_heartbeat >= 0.5:       # PX4 counts this as its ground station
@@ -310,7 +313,7 @@ def run(cfg, overrides, case_id, instance):
     alongside = other_simulators()
     proc = launch(case_dir, gz_model.write_case(case_dir, p, cfg), cfg, instance)
     try:
-        flight = fly(p, gz_model.px4_params(cfg), instance)
+        flight = fly(p, gz_model.px4_params(cfg, p), instance)
         flight["other_simulators"] = max(alongside, other_simulators() - 1)
     finally:
         stop(proc, case_dir)
@@ -376,7 +379,7 @@ def provenance(cfg, p):
     px4_root = Path(cfg["sim"]["px4_root"]).expanduser()
     px4_diff = command(["git", "diff", "HEAD"], px4_root)
     return {"model_revision": gz_model.MODEL_REVISION, "values": p, "sim": cfg["sim"],
-            "requested_px4_params": gz_model.px4_params(cfg), "acceptance_limits": metrics.LIMITS,
+            "requested_px4_params": gz_model.px4_params(cfg, p), "acceptance_limits": metrics.LIMITS,
             "repository_commit": command(["git", "rev-parse", "HEAD"], config.REPO),
             "repository_dirty": bool(command(["git", "status", "--porcelain"], config.REPO)),
             "px4_commit": command(["git", "rev-parse", "HEAD"], px4_root),

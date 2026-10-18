@@ -88,8 +88,16 @@ yaw가 특히 그렇습니다. 모터 하나의 최대 추력을 Tmax, 네 모�
 
 PX4의 `pusher_assist()`는 앞으로 가려고 기수를 숙이라는 요구를 푸셔 명령으로 바꿉니다.
 `VT_PITCH_MIN=0`으로 두면 보조가 켜진 동안에는 전진을 위해 기수를 숙이지 않고 푸셔만 씁니다. 그렇다고
-pitch가 항상 0°인 것은 아닙니다. 제동할 때는 기수를 들고, 보조가 꺼지는 저고도와 Land 모드에서는
-보통의 멀티콥터처럼 기울여서 이동합니다.
+pitch가 항상 0°인 것은 아닙니다. 제동할 때는 기수를 들고, 보조가 꺼지는 5 m 아래와 Land 모드에서는
+보통의 멀티콥터처럼 기울여서 이동합니다. 그래서 경로 비행 고도는 6 m 이상이어야 하고, 프로파일이 그보다
+낮은 고도를 거부합니다.
+
+**푸셔가 고장 나면** 보조가 켜진 모드(Offboard, Position, Altitude, Hold, Return)에서는 기수를 숙이지 못해
+앞으로 가지 못합니다. SITL에서 푸셔를 끈 채 정사각형을 비행하면 첫 가속에서 그 자리에 멈춰 있었고,
+`VT_FWD_THRUST_EN=0`으로 보조를 끄자 일반 쿼드처럼 기수를 2.6° 숙여 5 m/s로 정사각형 전체를 통과했습니다.
+노드는 이 파라미터를 바꿀 수 없습니다(stock PX4의 uXRCE-DDS로는 파라미터를 쓸 수 없음). 조종자가 직접
+데려오려면 QGC에서 `VT_FWD_THRUST_EN=0`으로 바꾸거나
+Stabilized 모드로 비행해야 합니다. **Position 모드로는 스틱을 밀어도 앞으로 가지 않습니다.**
 
 v1.17.0에서 푸셔 보조 명령은 0.9에서 잘립니다. 푸셔가 포화돼도 모자란 전진력을 기수 숙임으로 돌려
 주지 않기 때문에, 푸셔가 약하거나 정풍이 강하면 목표 속도에 못 미칩니다
@@ -146,20 +154,30 @@ standard-VTOL 할당기는 수평 로터(푸셔)의 반토크를 쓰지 않고, 
 | 설정 | 값 | 의미 |
 |---|---|---|
 | `CA_ROTOR_COUNT`, `CA_SV_CS_COUNT` | 5, 0 | 모터 5개, 조종면 없음 |
-| `VT_FWD_THRUST_EN` | 5 | `MPC_LAND_ALT1` 위에서만 푸셔 보조. auto Land와 하강에서는 끔 |
+| `VT_FWD_THRUST_EN` | 6 | `MPC_LAND_ALT2`(5 m) 위에서만 푸셔 보조. auto Land와 하강에서는 끔 |
 | `VT_PITCH_MIN` | 0° | 보조가 켜진 동안 전진을 위해 기수를 숙이지 않음 |
-| `VT_LND_PITCH_MIN` | 0° | Land 중 같은 설정. mode 5에서는 Land 중 보조가 꺼지므로 명시만 해 둔 값 |
+| `VT_LND_PITCH_MIN` | 0° | Land 중 같은 설정. mode 6에서는 Land 중 보조가 꺼지므로 명시만 해 둔 값 |
 | `VT_FWD_THRUST_SC` | 2.75 | 무게/푸셔 최대 추력에서 시작한 값. 푸셔 벤치 시험 후 다시 정함 |
 | `CA_R4_SLEW` | 1.0 s | 푸셔 명령이 0→1로 가는 데 최소 1초 |
 | `CA_ROTOR4_PY`, `_PZ` | 0, 0 | 푸셔 오프셋을 할당에 넣지 않음 |
 | `THR_MDL_FAC` | 1.0 | 시뮬레이터의 정적 추력이 회전수 제곱이라 1. 실기체는 벤치 곡선으로 정함(eCalc로는 약 0.35) |
 | `MC_YAWRATE_K` | 3.0 | 이전 모델에서 맞춘 SITL 값. 새 모델과 실기체에서 다시 맞춰야 함 |
 | `MPC_XY_VEL_MAX` | 16 m/s | 명령 속도가 잘리지 않도록 둔 상한. 운용 속도가 아님 |
-| `WV_EN` | 0 | 기수는 미션 노드가 정함 |
-| `RTL_TYPE` | 0 | 직접 귀환. 실제 failsafe 경로는 따로 시험 |
+| `VT_ARSP_TRANS`, `VT_F_TRANS_DUR`, `VT_TRANS_TIMEOUT`, `VT_F_TRANS_THR` | 30 m/s, 20 s, 3 s, 0 | 고정익 천이가 끝나지 못하게 막음([3.6](#36-고정익-천이-막기)) |
+| `COM_OBL_RC_ACT` | 5 (Hold) | Jetson의 setpoint가 끊기면 Hold. 기본값(Position 모드)은 RC 조종자가 있어야 동작 |
+| `COM_LOW_BAT_ACT` | 3 | 배터리 critical에서 귀환, emergency에서 착륙. 기본값은 경고만 |
+| `GF_ACTION` | 3 (Return) | 지오펜스를 넘으면 귀환 |
+| `GF_MAX_HOR_DIST`, `GF_MAX_VER_DIST` | 경로에서 계산 | 가장 먼 경유점 + 30 m, 비행 고도 + 30 m. 기본 정사각형은 101 m, 50 m |
+| `RTL_TYPE`, `RTL_RETURN_ALT`, `RTL_DESCEND_ALT` | 0, 비행 고도, 10 m | 직접 귀환. 기본값대로면 60 m까지 올라간 뒤 돌아옴 |
+| `MPC_ACC_HOR` | 1.5 m/s² | PX4 자신의 제동(Hold, Return, Land 접근). 기본값 3에서는 5 m/s에서 멈출 때 25°까지 기울었음 |
+| `WV_EN`, `WV_YRATE_MAX` | 1, 15°/s | PX4 자신의 모드에서 기수를 바람 쪽으로. Offboard에서는 노드가 기수를 정하므로 영향 없음 |
+| `MPC_LAND_SPEED` | 0.5 m/s | 착륙 마지막 구간 하강 속도. 기본값 0.7 |
 
-`VT_FWD_THRUST_EN=5`의 고도 판단에는 거리 센서나 home 기준 고도가 쓰입니다. 경계에 hysteresis가
-없어서 그 근처에서는 보조가 켜졌다 꺼졌다 할 수 있으므로 `MPC_LAND_ALT1`의 실효값을 확인해 둡니다.
+비행마다 다른 값(지오펜스, 귀환 고도)은 `px4/params.yaml`이 아니라 경로에서 계산합니다
+(`gz_model.mission_params`). 시뮬레이션과 검토용 파라미터 파일이 같은 계산을 씁니다.
+
+`VT_FWD_THRUST_EN=6`의 고도 판단에는 거리 센서나 home 기준 고도가 쓰입니다. 경계에 hysteresis가
+없어서 그 근처에서는 보조가 켜졌다 꺼졌다 할 수 있으므로 5 m 근처에서 오래 머물지 않습니다.
 모드 번호의 정의는 [`vtol_type.h`](https://github.com/PX4/PX4-Autopilot/blob/v1.17.0/src/modules/vtol_att_control/vtol_type.h)에
 있습니다.
 
@@ -169,14 +187,15 @@ standard-VTOL 할당기는 수평 로터(푸셔)의 반토크를 쓰지 않고, 
 bash simulation/docker_run.sh python3 -m psi_vtol.px4_setup --output /workspace/out/psi_candidate.params
 ```
 
-QGC 형식 파일이 만들어집니다. 모터 기하와 `concept`, `per_vehicle`이 들어가고 `sim_only`는 빠집니다.
-출력 핀, 센서 보정, RC, failsafe는 들어 있지 않습니다. 추력·CG·게인이 아직 가정값이므로, 측정한 값으로
+QGC 형식 파일이 만들어집니다. 모터 기하와 `concept`, `per_vehicle`, 그리고 기본 임무의 지오펜스와 귀환
+고도가 들어가고 `sim_only`는 빠집니다. 출력 핀, 센서 보정, RC는 들어 있지 않습니다. 추력·CG·게인이 아직 가정값이므로, 측정한 값으로
 원본 YAML을 고친 뒤 다시 만들어서 QGC에서 기존 설정과 비교하고 적용합니다.
 
 ### 3.5 실기체에서 따로 확인할 것
 
-- Offboard 상실 시 동작: `COM_OF_LOSS_T`, `COM_OBL_RC_ACT`, RC가 있을 때와 없을 때.
-- RC, 데이터 링크, 배터리, 지오펜스, 위치 추정을 잃었을 때의 동작.
+- Offboard 상실 시 동작: SITL에서는 setpoint가 끊기고 약 4초 뒤 Hold에 들어가 그동안 약 20 m를 더
+  갔습니다. 실기체에서 RC가 있을 때와 없을 때를 다시 확인합니다.
+- RC, 데이터 링크, 배터리, 위치 추정을 잃었을 때의 동작. 지오펜스는 SITL에서 확인함(아래).
 - `MPC_LAND_ALT1/2`, `MPC_LAND_SPEED`, `COM_DISARM_LAND`와 지면 기준 고도.
 - 대기속도 센서를 달았다면 방향, 보정, 유효성. 지금은 PX4도 미션 노드도 대기속도로 속도를 제한하지
   않습니다.
@@ -191,10 +210,34 @@ PX4는 offboard에 들어가기 전에 setpoint 스트림을 요구하고, 스�
 
 - 노드는 `VEHICLE_CMD_DO_VTOL_TRANSITION`을 보내지 않습니다.
 - RC에 천이 스위치를 매핑하지 않습니다.
-- VTOL 이륙, 천이, 고정익 미션 항목을 올리지 않습니다.
+- VTOL 이륙, 천이, 고정익 미션 항목을 올리지 않습니다. QGC의 천이 버튼도 누르지 않습니다.
+- 그래도 천이 명령이 들어올 때를 대비해, 천이가 끝날 수 없게 파라미터로 막습니다.
 
-Return, geofence, link loss, 수동 모드 전환에서도 MC가 유지되고 리프트 모터가 계속 도는지 SITL 로그로
-하나씩 확인합니다. `VT_FW_DIFTHR_EN`을 켜는 것만으로는 이 기체에 맞는 고정익 제어가 되지 않습니다.
+PX4는 대기속도가 `VT_ARSP_TRANS`를 넘거나(대기속도 센서가 있을 때) `VT_F_TRANS_DUR`가 지나면(없을 때)
+고정익으로 넘어갑니다. 그래서 천이 중 푸셔를 끄고(`VT_F_TRANS_THR=0`), 대기속도 기준을 푸셔로 낼 수 없는
+30 m/s로, 시간 기준을 20 s로 두고, 그보다 먼저 `VT_TRANS_TIMEOUT=3 s`가 천이를 취소하게 합니다.
+
+SITL에서 호버 중에 천이 명령을 보내 확인했습니다.
+
+| 설정 | 결과 |
+|---|---|
+| PX4 기본값 | 푸셔가 기체를 5 m/s까지 밀다가 약 6초 뒤 PX4의 quad-chute가 천이를 취소. 그 순간 roll 43°. 대기속도 10 m/s에 닿기 전에 취소됐기 때문에 살았을 뿐이고, 정풍이 8 m/s면 대지 속도 2 m/s에서 천이가 끝남 |
+| 위 설정 | 3초 동안 아무 일도 없다가 취소. 이후 PX4가 푸셔 보조를 끄고 일반 쿼드로 비행을 계속해 임무 전체 통과(최대 tilt 10°) |
+
+Return(`RTL_TYPE=0`)은 MC 그대로 돌아옵니다. PX4의 mission 기반 귀환 방식(`RTL_TYPE` 1–3)은 고정익
+천이를 넣으므로 쓰지 않습니다. `VT_FW_DIFTHR_EN`을 켜는 것만으로는 이 기체에 맞는 고정익 제어가 되지
+않습니다.
+
+### 3.7 failsafe를 SITL에서 확인한 결과
+
+실제 비행에서 생길 수 있는 일을 SITL에서 일부러 일으켜 봤습니다. 모두 다른 시뮬레이션 없이 혼자 돌렸습니다.
+
+| 상황 | 결과 |
+|---|---|
+| 5 m/s 순항 중 Jetson의 setpoint가 끊김 | 기본값에서는 PX4가 상실을 알고도 아무것도 하지 않아 5 m/s로 15초 넘게 직진. `COM_OBL_RC_ACT=5`로 약 4초 뒤 Hold에 들어가 최대 tilt 11.7°로 멈춤 |
+| 지오펜스 밖으로 나감(정사각형에 35 m 펜스) | 5초 Hold 뒤 21 m 높이로 귀환해 이륙 지점에 착륙 |
+| 푸셔 고장(처음부터) | 그 자리에서 앞으로 가지 못하고 가속 단계 시간 초과. 보조를 끄면 쿼드로 임무 통과(위 푸셔 보조 참고) |
+| 8 m/s 측풍 | 통과, 최대 tilt 11.5°, 이륙 지점 0.2 m 안에 0.59 m/s로 착지 |
 
 ## 4. 시험 순서
 

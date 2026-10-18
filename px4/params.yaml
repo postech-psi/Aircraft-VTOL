@@ -10,14 +10,33 @@
 # The control concept. The same on the vehicle and in the simulation.
 concept:
   CA_SV_CS_COUNT: 0           # no control surfaces
-  VT_FWD_THRUST_EN: 5         # assist above MPC_LAND_ALT1; off in auto LAND and near ground
+  VT_FWD_THRUST_EN: 6         # assist above MPC_LAND_ALT2 (5 m); off in auto LAND. Below 5 m the
+                              # vehicle flies as a plain quad and tilts its nose down to move
   VT_PITCH_MIN: 0.0           # no nose-down pitch: every forward demand goes to the pusher
-  VT_LND_PITCH_MIN: 0.0       # explicit override; mode 5 normally disables LAND assist
-  RTL_TYPE: 0                 # use direct return; still verify with the actual mission/failsafes
+  VT_LND_PITCH_MIN: 0.0       # explicit override; LAND has no assist anyway
+  RTL_TYPE: 0                 # direct return. The mission-based types fly a fixed-wing transition
   CA_R4_SLEW: 1.0             # pusher command takes at least 1 s from 0 to 1
   CA_ROTOR4_PZ: 0.0           # thrust-line offset is left to the rate integrator
   MPC_XY_VEL_MAX: 16.0        # above the cruise speed, or PX4 clips the commanded speed
-  WV_EN: 0                    # the mission node commands the heading
+
+  # There are no control surfaces, so a front transition must never finish. A transition asked for
+  # by a button, a switch or a mission item finds no pusher thrust, cannot reach 30 m/s, and is
+  # cancelled after 3 s; PX4 then flies on as a plain quad (SITL; docs/02_control_concept.md).
+  VT_ARSP_TRANS: 30.0         # the highest PX4 allows; the pusher runs out near 15 m/s
+  VT_F_TRANS_DUR: 20.0        # without airspeed the transition would end after this; the timeout
+  VT_TRANS_TIMEOUT: 3.0       #   below comes first
+  VT_F_TRANS_THR: 0.0         # no pusher during a transition attempt
+
+  # Failsafes. Mission-dependent ones (geofence, return height) are added by gz_model.mission_params.
+  COM_OBL_RC_ACT: 5           # setpoints from the Jetson stop: Hold. The default hands over to an RC
+                              # pilot; without one the vehicle flew on at 5 m/s for 15 s in SITL
+  COM_LOW_BAT_ACT: 3          # return at the critical level, land at the emergency level
+  GF_ACTION: 3                # outside the geofence: return
+  MPC_ACC_HOR: 1.5            # PX4's own braking (Hold, Return, Land) at 1.5 m/s^2, not 3. At 3 a
+                              # stop from 5 m/s pitched the vehicle to 25 degrees in SITL
+  WV_EN: 1                    # in PX4's own modes the nose turns into the wind; offboard sets the
+  WV_YRATE_MAX: 15.0          #   heading itself. No faster than 15 deg/s
+  MPC_LAND_SPEED: 0.5         # touchdown at 0.5 m/s, not 0.7
 
 # Values that belong to one vehicle. These are the simulated vehicle's, not the real one's.
 per_vehicle:

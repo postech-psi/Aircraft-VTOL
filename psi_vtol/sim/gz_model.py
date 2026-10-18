@@ -268,8 +268,23 @@ def world_sdf(p, stock_world, speed_factor):
     return head.rstrip(" ") + wind.lstrip(" ") + "    " + marker + tail
 
 
-def px4_params(cfg):
-    """PX4 parameters of a case: the control concept plus the geometry PX4 is told."""
+GEOFENCE_MARGIN_M = 30.0        # beyond the farthest waypoint, and above the flight height
+
+
+def mission_params(p):
+    """PX4 failsafe values that follow from the route and the flight height of a case."""
+    farthest = max(math.hypot(forward, left) for forward, left in p["route_m"])
+    return {
+        "GF_MAX_HOR_DIST": float(math.ceil(farthest + GEOFENCE_MARGIN_M)),
+        "GF_MAX_VER_DIST": float(math.ceil(p["alt_m"] + GEOFENCE_MARGIN_M)),
+        "RTL_RETURN_ALT": float(p["alt_m"]),            # PX4's default climbs to 60 m first
+        "RTL_DESCEND_ALT": float(min(p["alt_m"], 10.0)),
+    }
+
+
+def px4_params(cfg, p=None):
+    """PX4 parameters of a case: the control concept, the geometry PX4 is told, and the
+    failsafe values of the route. p: the case values; the nominal ones when not given."""
     n = cfg["nominal"]
     rx, ry = n["rotor_x_m"], n["rotor_y_m"]
     params = {
@@ -288,6 +303,7 @@ def px4_params(cfg):
                        f"CA_ROTOR{i}_PZ": -0.07,
                        f"CA_ROTOR{i}_AZ": -1.0, f"CA_ROTOR{i}_CT": ALLOCATION_CT,
                        f"CA_ROTOR{i}_KM": n["lift_moment_m"] * (1 if i < 2 else -1)})
+    params.update(mission_params(n if p is None else p))
     params.update(cfg["px4_params"])
     return params
 
@@ -319,7 +335,7 @@ def write_case(case_dir, p, cfg):
         f"export GZ_SIM_RESOURCE_PATH={case_dir}/models:{world_dir}\n"
         f"export GZ_SIM_SERVER_CONFIG_PATH={case_dir}/server.config\n", newline="\n")
 
-    env = {f"PX4_PARAM_{k}": str(v) for k, v in px4_params(cfg).items()}
+    env = {f"PX4_PARAM_{k}": str(v) for k, v in px4_params(cfg, p).items()}
     env.update({
         "GZ_SIM_SYSTEM_PLUGIN_PATH": str(config_plugin_path(cfg)),
         "HEADLESS": "1",

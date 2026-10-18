@@ -35,8 +35,27 @@ def test_px4_is_told_the_nominal_geometry_in_its_own_axes():
     params = gz_model.px4_params(CFG)
     assert (params["CA_ROTOR0_PX"], params["CA_ROTOR0_PY"]) == (0.3325, 0.2525)
     assert (params["CA_ROTOR1_PX"], params["CA_ROTOR1_PY"]) == (-0.3325, -0.2525)
-    assert params["VT_FWD_THRUST_EN"] == 5 and params["VT_PITCH_MIN"] == 0.0
+    assert params["VT_FWD_THRUST_EN"] == 6 and params["VT_PITCH_MIN"] == 0.0
     assert params["CA_ROTOR2_KM"] == -NOMINAL["lift_moment_m"]
+
+
+def test_a_front_transition_can_never_finish():
+    """No control surfaces: a transition must be cancelled before it reaches fixed-wing flight."""
+    params = gz_model.px4_params(CFG)
+    assert params["VT_F_TRANS_THR"] == 0.0                     # the pusher stays off
+    assert params["VT_ARSP_TRANS"] >= 30.0                     # twice the pusher's airspeed limit
+    assert params["VT_TRANS_TIMEOUT"] < params["VT_F_TRANS_DUR"]   # no airspeed: timeout first
+
+
+def test_failsafes_follow_the_route():
+    params = gz_model.px4_params(CFG)
+    assert (params["COM_OBL_RC_ACT"], params["GF_ACTION"], params["COM_LOW_BAT_ACT"]) == (5, 3, 3)
+    assert params["RTL_TYPE"] == 0 and params["RTL_RETURN_ALT"] == NOMINAL["alt_m"]
+    assert params["GF_MAX_HOR_DIST"] == 101.0                  # 50 m square: corner at 70.7 m
+    long_route = gz_model.px4_params(CFG, dict(NOMINAL, route_m=[[300.0, 0.0], [0.0, 0.0]]))
+    assert long_route["GF_MAX_HOR_DIST"] == 330.0
+    overridden = dict(CFG, px4_params=dict(CFG["px4_params"], GF_MAX_HOR_DIST=500.0))
+    assert gz_model.px4_params(overridden)["GF_MAX_HOR_DIST"] == 500.0   # --px4 still wins
 
 
 def test_wind_is_written_into_the_world():

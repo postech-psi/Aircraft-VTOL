@@ -164,6 +164,11 @@ def test_it_lands_where_it_took_off(p):
     assert lowest == pytest.approx(LAND_FROM_M, abs=0.2)
 
 
+def test_a_route_below_the_pusher_height_is_refused():
+    with pytest.raises(ValueError, match="pusher"):
+        Profile(dict(P, alt_m=5.0), HOME, YAW0)
+
+
 def test_a_waypoint_to_the_side_turns_first_and_a_short_leg_still_has_a_cruise():
     p = dict(P, cruise_mps=10.0, route_m=[[0.0, 40.0]])  # 40 m to the left: too short for 10 m/s
     profile = Profile(p, HOME, YAW0)

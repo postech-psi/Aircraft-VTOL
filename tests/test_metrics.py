@@ -135,7 +135,8 @@ def test_aero_telemetry_must_be_finite_and_monotonic(tmp_path):
 def test_hardware_candidate_excludes_simulation_failsafe_overrides():
     text = px4_setup.candidate()
     assert "CA_ROTOR4_AX\t1.0" in text
-    assert "VT_FWD_THRUST_EN\t5\t6" in text
+    assert "VT_FWD_THRUST_EN\t6\t6" in text
+    assert "COM_OBL_RC_ACT\t5\t6" in text and "GF_MAX_HOR_DIST\t101.0\t9" in text
     for name in config._read(config.REPO / "px4/params.yaml")["sim_only"]:
         assert f"\t{name}\t" not in text
 

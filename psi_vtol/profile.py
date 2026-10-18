@@ -20,6 +20,7 @@ import math
 from dataclasses import dataclass
 
 NAN = math.nan
+MIN_ALT_M = 6.0                 # pusher assist works above 5 m (VT_FWD_THRUST_EN 6, MPC_LAND_ALT2)
 DESCENT_MPS = 1.5
 LAND_FROM_M = 4.0               # below this height the landing is handed to PX4's Land mode
 TURN_RATE = math.radians(20.0)  # how fast the commanded heading may change
@@ -37,7 +38,8 @@ LANDING_PHASES = ("descend", "land")
 
 @dataclass
 class Setpoint:
-    """One position/velocity setpoint. A NaN field is not commanded, as in PX4."""
+    """One setpoint for PX4. A NaN field is not commanded, as in PX4. The acceleration and the
+    yaw rate are feedforward: PX4 still closes its loops on the position and velocity."""
     x: float = NAN
     y: float = NAN
     z: float = NAN
@@ -45,6 +47,10 @@ class Setpoint:
     vy: float = NAN
     vz: float = NAN
     yaw: float = NAN
+    ax: float = NAN
+    ay: float = NAN
+    az: float = NAN
+    yawspeed: float = NAN
 
 
 def _wrap(angle):
@@ -66,6 +72,9 @@ class Profile:
 
     def __init__(self, p, home, yaw0, wind_ne=None, part="all"):
         self.alt, self.cruise, self.accel = p["alt_m"], p["cruise_mps"], p["accel_mps2"]
+        if self.alt < MIN_ALT_M:
+            raise ValueError(f"alt_m {self.alt:g} is below {MIN_ALT_M:g} m: PX4 switches the pusher "
+                             "off under 5 m, and the vehicle would cruise nose-down as a quad")
         self.hover_s = p["hover_s"]
         # Heading policy. Off: point the nose along each leg. On: point it along the velocity
         # relative to the air, as a weathervane would; there are then no turns to fly.

@@ -20,7 +20,6 @@ from std_msgs.msg import String
 
 from vtol_mission import px4
 
-NANS = [math.nan, math.nan, math.nan]
 PX4_MAIN_MODE_OFFBOARD = 6
 PX4_MAIN_MODE_AUTO, PX4_SUB_MODE_AUTO_LAND = 4, 6
 
@@ -79,9 +78,9 @@ class SetpointSource(Node):
         msg.timestamp = px4.now_us(self)
         msg.position = [float(sp.x), float(sp.y), float(sp.z)]
         msg.velocity = [float(sp.vx), float(sp.vy), float(sp.vz)]
-        msg.acceleration = NANS
+        msg.acceleration = [float(sp.ax), float(sp.ay), float(sp.az)]
         msg.yaw = float(sp.yaw)
-        msg.yawspeed = math.nan
+        msg.yawspeed = float(sp.yawspeed)
         self.setpoint_pub.publish(msg)
 
     def command(self, command, param1=0.0, param2=0.0, param3=0.0):
