@@ -186,12 +186,18 @@ Gazebo WindEffects가 world의 바람을 바꾸고 플러그인이 그 값을 �
 ## 6. 스윕
 
 ```bash
-bash simulation/docker_run.sh python3 -m psi_vtol.sim.sweep oat --jobs 2
-bash simulation/docker_run.sh python3 -m psi_vtol.sim.sweep wind --jobs 2
-bash simulation/docker_run.sh python3 -m psi_vtol.sim.sweep corners --jobs 2
-bash simulation/docker_run.sh python3 -m psi_vtol.sim.sweep random --n 100 --seed 1 --jobs 2
+bash simulation/docker_run.sh python3 -m psi_vtol.sim.sweep oat
+bash simulation/docker_run.sh python3 -m psi_vtol.sim.sweep wind
+bash simulation/docker_run.sh python3 -m psi_vtol.sim.sweep corners
+bash simulation/docker_run.sh python3 -m psi_vtol.sim.sweep random --n 100 --seed 1
 bash simulation/docker_run.sh python3 -m psi_vtol.plots
 ```
+
+케이스는 기본으로 한 번에 하나씩 비행합니다. Gazebo는 PX4를 기다리지 않으므로, 시뮬레이션을 여러 개
+동시에 돌려 PX4가 뒤처지면 모터 명령이 시뮬레이션 시간으로 늦게 도착합니다. 4 CPU 컴퓨터에서 다른
+시뮬레이션과 함께 돌린 정사각형 11회 중 6회에 1 Hz 흔들림이 생겼고, 혼자 돌린 13회에서는 한 번도
+없었습니다. `--jobs`를 늘리려면 CPU가 충분한지 먼저 확인하세요. 결과의 `flight.other_simulators`에 함께
+돌던 PX4 수가 남습니다.
 
 | 스터디 | 내용 | 케이스 수 |
 |---|---|---|

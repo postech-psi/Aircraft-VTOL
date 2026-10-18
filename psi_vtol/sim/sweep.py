@@ -125,7 +125,10 @@ def main():
     parser.add_argument("--set", action="append", default=[], metavar="NAME=VALUE",
                         help="a vehicle value for every case of the study; may be repeated")
     parser.add_argument("--name", help="name of the output files; default: the study")
-    parser.add_argument("--jobs", type=int, default=3, help="cases flown at the same time")
+    parser.add_argument("--jobs", type=int, default=1,
+                        help="cases flown at the same time. Keep 1 unless the machine has CPUs to "
+                             "spare: Gazebo does not wait for PX4, and on 4 CPUs runs beside "
+                             "another simulation showed a 1 Hz wobble that runs alone never did")
     parser.add_argument("--first-instance", type=int, default=5)
     args = parser.parse_args()
     if args.jobs < 1 or args.n < 1:

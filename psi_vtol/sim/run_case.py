@@ -18,6 +18,7 @@ import platform
 import signal
 import struct
 import subprocess
+import sys
 import time
 import uuid
 from pathlib import Path
@@ -306,11 +307,16 @@ def run(cfg, overrides, case_id, instance):
     manifest = provenance(cfg, p)
     (case_dir / "manifest.json").write_text(json.dumps(manifest, indent=2))
 
+    alongside = other_simulators()
     proc = launch(case_dir, gz_model.write_case(case_dir, p, cfg), cfg, instance)
     try:
         flight = fly(p, gz_model.px4_params(cfg), instance)
+        flight["other_simulators"] = max(alongside, other_simulators() - 1)
     finally:
         stop(proc, case_dir)
+    if flight["other_simulators"]:
+        print(f"note: {flight['other_simulators']} other PX4 simulation(s) ran alongside this case; "
+              "see other_simulators()", file=sys.stderr)
     # PX4's own warnings, for a run that did not go as planned
     seen = [line for line in (case_dir / "px4.log").read_text(errors="replace").splitlines()
             if line.startswith(("WARN", "ERROR")) and "Resolve system health" not in line]
@@ -337,6 +343,23 @@ def run(cfg, overrides, case_id, instance):
               "log": str(logs[-1]) if logs else None}
     (case_dir / "result.json").write_text(json.dumps(record, indent=1))
     return record
+
+
+def other_simulators():
+    """PX4 SITL processes running on this machine besides the one about to start.
+
+    Gazebo does not wait for PX4 (there is no lockstep in PX4's gz bridge), so a PX4 that falls
+    behind sends its motor commands late in simulated time. In 2026-10 SITL runs beside other
+    simulations, 6 of 11 squares showed a 1 Hz wobble that 13 runs alone never did. The count is
+    recorded with each result so such runs can be told apart.
+    """
+    count = 0
+    for comm in Path("/proc").glob("[0-9]*/comm"):
+        try:
+            count += comm.read_text().strip() == "px4"
+        except OSError:
+            pass
+    return count
 
 
 def provenance(cfg, p):

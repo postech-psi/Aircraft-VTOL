@@ -220,6 +220,7 @@ sequenceDiagram
     R-->>U: result.json, manifest.json
 ```
 
-PX4와 Gazebo는 lockstep으로 돌기 때문에 컴퓨터가 느리면 시뮬레이션이 그만큼 느려질 뿐 물리 계산은
-달라지지 않습니다. 목표 배속은 실제의 4배입니다. 센서 잡음과 돌풍의 seed는 고정하지 않아서 같은 케이스도
-결과가 조금씩 다릅니다.
+PX4는 Gazebo의 시계를 따라가지만, Gazebo는 PX4를 기다리지 않습니다. PX4 v1.17의 Gazebo bridge에는
+lockstep이 없습니다(`src/modules/simulation/gz_bridge`). 그래서 컴퓨터가 바빠 PX4가 뒤처지면 모터 명령이
+시뮬레이션 시간으로 늦게 도착하고, 실제 기체에는 없는 제어 지연이 생깁니다. 목표 배속은 실제의 4배입니다.
+센서 잡음과 돌풍의 seed는 고정하지 않아서 같은 케이스도 결과가 조금씩 다릅니다.

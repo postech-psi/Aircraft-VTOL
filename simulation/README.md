@@ -31,10 +31,10 @@ docker build --build-arg BASE_IMAGE=mirror.gcr.io/library/ubuntu:24.04 -f simula
 
 ```bash
 bash simulation/docker_run.sh python3 -m psi_vtol.sim.run_case --set wind_speed_mps=4 --set wind_from_deg=90
-bash simulation/docker_run.sh python3 -m psi_vtol.sim.sweep corners --jobs 2
-bash simulation/docker_run.sh python3 -m psi_vtol.sim.sweep oat --jobs 2
-bash simulation/docker_run.sh python3 -m psi_vtol.sim.sweep wind --jobs 2
-bash simulation/docker_run.sh python3 -m psi_vtol.sim.sweep random --n 100 --seed 1 --jobs 2
+bash simulation/docker_run.sh python3 -m psi_vtol.sim.sweep corners
+bash simulation/docker_run.sh python3 -m psi_vtol.sim.sweep oat
+bash simulation/docker_run.sh python3 -m psi_vtol.sim.sweep wind
+bash simulation/docker_run.sh python3 -m psi_vtol.sim.sweep random --n 100 --seed 1
 bash simulation/docker_run.sh python3 -m psi_vtol.plots
 bash simulation/docker_run.sh python3 -m psi_vtol.px4_setup --output /workspace/out/psi_candidate.params
 ```
