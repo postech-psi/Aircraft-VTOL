@@ -77,6 +77,9 @@ bash simulation/docker_run.sh              # 기준 기체로 임무를 한 번 
 - 코드와 주석은 영어, 문서는 한국어로 씁니다.
 - 고친 뒤에는 `bash simulation/docker_run.sh python3 -m pytest -q`를 돌립니다. 비행 로직을
   건드렸다면 `bash simulation/docker_run.sh`로 한 번 비행시켜 봅니다.
+- push와 pull request마다 GitHub Actions가 단위 시험과 pyflakes를 Python 3.10, 3.12에서 돌립니다
+  ([`tests.yml`](.github/workflows/tests.yml)). 이 시험들은 PX4 없이 돌기 때문에
+  `pip install -e ".[dev]"`만 하면 로컬에서도 같은 명령으로 돌릴 수 있습니다.
 
 ## 출처
 
