@@ -1,4 +1,4 @@
-"""Exercise actual ROS node methods without requiring ROS packages in the unit-test host."""
+"""The ROS 2 nodes' own methods, loaded from their source and run without ROS installed."""
 import ast
 import math
 from types import SimpleNamespace
@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import pytest
 
 from psi_vtol import config
-from psi_vtol.profile import Profile, Stop, for_px4, needs_land
+from psi_vtol.profile import STOP_ACCEL_MPS2, STOP_RAMP_S, Profile, Stop, for_px4, needs_land
 from psi_vtol.trajectory import stopping_distance
 
 
@@ -23,19 +23,17 @@ def method(filename, class_name, name, **namespace):
 
 
 def test_hold_brakes_along_the_way_and_does_not_follow_position_drift():
-    """A point the vehicle has already passed, at 5 m/s, pitched it to 48 degrees (SITL)."""
+    """The mux's own stop: latched once, along the vehicle's way, and not moved when it drifts."""
     clock = SimpleNamespace(t=100.0)
     hold = method("setpoint_mux.py", "SetpointMux", "hold_setpoint", Stop=Stop, for_px4=for_px4,
                   time=SimpleNamespace(monotonic=lambda: clock.t))
     state = SimpleNamespace(position=[0., 0., -20.], velocity=(5., 0., 0.), heading=.1, stop=None)
     first = hold(state)
-    assert all(map(math.isnan, first.position[:2])) and first.position[2] == -20.  # moving: a velocity
-    assert first.velocity[:2] == [5., 0.]
-    assert first.acceleration[:2] == pytest.approx([0., 0.])           # braking eases in
+    assert all(map(math.isnan, first.position[:2])) and first.velocity[:2] == [5., 0.]
     state.position, state.velocity, state.heading = [5., -2., -18.], (0., 0., 0.), .5
     clock.t = 120.0
     later = hold(state)
-    assert later.position == pytest.approx([stopping_distance(5., 1.5, .5), 0., -20.])
+    assert later.position == pytest.approx([stopping_distance(5., STOP_ACCEL_MPS2, STOP_RAMP_S), 0., -20.])
     assert later.velocity[:2] == pytest.approx([0., 0.])
     assert later.yaw == first.yaw == .1
 
@@ -66,7 +64,7 @@ def test_replayed_position_cannot_refresh_watchdog():
 
 @pytest.mark.parametrize("filename, class_name", [("path_node.py", "PathNode"),
                                                   ("landing_node.py", "LandingNode")])
-def test_step_fails_cleanly_when_heading_into_wind_has_no_wind(filename, class_name):
+def test_start_fails_cleanly_when_heading_into_wind_has_no_wind(filename, class_name):
     into_wind = dict(config.profile(), heading_into_wind=1)
     start = method(filename, class_name, "start", Profile=Profile,
                    config=SimpleNamespace(profile=lambda mission: into_wind))

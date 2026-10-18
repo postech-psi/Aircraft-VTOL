@@ -39,13 +39,13 @@ def test_a_rounded_square_keeps_its_heading_and_curvature_smooth():
     assert np.allclose(step, np.diff(s), atol=1e-3)
 
 
-def test_corners_between_short_legs_are_made_tighter_and_u_turns_are_refused():
+def test_corners_between_short_legs_are_made_tighter_and_impossible_ones_refused():
     path = Path([(0, 0), (12, 0), (12, 12), (0, 12)], radius_m=15.0, transition_m=3.5,
                 min_radius_m=3.0)
     assert max(path.radii) < 15.0
     with pytest.raises(ValueError, match="too short"):
         Path([(0, 0), (12, 0), (12, 12)], radius_m=15.0, transition_m=3.5)
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="turn"):
         Path([(0, 0), (50, 0), (0, 0)], radius_m=15.0, transition_m=3.5, min_radius_m=3.0)
 
 

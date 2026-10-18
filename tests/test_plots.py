@@ -1,3 +1,4 @@
+"""plots.py: the small pieces of logic behind the figures."""
 from psi_vtol import plots
 
 

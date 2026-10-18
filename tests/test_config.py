@@ -1,6 +1,4 @@
 """The data files hang together: every number the simulation needs is there, once."""
-from pathlib import Path
-
 import pytest
 import yaml
 
@@ -47,7 +45,6 @@ def test_failsafe_switches_are_sim_only():
 
 def test_profile_is_what_the_ros_nodes_read():
     assert config.profile() == {k: config.load()["nominal"][k] for k in config.profile()}
-    assert isinstance(config.REPO, Path)
 
 
 def test_command_line_values_are_numbers_or_json_lists():

@@ -467,8 +467,8 @@ class Profile:
             air_n = speed * direction[0] - self.wind_ne[0]
             air_e = speed * direction[1] - self.wind_ne[1]
             target = math.atan2(air_e, air_n) if math.hypot(air_n, air_e) > 1.0 else None
-        # capped, so the first call after the climb cannot turn the heading in one step
-        dt = 0.1 if self._t_yaw is None else min(0.1, max(0.0, t - self._t_yaw))
+        # capped, so a pause between calls cannot turn the heading in one step
+        dt = 0.0 if self._t_yaw is None else min(0.1, max(0.0, t - self._t_yaw))
         self._t_yaw = t
         if target is not None:
             error = _wrap(target - self._yaw_cmd)

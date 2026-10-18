@@ -4,10 +4,10 @@ import math
 import pytest
 
 from psi_vtol import config
-from psi_vtol.profile import (ARRIVE_M, LAG_FAULT_M, LAND_FROM_M, LANDING_PHASES, MIN_CRUISE_S,
-                              STALL_S, STOP_ACCEL_MPS2, STOP_RAMP_S, TRACK_MAX_MPS, TRACK_P,
-                              TURN_ALIGNED_S, TURN_RATE, WIND_RATE, Profile, Setpoint, Stop,
-                              for_px4)
+from psi_vtol.profile import (ARRIVE_M, FLY_KINDS, LAG_FAULT_M, LAND_FROM_M, LANDING_PHASES,
+                              MIN_CRUISE_S, STALL_S, STOP_ACCEL_MPS2, STOP_RAMP_S, TRACK_MAX_MPS,
+                              TRACK_P, TURN_ALIGNED_S, TURN_RATE, WIND_RATE, Profile, Setpoint, Stop,
+                              for_px4, needs_land)
 from psi_vtol.trajectory import SpeedRamp
 
 P = config.profile()                                            # the 50 m square, flown through
@@ -24,7 +24,6 @@ THROUGH = ("climb", "hover1", "accel1", "cruise1", "corner1", "cruise2", "corner
 OUT_AND_BACK = ("climb", "hover1", "accel1", "cruise1", "decel1", "hover2",
                 "turn2", "accel2", "cruise2", "decel2", "hover3")
 ROUTES = pytest.mark.parametrize("p", [P, STOP, OB], ids=["square_through", "square_stop", "out_and_back"])
-FLY = ("accel", "cruise", "decel", "corner")
 
 
 def fly(profile, pos=HOME, t=100.0, disarm_below_m=0.2, heading=YAW0):
@@ -58,7 +57,7 @@ def fly(profile, pos=HOME, t=100.0, disarm_below_m=0.2, heading=YAW0):
 
 
 def speeds(history):
-    return [(t, math.hypot(sp.vx, sp.vy)) for t, phase, sp, _ in history if phase.rstrip("0123456789") in FLY]
+    return [(t, math.hypot(sp.vx, sp.vy)) for t, phase, sp, _ in history if phase.rstrip("0123456789") in FLY_KINDS]
 
 
 def test_the_default_route_is_a_50_m_square_flown_through_its_corners():
@@ -71,24 +70,18 @@ def test_the_default_route_is_a_50_m_square_flown_through_its_corners():
     c, s = math.cos(YAW0), math.sin(YAW0)                           # the second corner lies right
     right = (profile.legs[1]["end"][0] - HOME[0]) * -s + (profile.legs[1]["end"][1] - HOME[1]) * c
     assert right == pytest.approx(50.0)
+
+
+@pytest.mark.parametrize("p, phases", [(P, THROUGH), (STOP, SQUARE), (OB, OUT_AND_BACK)],
+                         ids=["square_through", "square_stop", "out_and_back"])
+def test_each_route_flies_its_phases_in_order_without_a_gap(p, phases):
+    """Out and back is flown stop and turn even when flying through: a 180 degree corner cannot
+    be rounded on the way."""
+    profile = Profile(p, HOME, YAW0)
     fly(profile)
-    assert profile.done
-    assert tuple(profile.times) == THROUGH + LANDING_PHASES
+    assert profile.done and tuple(profile.times) == phases + LANDING_PHASES
     ends = list(profile.times.values())
-    assert all(a[1] == b[0] for a, b in zip(ends, ends[1:]))    # no gap between phases
-
-
-def test_stop_and_turn_stops_over_every_corner():
-    profile = Profile(STOP, HOME, YAW0)
-    fly(profile)
-    assert tuple(profile.times) == SQUARE + LANDING_PHASES
-
-
-def test_out_and_back_stops_to_turn_round_even_when_flying_through():
-    """A 180 degree corner cannot be rounded on the way: it is a stop and a turn."""
-    profile = Profile(OB, HOME, YAW0)
-    fly(profile)
-    assert profile.done and tuple(profile.times) == OUT_AND_BACK + LANDING_PHASES
+    assert all(a[1] == b[0] for a, b in zip(ends, ends[1:]))
 
 
 @pytest.mark.parametrize("p, side_m, turn_rad", [(STOP, 50.0, math.pi / 2), (OB, 250.0, math.pi)],
@@ -99,7 +92,7 @@ def test_phase_lengths_follow_the_mission_file(p, side_m, turn_rad):
     length = {name: end - start for name, (start, end) in profile.times.items()}
     v = p["cruise_mps"]
     ramp = SpeedRamp(0.0, v, p["accel_mps2"], p["brake_ramp_s"])
-    cruise = (side_m - 2 * ramp.length) / v                     # square 4.3 s, out and back 22.9 s
+    cruise = (side_m - 2 * ramp.length) / v                     # square 4.3 s, out and back 14.3 s
     assert length["hover1"] == pytest.approx(p["hover_s"], abs=2 * DT)
     for leg in range(1, len(profile.legs) + 1):
         assert length[f"accel{leg}"] == pytest.approx(ramp.duration, abs=2 * DT)
@@ -110,20 +103,16 @@ def test_phase_lengths_follow_the_mission_file(p, side_m, turn_rad):
 
 
 @ROUTES
-def test_commanded_speed_never_changes_faster_than_the_limit(p):
-    """PX4 uses offboard setpoints unsmoothed: a step in the setpoint is a step in the pusher."""
-    history = speeds(fly(Profile(p, HOME, YAW0)))
-    for (t0, v0), (t1, v1) in zip(history, history[1:]):
-        assert abs(v1 - v0) <= p["accel_mps2"] * (t1 - t0) + 1e-9
-    assert max(v for _, v in history) == pytest.approx(p["cruise_mps"])
-
-
-@ROUTES
-def test_speed_changes_build_up_and_fade_out(p):
-    """A step into braking steps the pitch setpoint and cuts the pusher at once (report 10-18, §6)."""
+def test_speed_changes_build_up_and_fade_out_and_never_pass_the_limit(p):
+    """PX4 uses offboard setpoints unsmoothed: a step into braking steps the pitch setpoint and
+    cuts the pusher at once (report 2026-10-18, section 6)."""
     profile = Profile(p, HOME, YAW0)
     history = fly(profile)
     a = p["accel_mps2"]
+    flown = speeds(history)
+    for (t0, v0), (t1, v1) in zip(flown, flown[1:]):
+        assert abs(v1 - v0) <= a * (t1 - t0) + 1e-9
+    assert max(v for _, v in flown) == pytest.approx(p["cruise_mps"])
     for name in profile.times:
         if name.rstrip("0123456789") not in ("accel", "decel"):
             continue
@@ -143,7 +132,7 @@ def test_the_reference_stops_exactly_on_each_waypoint(p):
     for run in profile.runs:
         last = run["legs"][-1]
         name = next(n for n in reversed(profile.times) if n.endswith(str(last + 1))
-                    and n.rstrip("0123456789") in FLY)
+                    and n.rstrip("0123456789") in FLY_KINDS)
         sp = [sp for _, phase, sp, _ in history if phase == name][-1]
         assert (sp.x, sp.y) == pytest.approx(profile.legs[last]["end"], abs=0.05)
         assert math.hypot(sp.vx, sp.vy) < 0.05
@@ -178,7 +167,7 @@ def test_the_path_rounds_each_corner_inside_the_waypoint():
 def test_each_leg_is_flown_level_and_nose_first(p):
     profile = Profile(p, HOME, YAW0)
     for _, phase, sp, _ in fly(profile):
-        if phase.rstrip("0123456789") in FLY:
+        if phase.rstrip("0123456789") in FLY_KINDS:
             heading = profile.legs[int(phase[-1]) - 1]["heading"]
             assert sp.z == HOME[2] - p["alt_m"]
             assert math.remainder(sp.yaw - heading, 2 * math.pi) == pytest.approx(0, abs=1e-9)
@@ -304,46 +293,52 @@ def test_the_path_and_the_landing_can_be_flown_by_two_objects():
 def test_a_phase_that_takes_too_long_is_reported():
     profile = Profile(P, HOME, YAW0)
     profile.update(0.0, HOME, (0.0, 0.0, 0.0))                  # the vehicle never climbs
-    assert not profile.overdue(59.0)
-    assert profile.overdue(61.0)
+    assert not profile.overdue(profile.limit_s() - 1.0)
+    assert profile.overdue(profile.limit_s() + 1.0)
 
 
-def _to_accel1(p):
-    profile = Profile(p, HOME, 0.0, part="path")
-    hover, now = (HOME[0], HOME[1], HOME[2] - p["alt_m"]), 100.0
-    while profile.phase != "accel1":                            # climbed, hovered
-        profile.update(now, hover, (0, 0, 0))
+def fly_exactly_until(profile, phase, now=100.0):
+    """Follow the reference exactly until the phase starts. Returns (position, velocity, time)."""
+    pos, vel = [profile.home[0], profile.home[1], profile.z_fly], [0.0, 0.0, 0.0]
+    while profile.phase != phase:
+        sp = profile.update(now, tuple(pos), tuple(vel))
+        if not math.isnan(sp.vx):
+            pos[:2], vel[:2] = [sp.x, sp.y], [sp.vx, sp.vy]
         now += DT
-    return profile, hover, now
+    return pos, vel, now
+
+
+def coast(profile, pos, vel, now, drag_mps2, seconds=30.0):
+    """Keep to the path but only lose speed to drag, as without a pusher, until a fault.
+    Returns how far the vehicle was behind the reference then."""
+    lag = 0.0
+    for _ in range(int(seconds / DT)):
+        sp = profile.update(now, tuple(pos), tuple(vel))
+        if profile.fault:
+            break
+        speed = max(math.hypot(*vel[:2]) - drag_mps2 * DT, 0.0)
+        heading = math.atan2(sp.vy, sp.vx)
+        vel[:2] = [speed * math.cos(heading), speed * math.sin(heading)]
+        pos[0], pos[1] = pos[0] + vel[0] * DT, pos[1] + vel[1] * DT
+        lag = math.hypot(sp.x - pos[0], sp.y - pos[1])
+        now += DT
+    return lag
 
 
 def test_no_forward_speed_is_a_pusher_fault():
     """With the pusher dead, assist holds the nose level and the vehicle stays put (SITL)."""
-    profile, hover, now = _to_accel1(P)
+    profile = Profile(P, HOME, 0.0, part="path")
+    hover, _, now = fly_exactly_until(profile, "accel1")
     for i in range(int((STALL_S + 1.0) / DT)):                  # it stays put instead of speeding up
-        profile.update(now + i * DT, hover, (0, 0, 0))
+        profile.update(now + i * DT, tuple(hover), (0, 0, 0))
     assert profile.fault and profile.fault.startswith("pusher")
+    assert needs_land(profile.fault)
 
 
 def test_coasting_down_in_cruise_is_a_pusher_fault_before_it_falls_far_behind():
     """A pusher that stops in cruise: assist cannot tilt the nose down, drag slows the vehicle."""
-    profile, hover, now = _to_accel1(P)
-    pos, vel = list(hover), [0.0, 0.0, 0.0]
-    while profile.phase != "cruise1":                           # flown exactly so far
-        sp = profile.update(now, tuple(pos), tuple(vel))
-        pos[:2], vel[:2] = [sp.x, sp.y], [sp.vx, sp.vy]
-        now += DT
-    lag = 0.0
-    for _ in range(int(20.0 / DT)):
-        sp = profile.update(now, tuple(pos), tuple(vel))
-        if profile.fault:
-            break
-        speed = math.hypot(*vel[:2])
-        scale = max(speed - 0.3 * DT, 0.0) / speed              # 0.3 m/s2 of drag
-        vel[0], vel[1] = vel[0] * scale, vel[1] * scale
-        pos[0], pos[1] = pos[0] + vel[0] * DT, pos[1] + vel[1] * DT
-        lag = math.hypot(sp.x - pos[0], sp.y - pos[1])
-        now += DT
+    profile = Profile(P, HOME, 0.0, part="path")
+    lag = coast(profile, *fly_exactly_until(profile, "cruise1"), drag_mps2=0.3)
     assert profile.fault and profile.fault.startswith("pusher: ")
     assert lag < LAG_FAULT_M
 
@@ -352,33 +347,18 @@ def test_a_pusher_lost_at_7_mps_is_seen_through_the_corners_and_slow_downs():
     """At 7 m/s the middle legs only speed up and slow down. A check that restarted with every
     slow-down of the plan saw this as falling behind, and Hold without forward thrust followed:
     switched to Land after it, the vehicle pitched to 48 deg in SITL."""
-    p = dict(P, cruise_mps=7.0)
-    profile = Profile(p, HOME, 0.0, part="path")
-    pos, vel, now = [HOME[0], HOME[1], HOME[2] - p["alt_m"]], [0.0, 0.0, 0.0], 100.0
-    while profile.phase != "corner1":                           # flown exactly so far
-        sp = profile.update(now, tuple(pos), tuple(vel))
-        if not math.isnan(sp.vx):
-            pos[:2], vel[:2] = [sp.x, sp.y], [sp.vx, sp.vy]
-        now += DT
+    profile = Profile(dict(P, cruise_mps=7.0), HOME, 0.0, part="path")
     assert "cruise2" not in profile.phases
-    lag = 0.0
-    for _ in range(int(30.0 / DT)):                             # the vehicle follows the path
-        sp = profile.update(now, tuple(pos), tuple(vel))        # but only coasts down on drag
-        if profile.fault:
-            break
-        speed = max(math.hypot(*vel[:2]) - 0.3 * DT, 0.0)
-        heading = math.atan2(sp.vy, sp.vx)
-        vel[:2] = [speed * math.cos(heading), speed * math.sin(heading)]
-        pos[0], pos[1] = pos[0] + vel[0] * DT, pos[1] + vel[1] * DT
-        lag = math.hypot(sp.x - pos[0], sp.y - pos[1])
-        now += DT
+    lag = coast(profile, *fly_exactly_until(profile, "corner1"), drag_mps2=0.3)
     assert profile.fault and profile.fault.startswith("pusher: ")
     assert lag < LAG_FAULT_M
 
 
-def test_falling_far_behind_the_reference_is_a_fault():
-    profile, hover, now = _to_accel1(P)
-    pos, vel = list(hover), (0.0, 0.0, 0.0)
+def test_falling_far_behind_the_reference_is_a_fault_that_lands_too():
+    """Half the planned speed: a weak pusher, not a dead one. It still cannot make way forward."""
+    profile = Profile(P, HOME, 0.0, part="path")
+    pos, _, now = fly_exactly_until(profile, "accel1")
+    vel = (0.0, 0.0, 0.0)
     for i in range(int(30.0 / DT)):                            # half the planned speed
         sp = profile.update(now + i * DT, tuple(pos), vel)
         vel = (0.5 * sp.vx, 0.5 * sp.vy, 0.0)
@@ -388,9 +368,10 @@ def test_falling_far_behind_the_reference_is_a_fault():
             break
     assert profile.fault and profile.fault.startswith("falling behind")
     assert float(profile.fault.split(" by ")[1].split()[0]) >= LAG_FAULT_M
+    assert needs_land(profile.fault) and not needs_land("timeout in hover3")
 
 
-def test_a_route_with_a_leg_shorter_than_a_metre_is_refused():
+def test_a_route_without_waypoints_or_with_a_leg_under_a_metre_is_refused():
     with pytest.raises(ValueError, match="shorter than 1 m"):
         Profile(dict(P, route_m=[[250.0, 0.0], [250.0, 0.5]]), HOME, YAW0)
     with pytest.raises(ValueError, match="no waypoints"):
@@ -409,12 +390,12 @@ def test_heading_into_wind_flies_no_turns_and_turns_no_faster_than_the_turn_rate
     assert not any(phase.startswith("turn") for phase in profile.phases)
     yaws = [(t, sp.yaw) for t, phase, sp, _ in fly(profile, heading=0.0) if phase != "align"]
     for (t0, y0), (t1, y1) in zip(yaws, yaws[1:]):
-        assert abs(y1 - y0) <= TURN_RATE * 0.1 + 1e-9
+        assert abs(math.remainder(y1 - y0, 2 * math.pi)) <= TURN_RATE * (t1 - t0) + 1e-9
     assert max(y for _, y in yaws) > math.radians(30)           # the nose did turn into the wind
 
 
 def test_stop_brings_a_moving_vehicle_to_rest_without_a_step():
-    """What the failsafe flies: a position setpoint where the vehicle is pitched it to 48 degrees."""
+    """What the failsafe flies. Holding the point where a 5 m/s vehicle was pitched it to 48 deg."""
     stop = Stop(10.0, (1.0, 2.0, -20.0), (3.0, 4.0, 0.0), 0.3)
     ramp = SpeedRamp(5.0, 0.0, STOP_ACCEL_MPS2, STOP_RAMP_S)
     first = stop.setpoint(10.0)
