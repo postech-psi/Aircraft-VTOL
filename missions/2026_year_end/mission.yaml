@@ -1,4 +1,4 @@
-# The year-end flight 2026: take off, climb, speed up, cruise, slow down, descend, land.
+# The year-end flight 2026: take off, fly out, stop and turn, fly back, land where it took off.
 # docs/02_control_concept.md, section 1.
 
 vehicle: psi_qp               # vehicle/psi_qp.yaml
@@ -7,8 +7,13 @@ profile:
   alt_m: 20.0
   cruise_mps: 10.0
   accel_mps2: 1.0             # limit on the commanded speed change, both ways
-  cruise_s: 15.0
   hover_s: 6.0
+  # Waypoints [forward, left] in metres from the take-off point, in the frame of the heading at
+  # take-off. The vehicle stops and turns over each one and lands on the last. Out and back: the
+  # 250 m leg is the old mission's speed-up, 15 s cruise and slow-down.
+  route_m:
+    - [250.0, 0.0]
+    - [0.0, 0.0]
   heading_into_wind: 0        # 0 command the heading along the direction of travel;
                               # 1 command it along the velocity relative to the air, which
                               # needs the wind (the simulation then uses the true mean wind)

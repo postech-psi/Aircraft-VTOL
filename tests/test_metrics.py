@@ -26,7 +26,8 @@ def synthetic_log():
             ("vehicle_land_detected", landed)]
     flight = {"completed": True, "alt_m": 20., "cruise_mps": 10., "home": [0, 0, 0], "yaw0": 0.,
         "landing_target": [1, 0, 0],
-        "phases": dict(zip(["climb", "hover1", "accel", "cruise", "decel", "hover2", "descend", "land"],
+        "legs": [{"start": [0, 0], "end": [250, 0], "heading": 0., "speed": 10.}],
+        "phases": dict(zip(["climb", "hover1", "accel1", "cruise1", "decel1", "hover2", "descend", "land"],
                            [[0, 10], [10, 16], [16, 26], [26, 41], [41, 51], [51, 57], [57, 68], [68, 73]]))}
     return [SimpleNamespace(name=n, multi_id=0, data=d) for n, d in data], flight
 
@@ -41,6 +42,29 @@ def test_compute_catches_climb_tilt_zero_speed_and_landing_speed(monkeypatch):
     assert result["touchdown_speed_mps"] == 2
     assert result["touchdown_err_m"] == 1
     assert result["data_gap_max_s"] < .11
+
+
+def test_each_leg_is_judged_against_its_own_line_and_speed(monkeypatch):
+    """Out and back: the way home is flown at -10 m/s along x, 1 m to the side of its line."""
+    t = np.arange(0, 100.01, .1)
+    names = ["climb", "hover1", "accel1", "cruise1", "decel1", "hover2", "turn2", "accel2", "cruise2", "decel2"]
+    starts = [0, 10, 16, 26, 41, 51, 57, 68, 78, 93, 100]
+    phases = {n: [a, b] for n, a, b in zip(names, starts, starts[1:])}
+    vx = np.where((t >= 26) & (t <= 41), 10., 0.) + np.where((t >= 78) & (t <= 93), -10., 0.)
+    position = {"timestamp": t * 1e6, "x": np.zeros_like(t), "y": np.where(t >= 68, 1., 0.),
+                "z": np.full_like(t, -20.), "vx": vx, "vy": np.zeros_like(t), "vz": np.zeros_like(t)}
+    attitude = {"timestamp": t * 1e6, "q[0]": np.ones_like(t), **{f"q[{i}]": np.zeros_like(t) for i in (1, 2, 3)}}
+    motors = {"timestamp": t * 1e6, **{f"control[{i}]": np.full_like(t, .5) for i in range(5)}}
+    data = [SimpleNamespace(name=n, multi_id=0, data=d) for n, d in
+            [("vehicle_attitude", attitude), ("vehicle_local_position", position), ("actuator_motors", motors)]]
+    flight = {"home": [0, 0, 0], "alt_m": 20., "phases": phases,
+              "legs": [{"start": [0, 0], "end": [250, 0], "heading": 0., "speed": 10.},
+                       {"start": [250, 0], "end": [0, 0], "heading": np.pi, "speed": 10.}]}
+    monkeypatch.setattr(metrics, "ULog", lambda *a, **kw: SimpleNamespace(data_list=data))
+    result = metrics.compute("synthetic.ulg", flight)
+    assert result["cruise_speed_err_mps"] == pytest.approx(0, abs=1e-9)
+    assert result["cross_track_max_m"] == pytest.approx(1)
+    assert result["alt_err_max_m"] == 0
 
 
 @pytest.mark.parametrize("contact_field", [True, False])
