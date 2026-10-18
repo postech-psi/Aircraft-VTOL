@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
-"""Draw the figures of the feasibility study from the sweep results.
+"""Figures of the simulation report. Each one answers one question.
 
-    python3 -m psi_vtol.plots       # writes missions/<mission>/figures/*.png and *.pdf
+    python3 -m psi_vtol.plots                          # the vehicle and the wing share only
+    python3 -m psi_vtol.plots --flight out/square.json
+    python3 -m psi_vtol.plots --oscillation out/calm.json out/wobbled.json 2
+    python3 -m psi_vtol.plots --braking "Old" out/old/*.json --braking "Eased" out/new/*.json
+    python3 -m psi_vtol.plots --wind a/wind.json "10 m/s, straight" --wind b/wind.json "5 m/s, square"
+    python3 -m psi_vtol.plots --oat out/2026_year_end/aeroprop-v2/oat.json
 
-Reads oat.json, wind.json and random_seed1.json from out/<mission>/, and the PX4 log of the
-nominal case for the time history.
+Figures go to missions/<mission>/figures/<model revision>/ as PNG and PDF. The pusher-thrust
+figure is drawn from the cruise segments of the wind studies given with --wind.
 """
 import argparse
 import json
@@ -21,17 +26,19 @@ from matplotlib.lines import Line2D  # noqa: E402
 from psi_vtol import config  # noqa: E402
 from psi_vtol.sim import gz_model, metrics  # noqa: E402
 
-CFG = OUT = FIGURES = None      # the mission being drawn; set by main()
+CFG = FIGURES = None            # the mission being drawn; set by main()
 
 # Ink and surfaces
 INK, INK2, MUTED = "#0b0b0b", "#52514e", "#898781"
 SURFACE, GRID, AXIS, BAND = "#fcfcfb", "#e1e0d9", "#c3c2b7", "#f0efec"
-# Two categorical hues, and one blue ramp for magnitude and for ordered series
+# Two categorical hues, one blue ramp for magnitude, and the status pair for pass and fail
 BLUE, ORANGE = "#2a78d6", "#eb6834"
+GOOD, CRITICAL = "#0ca30c", "#d03b3b"
 RAMP = ["#cde2fb", "#b7d3f6", "#9ec5f4", "#86b6ef", "#6da7ec", "#5598e7", "#3987e5", "#2a78d6",
         "#256abf", "#1c5cab", "#184f95", "#104281", "#0d366b"]
 LIGHT, MID, DARK = RAMP[3], RAMP[7], RAMP[11]
 SEQUENTIAL = LinearSegmentedColormap.from_list("blue", RAMP)
+SIM_NOTE = "PX4 v1.17.0 SITL with Gazebo and assumed vehicle coefficients; simulation, not flight data."
 
 plt.rcParams.update({
     "font.family": "sans-serif", "font.size": 8.5,
@@ -53,13 +60,58 @@ plt.rcParams.update({
 def save(fig, name):
     FIGURES.mkdir(parents=True, exist_ok=True)
     for ext in ("png", "pdf"):
-        fig.savefig(FIGURES / f"{name}.{ext}", bbox_inches="tight", pad_inches=0.12)
+        fig.savefig(FIGURES / f"{name}.{ext}", bbox_inches="tight", pad_inches=0.15)
     plt.close(fig)
     print("wrote", FIGURES / f"{name}.png")
 
 
-def load(name):
-    return json.loads((OUT / f"{name}.json").read_text())
+def _extent(fig):
+    """The figure-fraction box around everything drawn so far: axes, their labels, legends."""
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    boxes = [a.get_tightbbox(renderer) for a in fig.axes if a.get_visible()]
+    boxes += [legend.get_window_extent(renderer) for legend in fig.legends]
+    boxes += [t.get_window_extent(renderer) for t in fig.texts]
+    union = matplotlib.transforms.Bbox.union([b for b in boxes if b is not None])
+    return union.transformed(fig.transFigure.inverted())
+
+
+def heading(fig, title, subtitle):
+    """The takeaway in bold, then what was flown, clear above everything drawn."""
+    box = _extent(fig)
+    left = min(box.x0, 0.0)
+    sub = fig.text(left, box.y1 + 0.012, subtitle, fontsize=8.5, color=INK2, ha="left",
+                   va="bottom", linespacing=1.35)
+    lines = subtitle.count("\n") + 1
+    above = matplotlib.transforms.offset_copy(sub.get_transform(), fig=fig, y=lines * 12.5 + 5,
+                                              units="points")
+    fig.text(left, box.y1 + 0.012, title, fontsize=11.5, fontweight="bold", color=INK, ha="left",
+             va="bottom", transform=above)
+
+
+def footnote(fig, text):
+    """A muted line clear below everything drawn."""
+    box = _extent(fig)
+    fig.text(min(box.x0, 0.0), box.y0 - 0.012, text, fontsize=7.2, color=MUTED, ha="left",
+             va="top", linespacing=1.35)
+
+
+def load(path):
+    return json.loads(Path(path).read_text())
+
+
+def values_of(record):
+    """The case values a record was flown with: its manifest, else the nominal plus overrides."""
+    manifest = Path(record.get("manifest") or "")
+    if manifest.is_file():
+        return load(manifest)["values"]
+    return {**CFG["nominal"], **{k: v for k, v in record.get("overrides", {}).items() if ":" not in k}}
+
+
+def ulog_topics(record, topics):
+    from pyulog import ULog
+    ulog = ULog(record["log"], message_name_filter_list=topics)
+    return {d.name: d.data for d in ulog.data_list if d.multi_id == 0}
 
 
 # ---------------------------------------------------------------------------------------------
@@ -137,338 +189,624 @@ def vehicle_plan():
     save(fig, "fig0_vehicle")
 
 
-# ---------------------------------------------------------------------------------------------
-# 1. One flight of the nominal vehicle
-# ---------------------------------------------------------------------------------------------
-LABELS = {"climb": "Climb", "hover": "Hover", "turn": "Turn", "accel": "Accel", "cruise": "Cruise",
-          "decel": "Decel", "descend": "Descent", "land": "Landing"}
 
 
-def nominal_flight(record=None):
-    from pyulog import ULog
-    if record is None:
-        record = next(r for r in load("oat") if r["case"] == "nominal")
+# ---------------------------------------------------------------------------------------------
+# 1. One flight: where it went and what it did
+# ---------------------------------------------------------------------------------------------
+def takeoff_frame(flight):
+    """Maps north/east to metres (to the right, forward) of the take-off point and heading."""
+    hx, hy = flight["home"][:2]
+    c, s = math.cos(flight["yaw0"]), math.sin(flight["yaw0"])
+
+    def to(north, east):
+        dn, de = np.asarray(north) - hx, np.asarray(east) - hy
+        return -dn * s + de * c, dn * c + de * s
+    return to
+
+
+def flight_parts(phases):
+    """[start, end, label] for the take-off, each leg of the route and the landing."""
+    parts = []
+    for name, (a, b) in sorted(phases.items(), key=lambda item: item[1][0]):
+        kind = name.rstrip("0123456789")
+        number = int(name[len(kind):] or (2 if kind == "hover" else 1))
+        if name in ("climb", "hover1"):
+            label = "Take-off"
+        elif kind in ("descend", "land"):
+            label = "Landing"
+        else:                       # hover<i+1> ends leg i
+            label = f"Leg {number - 1 if kind == 'hover' else number}"
+        if parts and parts[-1][2] == label:
+            parts[-1][1] = b
+        else:
+            parts.append([a, b, label])
+    return parts
+
+
+def ground_track(ax, record, color, label, planned=True):
     flight = record["flight"]
-    ulog = ULog(record["log"])
+    to = takeoff_frame(flight)
+    pos = ulog_topics(record, ["vehicle_local_position"])["vehicle_local_position"]
+    t = pos["timestamp"] * 1e-6
+    ph = flight["phases"]
+    keep = (t >= ph["climb"][0]) & (t <= max(end for _, end in ph.values()))
+    right, forward = to(pos["x"][keep], pos["y"][keep])
+    legs = flight.get("legs") or []
+    if planned and legs:
+        corners = [legs[0]["start"]] + [leg["end"] for leg in legs]
+        pr, pf = to([c[0] for c in corners], [c[1] for c in corners])
+        ax.plot(pr, pf, color=GRID, lw=8, solid_capstyle="round", zorder=1, label="Planned route")
+        for i, (r, f) in enumerate(zip(pr[1:], pf[1:]), 1):
+            if math.hypot(r, f) < 1.0:          # back at the take-off point: labelled below
+                continue
+            ax.plot(r, f, "o", ms=15, mfc=SURFACE, mec=INK2, mew=1.0, zorder=5)
+            ax.text(r, f, str(i), ha="center", va="center", fontsize=7.5, color=INK, zorder=6)
+        back = math.hypot(pr[-1], pf[-1]) < 1.0
+        home_text = (f"Take-off, and landing\nat waypoint {len(legs)}" if back
+                     else "Take-off point")
+        for (r0, f0), (r1, f1) in zip(zip(pr, pf), zip(pr[1:], pf[1:])):
+            mid, step = np.array([(r0 + r1) / 2, (f0 + f1) / 2]), np.array([r1 - r0, f1 - f0])
+            step = step / np.hypot(*step) * 2.5
+            ax.annotate("", mid + step, mid - step, zorder=4,
+                        arrowprops=dict(arrowstyle="-|>", color=INK2, lw=1.0, mutation_scale=9))
+        ax.plot(0, 0, "s", ms=8, color=INK, zorder=6)
+        ax.annotate(home_text, (0, 0), xytext=(9, 9), textcoords="offset points",
+                    ha="left", va="bottom", fontsize=7.5, color=INK2, linespacing=1.15)
+    ax.plot(right, forward, color=color, lw=1.8 if planned else 1.3, zorder=3, label=label)
 
-    def topic(name):
-        return next(d.data for d in ulog.data_list if d.name == name and d.multi_id == 0)
 
-    t0 = flight["phases"]["climb"][0]
-    att, pos = topic("vehicle_attitude"), topic("vehicle_local_position")
-    t1 = flight["phases"].get("land", [0, pos["timestamp"][-1] * 1e-6])[1]
-    asked, mot = topic("vehicle_local_position_setpoint"), topic("actuator_motors")
-    # phases in the order flown, each with its label: accel1 and accel2 are both "Accel"
-    phases = sorted(flight["phases"].items(), key=lambda item: item[1][0])
-    phases = [(a, b, LABELS.get(name.rstrip("0123456789"), name)) for name, (a, b) in phases]
+def flight(record, label, compare=None, compare_label=None, name="fig1_flight"):
+    """Ground track beside the time history of speed, attitude, height and motor commands."""
+    f, fl, v = record["figures"], record["flight"], values_of(record)
+    data = ulog_topics(record, ["vehicle_local_position", "vehicle_local_position_setpoint",
+                                "vehicle_attitude", "actuator_motors"])
+    pos, asked = data["vehicle_local_position"], data["vehicle_local_position_setpoint"]
+    att, mot = data["vehicle_attitude"], data["actuator_motors"]
+    ph = fl["phases"]
+    t0, t1 = ph["climb"][0], max(end for _, end in ph.values())
 
-    def clip(data):
-        t = data["timestamp"] * 1e-6
+    def clip(d):
+        t = d["timestamp"] * 1e-6
         keep = (t >= t0) & (t <= t1)
         return t[keep] - t0, keep
 
-    fig, axes = plt.subplots(4, 1, figsize=(7.2, 7.4), sharex=True,
-                             gridspec_kw={"hspace": 0.34})
+    fig = plt.figure(figsize=(11.0, 6.2))
+    grid = fig.add_gridspec(4, 2, width_ratios=[1.0, 1.55], wspace=0.22, hspace=0.14)
+    track = fig.add_subplot(grid[:, 0])
+    axes = [fig.add_subplot(grid[0, 1])]
+    axes += [fig.add_subplot(grid[i, 1], sharex=axes[0]) for i in (1, 2, 3)]
+
+    ground_track(track, record, BLUE, label)
+    if compare is not None:
+        ground_track(track, compare, ORANGE, compare_label, planned=False)
+    track.set_aspect("equal")
+    track.set_xlabel("To the right of the take-off heading (m)")
+    track.set_ylabel("Forward along the take-off heading (m)")
+    track.margins(0.12)
+    track.legend(loc="upper center", bbox_to_anchor=(0.5, -0.11), ncol=1)
+
+    parts = flight_parts(ph)
+    turns = [(a - t0, b - t0) for n, (a, b) in ph.items() if n.startswith("turn")]
     for ax in axes:
-        ax.grid(axis="x", visible=False)        # the phase bands already mark time
-        for i, (a, b, _) in enumerate(phases):
-            if i % 2 == 0:
-                ax.axvspan(a - t0, b - t0, color=BAND, lw=0)
-    for a, b, label in phases:
-        axes[0].text((a + b) / 2 - t0, 1.25, label, transform=axes[0].get_xaxis_transform(),
-                     ha="center", va="bottom", fontsize=7.5, color=INK2, linespacing=0.95,
-                     rotation=90 if len(phases) > 8 else 0)
+        ax.grid(axis="x", visible=False)
+        for i, (a, b, _) in enumerate(parts):
+            if i % 2:
+                ax.axvspan(a - t0, b - t0, color=BAND, lw=0, zorder=0)
+        for a, b in turns:
+            ax.axvspan(a, b, color=GRID, lw=0, zorder=0)
+        ax.tick_params(axis="x", labelbottom=ax is axes[-1])
+        ax.yaxis.set_label_coords(-0.075, 0.5)
+    for a, b, text in parts:
+        axes[0].text((a + b) / 2 - t0, 1.04, text, transform=axes[0].get_xaxis_transform(),
+                     ha="center", va="bottom", fontsize=7.5, color=INK2)
 
     ax = axes[0]
     t, keep = clip(asked)
     ax.plot(t, np.hypot(np.nan_to_num(asked["vx"][keep]), np.nan_to_num(asked["vy"][keep])),
-            color=MUTED, label="Commanded")
+            color=MUTED, lw=1.2, label="PX4 velocity setpoint")
     t, keep = clip(pos)
-    ax.plot(t, np.hypot(pos["vx"][keep], pos["vy"][keep]), color=BLUE, label="Flown")
-    ax.set_title("Horizontal speed (m/s)")
-    ax.margins(y=.12)
+    speed = np.hypot(pos["vx"][keep], pos["vy"][keep])
+    ax.plot(t, speed, color=BLUE, label="Flown")
+    ax.set_ylabel("Horizontal\nspeed (m/s)")
+    ax.set_ylim(0, np.nanmax(speed) * 1.45)
     ax.legend(loc="upper right", ncol=2)
 
     ax = axes[1]
     roll, pitch, _ = metrics._euler_deg(att)
     t, keep = clip(att)
-    ax.plot(t, pitch[keep], color=BLUE, label="Pitch, nose up positive")
-    ax.plot(t, roll[keep], color=ORANGE, label="Roll")
-    ax.set_title("Attitude (degrees)")
-    ax.margins(y=.15)
-    ax.legend(loc="upper left", ncol=2)
+    ax.plot(t, pitch[keep], color=BLUE, label="Pitch, nose up +")
+    ax.plot(t, roll[keep], color=ORANGE, label="Roll, right +")
+    limit = metrics.LIMITS["tilt_max_deg"]
+    peak = np.nanmax(np.abs(np.r_[roll[keep], pitch[keep]]))
+    span = max(12.0, peak * 1.5)
+    if peak * 1.15 >= limit:
+        for sign in (1, -1):
+            ax.axhline(sign * limit, color=CRITICAL, lw=0.9)
+        ax.text(0.5, limit, f"pass limit ±{limit:g}°", fontsize=7, color=INK2, va="bottom")
+    ax.set_ylim(-span, span)
+    ax.set_ylabel("Roll, pitch (°)")
+    ax.legend(loc="upper right", ncol=2)
 
     ax = axes[2]
     t, keep = clip(pos)
-    ax.axhline(flight["alt_m"], color=MUTED, lw=1.0)
-    ax.text(0.5, flight["alt_m"] + 0.9, "target", color=INK2, fontsize=7.5)
-    ax.plot(t, flight["home"][2] - pos["z"][keep], color=BLUE)
-    ax.set_title("Height (m)")
-    ax.set_ylim(bottom=0)
+    ax.axhline(v["alt_m"], color=MUTED, lw=0.9)
+    ax.plot(t, fl["home"][2] - pos["z"][keep], color=BLUE)
+    ax.text(0.5, v["alt_m"], f"target {v['alt_m']:g} m", fontsize=7, color=INK2, va="bottom")
+    ax.set_ylim(0, v["alt_m"] * 1.3)
+    ax.set_ylabel("Height above\ntake-off (m)")
 
     ax = axes[3]
     t, keep = clip(mot)
     lift = np.stack([mot[f"control[{i}]"][keep] for i in range(4)])
-    ax.fill_between(t, lift.min(axis=0), lift.max(axis=0), color=BLUE, alpha=0.12, lw=0)
-    ax.plot(t, lift.mean(axis=0), color=BLUE, label="Lift rotors, mean and range")
+    ax.fill_between(t, lift.min(axis=0), lift.max(axis=0), color=BLUE, alpha=0.15, lw=0)
+    ax.plot(t, lift.mean(axis=0), color=BLUE, label="Lift rotors: mean, band from lowest to highest")
     ax.plot(t, np.nan_to_num(mot["control[4]"][keep]), color=ORANGE, label="Pusher")
-    ax.set_title("Motor command (0 to 1)")
-    ax.set_ylim(0, 1.05)
+    ax.set_ylim(0, 1.25)
+    ax.set_yticks([0, 0.5, 1.0])
+    ax.set_ylabel("Motor command\n(0 to 1)")
     ax.legend(loc="upper right", ncol=2)
-    ax.set_xlabel("Time from the start of the climb (s)")
+    ax.set_xlabel("Time since the start of the climb (s)")
     ax.set_xlim(0, t1 - t0)
-    outcome = "PASS" if record["passed"] else "FAIL"
-    fig.suptitle(f"Nominal vehicle: mission in still air — {outcome}",
-                 x=0.125, y=0.975, ha="left", fontsize=10.5, fontweight="bold")
-    save(fig, "fig1_nominal_flight")
+
+    outcome = "passes every check" if record["passed"] else "fails: " + "; ".join(record["reasons"])[:70]
+    wind = (f"{v['wind_speed_mps']:g} m/s wind from {v['wind_from_deg']:g}° off the take-off heading"
+            if v["wind_speed_mps"] > 0 else "no wind")
+    footnote(fig, SIM_NOTE)
+    heading(fig, f"{label}: {outcome}",
+            f"{len(fl.get('legs', [])) or 1} legs at {v['cruise_mps']:g} m/s, {wind}. Landed "
+            f"{f.get('touchdown_err_m', math.nan):.2f} m from the take-off point; largest tilt "
+            f"{f.get('tilt_max_deg', math.nan):.0f}°.\nOn the right, alternate legs are shaded; the "
+            "darker strips are the turns, flown in a hover.")
+    save(fig, name)
+
+
+def oscillation(clean, bad, leg, name="fig6_sideways_oscillation"):
+    """Roll and sideways speed on one leg, for a calm run and for the run that oscillated."""
+    fig, axes = plt.subplots(2, 1, figsize=(7.4, 4.4), sharex=True, gridspec_kw={"hspace": 0.12})
+    for record, color, text in ((clean, BLUE, "Flown alone"), (bad, ORANGE, "Flown beside other simulations")):
+        fl = record["flight"]
+        heading_rad = fl["legs"][leg - 1]["heading"]
+        start, brake = fl["phases"][f"accel{leg}"][0], fl["phases"][f"decel{leg}"][0]
+        end = fl["phases"][f"hover{leg + 1}"][0] + 2.0
+        d = ulog_topics(record, ["vehicle_attitude", "vehicle_local_position"])
+        att, pos = d["vehicle_attitude"], d["vehicle_local_position"]
+        roll, _, _ = metrics._euler_deg(att)
+        ta, tp = att["timestamp"] * 1e-6, pos["timestamp"] * 1e-6
+        ka, kp = (ta >= start) & (ta <= end), (tp >= start) & (tp <= end)
+        side = -pos["vx"][kp] * math.sin(heading_rad) + pos["vy"][kp] * math.cos(heading_rad)
+        axes[0].plot(ta[ka] - brake, roll[ka], color=color, label=text)
+        axes[1].plot(tp[kp] - brake, side, color=color, label=text)
+    for ax in axes:
+        ax.axvline(0, color=INK2, lw=0.9)
+        ax.grid(axis="x", visible=False)
+    axes[0].text(0.15, 0.95, "slow-down starts,\npusher cuts out", transform=axes[0].get_xaxis_transform(),
+                 fontsize=7.2, color=INK2, va="top")
+    limit = metrics.LIMITS["tilt_max_deg"]
+    for sign in (1, -1):
+        axes[0].axhline(sign * limit, color=CRITICAL, lw=0.9)
+    axes[0].text(axes[0].get_xlim()[0] + 0.2, -limit, f"pass limit ±{limit:g}°", fontsize=7,
+                 color=INK2, va="bottom")
+    for ax in axes:
+        low, high = ax.get_ylim()
+        ax.set_ylim(low, high + (high - low) * 0.25)
+    axes[0].set_ylabel("Roll (°)")
+    axes[1].set_ylabel(f"Speed across\nleg {leg} (m/s)")
+    axes[1].set_xlabel("Time from the start of the slow-down (s)")
+    axes[0].legend(loc="upper left", ncol=2, bbox_to_anchor=(0.0, 1.0))
+    footnote(fig, SIM_NOTE)
+    peak = bad["figures"]["tilt_max_deg"]
+    heading(fig, f"A run that shared the machine with other simulations swung into a {peak:.0f}° roll; "
+            "runs alone never did",
+            f"Leg {leg} of the 50 m square at 5 m/s, no wind, the same profile in both. A sway of about 1 Hz "
+            "appeared 1.5 s before braking and peaked\nonce the pusher cut out. Beside other simulations "
+            "6 of 11 squares wobbled like this, alone 0 of 13: Gazebo does not wait for PX4,\nso a busy "
+            "machine delays the motor commands. It is an artifact of the simulation, not of the vehicle.")
+    save(fig, name)
+
+
+def braking(groups, name="fig7_braking"):
+    """Commanded speed, pitch and pusher through every slow-down, for each version of the profile.
+
+    groups: [(label, records)], drawn in that order; the last is the current profile.
+    """
+    grid = np.linspace(-1.0, 10.0, 221)
+    fig, axes = plt.subplots(3, 1, figsize=(7.4, 6.0), sharex=True, gridspec_kw={"hspace": 0.12})
+    keys, peaks = [], []
+    for (label, records), color in zip(groups, (ORANGE, BLUE)):
+        curves = {"speed": [], "pitch": [], "pusher": []}
+        for record in records:
+            d = ulog_topics(record, ["vehicle_attitude", "vehicle_local_position_setpoint",
+                                     "actuator_motors"])
+            att, sp, mot = d["vehicle_attitude"], d["vehicle_local_position_setpoint"], d["actuator_motors"]
+            _, pitch, _ = metrics._euler_deg(att)
+            series = {"speed": (sp["timestamp"], np.hypot(np.nan_to_num(sp["vx"]), np.nan_to_num(sp["vy"]))),
+                      "pitch": (att["timestamp"], pitch),
+                      "pusher": (mot["timestamp"], np.nan_to_num(mot["control[4]"]))}
+            for phase, (start, _) in record["flight"]["phases"].items():
+                if phase.rstrip("0123456789") != "decel":
+                    continue
+                for key, (stamps, values) in series.items():
+                    curves[key].append(np.interp(grid, stamps * 1e-6 - start, values,
+                                                 left=np.nan, right=np.nan))
+        for ax, key in zip(axes, curves):
+            rows = np.array(curves[key])
+            for row in rows:
+                ax.plot(grid, row, color=color, lw=0.6, alpha=0.22, zorder=2)
+            ax.plot(grid, np.nanmedian(rows, axis=0), color=color, lw=2.0, zorder=3)
+        peaks.append(np.median(np.nanmax(np.array(curves["pitch"]), axis=1)))
+        keys.append(Line2D([], [], color=color, lw=2.0,
+                           label=f"{label}: median of {len(curves['pitch'])} slow-downs, thin lines each"))
+    for ax in axes:
+        ax.axvline(0, color=INK2, lw=0.9)
+        ax.grid(axis="x", visible=False)
+    axes[0].set_ylabel("Commanded\nspeed (m/s)")
+    axes[1].set_ylabel("Pitch, nose\nup (°)")
+    axes[2].set_ylabel("Pusher\ncommand")
+    axes[2].set_xlabel("Time from the start of the slow-down (s)")
+    axes[0].set_ylim(0, None)
+    low, high = axes[1].get_ylim()
+    axes[1].set_ylim(low, high + (high - low) * 0.15)
+    axes[0].legend(handles=keys, loc="upper right", fontsize=7.4)
+    footnote(fig, SIM_NOTE)
+    heading(fig, f"Easing into the braking lowers the nose-up from {peaks[0]:.1f}° to {peaks[-1]:.1f}° "
+            "and lets the pusher fade out",
+            "Every slow-down of the 50 m square at 5 m/s, no wind, each run flown with no other simulation "
+            "on the machine.\nThe eased braking takes longer (7.9 s instead of 5 s from 5 m/s) and is "
+            "never harder than the old one.")
+    save(fig, name)
 
 
 # ---------------------------------------------------------------------------------------------
-# 2. Wind, by speed and direction, for the two heading holds
+# 2. Which steady winds the vehicle handles
 # ---------------------------------------------------------------------------------------------
-def wind_envelope():
-    runs = {r["case"]: r for r in load("wind")}
-    records = {name: r["figures"] for name, r in runs.items()}
-    speeds = [2, 4, 6, 8]
-    directions = sorted({int(name.split("_")[1][4:]) for name in records})
-    rows = [("fwd_yaw_err_max_deg", "Heading off the commanded one, largest (degrees)", "{:.0f}"),
-            ("cross_track_max_m", "Distance off the track, largest (m)", "{:.1f}"),
-            ("lift_max_cmd", "Largest lift-motor command (0 to 1)", "{:.2f}")]
-    holds = [("firm", "Firm heading hold (PX4's yaw gains)"),
-             ("soft", "Soft heading hold (weak yaw gain, no integrator)")]
-
-    fig, axes = plt.subplots(3, 2, figsize=(7.2, 6.6),
-                             gridspec_kw={"hspace": 0.62, "wspace": 0.10})
-    for i, (key, title, fmt) in enumerate(rows):
-        grids = [np.array([[records[f"wind{s}_from{d}_{hold}"].get(key, np.nan) for d in directions]
-                           for s in speeds]) for hold, _ in holds]
-        finite = np.asarray(grids)[np.isfinite(grids)]
-        top = max(1., float(finite.max())) if finite.size else 1.
-        low = 0.0 if key != "lift_max_cmd" else 0.4
-        for j, (grid, (_, hold_title)) in enumerate(zip(grids, holds)):
-            ax = axes[i, j]
-            ax.grid(False)
-            mesh = ax.pcolormesh(grid, cmap=SEQUENTIAL, vmin=low, vmax=top,
-                                 edgecolors=SURFACE, linewidth=2)
-            for (y, x), value in np.ndenumerate(grid):
-                dark = (value - low) / max(1e-6, top - low) > 0.5
-                run = runs[f"wind{speeds[y]}_from{directions[x]}_{holds[j][0]}"]
-                label = fmt.format(value) if np.isfinite(value) else "missing"
-                if not run["passed"]:
-                    label += " ×"
-                ax.text(x + 0.5, y + 0.5, label, ha="center", va="center",
-                        fontsize=7.5, color="#ffffff" if dark else INK)
-            ax.set_xticks(np.arange(len(directions)) + 0.5,
-                          [str(d) for d in directions], fontsize=7.5)
-            ax.set_yticks(np.arange(4) + 0.5, [str(s) for s in speeds] if j == 0 else [])
-            for side in ax.spines.values():
-                side.set_visible(False)
-            if j == 0:
-                ax.set_ylabel("Wind (m/s)")
-            if i == 2:
-                ax.set_xlabel("Wind from (degrees off the nose)")
-            ax.set_title(title if j == 0 else "", pad=6)
-            if i == 0:
-                ax.text(0.5, 1.28, hold_title, transform=ax.transAxes, ha="center",
-                        fontsize=8.5, color=INK2)
-        bar = fig.colorbar(mesh, ax=axes[i, :], fraction=0.03, pad=0.02)
-        bar.outline.set_visible(False)
-        bar.ax.tick_params(labelsize=7.5)
-    fig.suptitle("Steady wind: 10 m/s cruise, the other values nominal (× = failed case)",
-                 x=0.105, y=1.0, ha="left", fontsize=10.5, fontweight="bold")
-    save(fig, "fig2_wind")
+# Why a case failed, most severe first. The marker shape carries the reason; colour only pass/fail.
+REASONS = [("tilt", "Tilted past 30°", "D"),
+           ("pusher", "Pusher ran out (saturated, or could not reach speed)", "^"),
+           ("heading", "Heading error past 20°", "s"),
+           ("other", "Another check failed", "X")]
 
 
-# ---------------------------------------------------------------------------------------------
-# 3. One value at a time
-# ---------------------------------------------------------------------------------------------
-LABELS = {
-    "mass_kg": "Mass", "inertia_scale": "Inertia, factor", "cg_x_m": "CG fore and aft",
-    "cg_y_m": "CG sideways", "cg_z_m": "CG up and down", "rotor_x_m": "Lift motor fore-aft position",
-    "lift_thrust_max_n": "Lift motor maximum thrust", "lift_moment_m": "Lift rotor reaction torque",
-    "lift_tau_up_s": "Lift motor time constant", "lift_mismatch_pct": "Lift motor mismatch",
-    "pusher_thrust_max_n": "Pusher maximum thrust", "pusher_y_m": "Pusher thrust line sideways",
-    "pusher_z_m": "Pusher thrust line up and down", "wing_chord_m": "Wing chord",
-    "wing_incidence_deg": "Wing incidence", "wing_cd0": "Drag coefficient",
-    "wing_cp_x_m": "Where the wing lift acts", "tail_area_m2": "Rear plate area",
-    "tail_arm_m": "Rear plate distance", "tail_incidence_deg": "Rear plate incidence",
-    "side_area_m2": "Side area", "side_cp_x_m": "Where the side force acts",
-    "air_density": "Air density", "cruise_mps": "Cruise speed", "accel_mps2": "Acceleration limit",
-    "wing_cm0": "Wing pitching moment coefficient", "lift_drag_at_full_rpm": "Rotor crossflow drag",
-    "pusher_zero_thrust_mps": "Pusher inflow speed scale", "front_rotor_efficiency": "Front installed efficiency",
-    "rear_rotor_efficiency": "Rear installed efficiency", "body_side_cd": "Body side drag coefficient",
-    "motor_voltage_end_ratio": "Final voltage ratio", "wind_vertical_gust_mps": "Vertical gust deviation",
-}
-UNITS = {"mass_kg": "kg", "cg_x_m": "m", "cg_y_m": "m", "cg_z_m": "m", "rotor_x_m": "m",
-         "lift_thrust_max_n": "N", "lift_moment_m": "m", "lift_tau_up_s": "s",
-         "lift_mismatch_pct": "%", "pusher_thrust_max_n": "N", "pusher_y_m": "m", "pusher_z_m": "m",
-         "wing_chord_m": "m", "wing_incidence_deg": "deg", "wing_cp_x_m": "m", "tail_area_m2": "m²",
-         "tail_arm_m": "m", "tail_incidence_deg": "deg", "side_area_m2": "m²", "side_cp_x_m": "m",
-         "air_density": "kg/m³", "cruise_mps": "m/s", "accel_mps2": "m/s²"}
+def reason(record):
+    text = " ".join(record["reasons"])
+    if "tilt_max" in text or "tumbled" in text:
+        return "tilt"
+    if "pusher" in text or "timeout in accel" in text:
+        return "pusher"
+    if "yaw_err" in text:
+        return "heading"
+    return "other"
 
 
-def one_at_a_time():
-    cfg = CFG
-    records = {r["case"]: r["figures"] for r in load("oat")}
-    nominal = records["nominal"]
-    columns = [("lift_max_cmd", "Largest lift-motor\ncommand (0 to 1)"),
-               ("pusher_max_cmd", "Largest pusher\ncommand (0 to 1)"),
-               ("pitch_integ_max", "Pitch-rate integrator,\nlargest (limit 0.30)"),
-               ("tilt_max_deg", "Largest roll or pitch\n(degrees)")]
-    names = [n for n in LABELS if n in cfg["sweep"]]
+def wind_cases(records):
+    """{(speed, from_deg): record}, with the firm heading hold where the study has two."""
+    cases = {}
+    for r in records:
+        parts = r["case"].split("_")
+        if not parts[0].startswith("wind") or (len(parts) > 2 and parts[2] != "firm"):
+            continue
+        speed, direction = float(parts[0][4:]), float(parts[1][4:])
+        cases[(speed, direction)] = r
+    return cases
 
-    fig, axes = plt.subplots(1, 4, figsize=(7.2, max(6.4, len(names) * .3)), sharey=True,
-                             gridspec_kw={"wspace": 0.12})
-    rows = np.arange(len(names))[::-1]
-    for ax, (key, title) in zip(axes, columns):
-        ax.axvline(nominal.get(key, np.nan), color=MUTED, lw=1.0, zorder=1)
-        for y, name in zip(rows, names):
-            ends = {end: records.get(f"{name}_{end}", {}).get(key, np.nan) for end in ("lo", "hi")}
-            ax.plot([ends["lo"], ends["hi"]], [y, y], color=AXIS, lw=1.2, zorder=2)
-            ax.plot(ends["lo"], y, "o", ms=6.5, color=LIGHT, mec=SURFACE, mew=1.2, zorder=3)
-            ax.plot(ends["hi"], y, "o", ms=6.5, color=DARK, mec=SURFACE, mew=1.2, zorder=4)
-        ax.set_title(title, fontsize=8, fontweight="normal", color=INK2, pad=8)
-        ax.grid(axis="y", visible=False)
+
+def wind_envelope(sets, name="fig2_wind_envelope"):
+    directions = [0, 45, 90, 135, 180, 225, 270, 315]
+    names = {0: "head", 90: "left", 180: "tail", 270: "right"}
+    fig, axes = plt.subplots(1, len(sets), figsize=(4.3 * len(sets), 3.5), sharey=True,
+                             gridspec_kw={"wspace": 0.08})
+    axes = np.atleast_1d(axes)
+    counts = []
+    for ax, (label, records) in zip(axes, sets):
+        cases = wind_cases(records)
+        speeds = sorted({s for s, _ in cases})
+        passed = sum(r["passed"] for r in cases.values())
+        counts.append((label, passed, len(cases),
+                       sum(r["passed"] for (s, _), r in cases.items() if s >= 6),
+                       sum(1 for s, _ in cases if s >= 6)))
+        for (speed, direction), r in cases.items():
+            x, y = directions.index(int(direction)), speeds.index(speed)
+            if r["passed"]:
+                ax.plot(x, y, "o", ms=11, color=GOOD, mec=SURFACE, mew=2)
+            else:
+                marker = next(m for key, _, m in REASONS if key == reason(r))
+                ax.plot(x, y, marker, ms=10, color=CRITICAL, mec=SURFACE, mew=2)
+            if r.get("rerun_alone"):
+                ax.plot(x, y, "o", ms=17, mfc="none", mec=INK, mew=1.1)
+        ax.set_xticks(range(len(directions)),
+                      [f"{d}°\n{names[d]}" if d in names else f"{d}°" for d in directions])
+        ax.set_yticks(range(len(speeds)), [f"{s:g}" for s in speeds])
+        ax.set_xlim(-0.6, len(directions) - 0.4)
+        ax.set_ylim(-0.6, len(speeds) - 0.4)
+        ax.grid(False)
         ax.spines["left"].set_visible(False)
-        ax.set_ylim(-0.7, len(names) - 0.3)
-        ax.margins(x=0.12)
-        ax.tick_params(axis="x", labelsize=7.5)
-
-    def row_label(name):
-        low, high = cfg["sweep"][name]
-        unit = UNITS.get(name, "")
-        return f"{LABELS[name]}, {low:g} to {high:g}{' ' + unit if unit else ''}"
-
-    axes[0].set_yticks(rows, [row_label(n) for n in names], fontsize=7.6)
-    keys = [Line2D([], [], marker="o", ls="", ms=6.5, color=LIGHT, label="Low end of the range"),
-            Line2D([], [], marker="o", ls="", ms=6.5, color=DARK, label="High end of the range"),
-            Line2D([], [], color=MUTED, lw=1.0, label="Nominal vehicle")]
-    fig.legend(handles=keys, loc="lower left", bbox_to_anchor=(0.125, 0.015), ncol=3)
-    fig.suptitle("One value changed at a time, across its range", x=-0.17, y=0.99, ha="left",
-                 fontsize=10.5, fontweight="bold")
-    save(fig, "fig3_one_at_a_time")
+        ax.set_title(f"{label}\n{passed} of {len(cases)} pass", fontsize=8.5, linespacing=1.4)
+        ax.set_xlabel("Wind from, degrees off the take-off heading")
+    axes[0].set_ylabel("Steady wind (m/s)")
+    keys = [Line2D([], [], marker="o", ls="", ms=9, color=GOOD, label="Pass")]
+    keys += [Line2D([], [], marker=m, ls="", ms=8, color=CRITICAL, label=f"Fail: {text.lower()}")
+             for _, text, m in REASONS]
+    if any(r.get("rerun_alone") for _, records in sets for r in records):
+        keys.append(Line2D([], [], marker="o", ls="", ms=12, mfc="none", mec=INK, mew=1.1,
+                           label="Flown again with no other simulation running; this result replaces the sweep's"))
+    below = _extent(fig)
+    fig.legend(handles=keys, loc="upper left", bbox_to_anchor=(below.x0, below.y0 - 0.01),
+               ncol=2 if len(sets) == 1 else 3, fontsize=7.6)
+    if len(counts) == 2 and counts[1][3] > counts[0][3]:
+        title = (f"Flying slower handles more of the strong wind: at 6–8 m/s, {counts[0][3]} of "
+                 f"{counts[0][4]} cases pass at {counts[0][0].split(',')[0]}, {counts[1][3]} of "
+                 f"{counts[1][4]} at {counts[1][0].split(',')[0]}")
+    else:
+        title = "Which steady winds the vehicle handles"
+    footnote(fig, SIM_NOTE)
+    heading(fig, title, "Each mark is one full simulated flight in a steady wind (firm heading hold). "
+            "Direction is measured from the nose at take-off;\non the square the vehicle meets the "
+            "wind from all four sides once per lap.")
+    save(fig, name)
 
 
 # ---------------------------------------------------------------------------------------------
-# 4. Everything changed at once
+# 3. Why a headwind is the limit: pusher thrust needed against thrust available
 # ---------------------------------------------------------------------------------------------
-def wing_share(r):
-    """Measured model load for v2; the historical study has only a level-flight estimate."""
-    if r.get("model_revision") == gz_model.MODEL_REVISION:
-        return r["figures"].get("wing_lift_fraction_max", np.nan)
-    o = r["overrides"]
-    a = math.radians(o["wind_from_deg"])
-    airspeed = math.hypot(o["cruise_mps"] + o["wind_speed_mps"] * math.cos(a),
-                          o["wind_speed_mps"] * math.sin(a))
-    return r["derived"]["wing_lift_fraction_cruise"] * (airspeed / o["cruise_mps"]) ** 2
+def pusher_thrust(sets, name="fig3_pusher_thrust"):
+    n = CFG["nominal"]
+    t_max, v_zero = n["pusher_thrust_max_n"], n["pusher_zero_thrust_mps"]
+
+    def available(airspeed, command):
+        """The simulation's pusher model (AeroPhysics.hh): static T_max*u, falling with inflow."""
+        return t_max * command * np.clip(1 - np.maximum(airspeed, 0) / (v_zero * math.sqrt(command)), 0, 1)
+
+    def straight(record):       # one heading for the whole cruise, so one inflow per flight
+        return len(record["flight"].get("legs") or [None]) == 1
+
+    def inflow(record, speed):
+        """Air coming into the pusher along the nose: ground speed plus the headwind part."""
+        o = record.get("overrides", {})
+        return speed + o.get("wind_speed_mps", 0.0) * math.cos(math.radians(o.get("wind_from_deg", 0.0)))
+
+    fig, ax = plt.subplots(figsize=(7.4, 4.3))
+    v = np.linspace(0, 26, 300)
+    ax.plot(v, available(v, 1.0), color=MUTED, lw=1.3, label="Available at full command")
+    ax.plot(v, available(v, 0.9), color=INK, lw=2.0, label="Available at 0.9, PX4's cap on the pusher")
+    every, drawn = [], []
+    for (label, records), color in zip(sets, (BLUE, ORANGE)):
+        flights = [r for r in records if straight(r)]
+        held = [(inflow(r, r["figures"]["cruise_speed_mps"]), r["figures"]["cruise_pusher_cmd"])
+                for r in flights if math.isfinite(r["figures"].get("cruise_pusher_cmd", math.nan))]
+        stuck = [r["figures"]["true_airspeed_max_mps"]
+                 for r in flights if "timeout in accel" in " ".join(r["reasons"])]
+        if not held:
+            continue
+        drawn.append(label)
+        a = np.array([p[0] for p in held])
+        need = np.array([available(*p) for p in held])
+        every += list(zip(a, need))
+        ax.plot(a, need, "o", ms=6.5, color=color, mec=SURFACE, mew=1.5, zorder=4,
+                label=f"Needed to hold cruise: {label}")
+        if stuck:
+            s = np.array(stuck)
+            ax.plot(s, available(s, 0.9), "^", ms=7.5, color=CRITICAL, mec=SURFACE, mew=1.5, zorder=5,
+                    label="Pinned at the cap, never reached cruise speed (fastest airspeed reached)")
+    a, need = np.array(every).T
+    fit = np.polyfit(a, need, 2)
+    vv = np.linspace(max(0, a.min() - 1), 22, 200)
+    ax.plot(vv, np.polyval(fit, vv), color=INK2, lw=1.0, ls=(0, (4, 2)), zorder=3,
+            label="Needed, quadratic fit to the dots")
+    gap = np.polyval(fit, vv) - available(vv, 0.9)
+    limit = vv[np.argmax(gap > 0)] if (gap > 0).any() else math.nan
+    if math.isfinite(limit):
+        ax.axvline(limit, color=CRITICAL, lw=0.9)
+        ax.text(limit + 0.3, 25.5, f"pusher limit:\nabout {limit:.0f} m/s of air\ninto the pusher",
+                fontsize=7.5, color=INK2, va="top", linespacing=1.2)
+    for speed, text in ((13, "5 m/s cruise\n+ 8 m/s headwind"), (18, "10 m/s cruise\n+ 8 m/s headwind")):
+        ax.plot([speed, speed], [0, 1.2], color=INK2, lw=1.0)
+        ax.text(speed, 1.6, text, fontsize=7, color=INK2, ha="center", va="bottom", linespacing=1.1)
+    ax.set_xlim(0, 26)
+    ax.set_ylim(0, 26)
+    ax.set_xlabel("Air coming into the pusher: ground speed + headwind (m/s)")
+    ax.set_ylabel("Pusher thrust (N)")
+    ax.legend(loc="upper left", bbox_to_anchor=(0.0, -0.13), ncol=2, fontsize=7.4, columnspacing=1.5)
+    title = (f"In a headwind the pusher runs out at about {limit:.0f} m/s of airspeed"
+             if math.isfinite(limit) else "Pusher thrust needed against thrust available")
+    footnote(fig, SIM_NOTE + " Battery sag (under 2% here) is ignored.")
+    heading(fig, title,
+            f"The {t_max:g} N pusher gives less as the air comes in faster (none at {v_zero:g} m/s at full "
+            "speed). Each dot is one simulated flight in a steady\nwind: the thrust PX4 used to hold "
+            f"cruise, from its pusher command and the same model. Straight flights only ({', '.join(drawn)}).")
+    save(fig, name)
+    return limit
 
 
-def random_study():
-    flown = [r for r in load("random_seed1") if r["figures"]]
-    cfg = CFG
+# ---------------------------------------------------------------------------------------------
+# 4. Which uncertainties use up the margins
+# ---------------------------------------------------------------------------------------------
+PARAM_NAMES = {
+    "mass_kg": ("Mass", "kg"), "inertia_scale": ("Inertia ×", ""), "cg_x_m": ("CG fore-aft", "m"),
+    "cg_y_m": ("CG sideways", "m"), "cg_z_m": ("CG up-down", "m"),
+    "lift_thrust_max_n": ("Lift motor max thrust", "N"), "lift_moment_m": ("Lift rotor torque ratio", "m"),
+    "lift_tau_up_s": ("Lift motor time constant", "s"), "lift_mismatch_pct": ("Lift motor mismatch", "%"),
+    "pusher_thrust_max_n": ("Pusher max thrust", "N"), "pusher_y_m": ("Pusher line sideways", "m"),
+    "pusher_z_m": ("Pusher line up-down", "m"), "wing_incidence_deg": ("Wing incidence", "°"),
+    "wing_cd0": ("Wing drag coefficient", ""), "wing_cp_x_m": ("Wing lift position", "m"),
+    "wing_cm0": ("Wing pitching moment", ""), "lift_drag_at_full_rpm": ("Rotor crossflow drag", ""),
+    "pusher_zero_thrust_mps": ("Pusher zero-thrust speed", "m/s"),
+    "front_rotor_efficiency": ("Front rotor efficiency", ""), "rear_rotor_efficiency": ("Rear rotor efficiency", ""),
+    "body_side_cd": ("Body side drag coefficient", ""), "motor_voltage_end_ratio": ("Final voltage ratio", ""),
+    "wind_vertical_gust_mps": ("Vertical gusts", "m/s"), "tail_arm_m": ("Rear plate distance", "m"),
+    "tail_incidence_deg": ("Rear plate incidence", "°"), "side_area_m2": ("Side area", "m²"),
+    "side_cp_x_m": ("Side force position", "m"), "air_density": ("Air density", "kg/m³"),
+    "wind_gust_pct": ("Gusts", "× mean"), "cruise_mps": ("Cruise speed", "m/s"),
+    "accel_mps2": ("Acceleration limit", "m/s²"),
+}
+CRITERIA = [("Tilt", "tilt_max_deg"), ("Pusher\nsaturation", "pusher_sat_frac"),
+            ("Lift motors\nat maximum", "lift_sat_frac"), ("Heading\nerror", "fwd_yaw_err_max_deg"),
+            ("Off the\nleg line", "cross_track_max_m"), ("Cruise\nspeed error", "cruise_speed_err_mps"),
+            ("Height\nerror", "alt_err_max_m"), ("Wing\nshare", "wing_lift_fraction_max"),
+            ("Touchdown\nspeed", "touchdown_speed_mps")]
 
-    def crosswind(r):
-        o = r["overrides"]
-        return abs(o["wind_speed_mps"] * math.sin(math.radians(o["wind_from_deg"])))
 
-    share_label = ("Maximum model wing vertical force\n/ weight (full run)" if
-                   any(r.get("model_revision") == gz_model.MODEL_REVISION for r in flown) else
-                   "Estimated wing share\n(level flight, mean wind)")
-    panels = [(wing_share, share_label,
-               "torque_unachieved_frac", "Share of forward flight with the\nallocator short of torque",
-               metrics.LIMITS["torque_unachieved_frac"]),
-              (lambda r: r["derived"]["lift_thrust_to_weight"], "Lift thrust-to-weight\nratio",
-               "lift_sat_frac", "Share of forward flight with a\nlift motor at its maximum",
-               metrics.LIMITS["lift_sat_frac"]),
-              (crosswind, "Crosswind component\n(m/s)",
-               "fwd_yaw_err_max_deg", "Heading off the commanded one,\nlargest (degrees)", None)]
-    inside = [r for r in flown if r["passed"]]
-    outside = [r for r in flown if not r["passed"]]
+def case_label(record):
+    o = {k: v for k, v in record["overrides"].items() if ":" not in k}
+    if not o:
+        return "Nominal vehicle"
+    if "wind_from_deg" in o and len(o) == 2:
+        return f"Wind {o['wind_speed_mps']:g} m/s from {o['wind_from_deg']:g}°"
+    name, value = next((k, v) for k, v in o.items() if k != "wind_speed_mps" or len(o) == 1)
+    text, unit = PARAM_NAMES.get(name, (name, ""))
+    extra = " (5 m/s wind)" if name == "wind_gust_pct" else ""
+    if name == "wind_gust_pct":
+        return f"{text} {value:.0%} of the mean{extra}"
+    gap = "" if unit in ("°", "%", "") else " "
+    return f"{text} {value:g}{gap}{unit}"
 
-    fig, axes = plt.subplots(1, 3, figsize=(7.2, 2.9), gridspec_kw={"wspace": 0.42})
-    for ax, (x_of, x_label, key, y_label, limit) in zip(axes, panels):
-        if limit is not None:
-            ax.axhline(limit, color=MUTED, lw=1.0)
-            ax.annotate("limit", (1.0, limit), xycoords=("axes fraction", "data"),
-                        xytext=(-2, 3), textcoords="offset points", ha="right",
-                        fontsize=7.5, color=INK2)
-        ax.plot([x_of(r) for r in inside], [r["figures"].get(key, np.nan) for r in inside], "o", ms=6,
-                color=BLUE, mec=SURFACE, mew=1.2)
-        ax.plot([x_of(r) for r in outside], [r["figures"].get(key, np.nan) for r in outside], "X", ms=7.5,
-                color=ORANGE, mec=SURFACE, mew=1.0)
-        ax.set_xlabel(x_label)
-        ax.set_title(y_label, fontsize=8, fontweight="normal", color=INK2, pad=8)
-        ax.set_ylim(bottom=-0.03 * ax.get_ylim()[1])
-    keys = [Line2D([], [], marker="o", ls="", ms=6, color=BLUE,
-                   label=f"Inside every limit ({len(inside)})"),
-            Line2D([], [], marker="X", ls="", ms=7.5, color=ORANGE,
-                   label=f"Outside at least one limit ({len(outside)})")]
-    fig.legend(handles=keys, loc="lower left", bbox_to_anchor=(0.06, -0.24), ncol=2)
-    fig.suptitle(f"All {len(cfg['sweep'])} values drawn at random: {len(flown)} flights",
-                 x=0.06, y=1.13, ha="left", fontsize=10.5, fontweight="bold")
-    save(fig, "fig4_random")
+
+def margins(records, name="fig4_margins", rows_shown=22):
+    """Share of each pass limit used, for the cases that use the most of any."""
+    limits = metrics.LIMITS
+    unfinished = lambda r: any(w in " ".join(r["reasons"]) for w in ("timeout", "not completed", "tumbled"))
+    table = []
+    for r in records:
+        use = [r["figures"].get(key, math.nan) / limits[key] for _, key in CRITERIA]
+        table.append((case_label(r), np.array(use, dtype=float), unfinished(r), r))
+    nominal = next(row for row in table if row[0] == "Nominal vehicle")
+    others = [row for row in table if row is not nominal]
+    # Touchdown speed takes a large share in every case, so it would crowd the ranking; it
+    # still counts when it fails.
+    sorting = [j for j, (_, key) in enumerate(CRITERIA) if key != "touchdown_speed_mps"]
+
+    def worst(row):
+        if row[2]:
+            return math.inf
+        return np.nanmax(row[1]) if np.nanmax(row[1]) > 1 else np.nanmax(row[1][sorting])
+    others.sort(key=worst, reverse=True)
+    quiet = [row for row in others if not row[2] and np.nanmax(row[1]) <= 1
+             and np.nanmax(np.abs(row[1] - nominal[1])[sorting]) < 0.05]
+    shown = [row for row in others if row not in quiet][:rows_shown]
+    rows = [nominal] + shown
+
+    fig, ax = plt.subplots(figsize=(8.6, 0.27 * len(rows) + 1.6))
+    data = np.array([row[1] for row in rows])
+    ax.imshow(np.clip(data, 0, 1), cmap=SEQUENTIAL, vmin=0, vmax=1, aspect="auto")
+    for i, (label, use, dnf, r) in enumerate(rows):
+        if dnf:
+            ax.add_patch(plt.Rectangle((-0.5, i - 0.5), len(CRITERIA), 1, color=GRID, zorder=2))
+            why = next((w for w in r["reasons"] if "timeout" in w or "tumbled" in w), r["reasons"][0])
+            ax.text(len(CRITERIA) / 2 - 0.5, i, f"✕  did not finish the flight: {why}", ha="center",
+                    va="center", fontsize=7.2, color=CRITICAL, zorder=3)
+            continue
+        for j, u in enumerate(use):
+            if not math.isfinite(u):
+                continue
+            if u > 1:
+                ax.add_patch(plt.Rectangle((j - 0.5, i - 0.5), 1, 1, color=CRITICAL, zorder=2))
+                ax.text(j, i, f"✕ {u:.0%}", ha="center", va="center", fontsize=6.8, color="white",
+                        fontweight="bold", zorder=3)
+            elif u >= 0.5:
+                ax.text(j, i, f"{u:.0%}", ha="center", va="center", fontsize=6.8,
+                        color="white" if u > 0.65 else INK, zorder=3)
+    ax.axhline(0.5, color=SURFACE, lw=3)
+    ax.set_xticks(range(len(CRITERIA)), [c for c, _ in CRITERIA], fontsize=7.2)
+    ax.xaxis.tick_top()
+    ax.set_yticks(range(len(rows)), [row[0] for row in rows], fontsize=7.4)
+    ax.grid(False)
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+    bar = fig.colorbar(ax.images[0], ax=ax, fraction=0.03, pad=0.02, ticks=[0, 0.5, 1])
+    bar.ax.set_yticklabels(["0", "half", "at the limit"], fontsize=7)
+    bar.outline.set_visible(False)
+    column = [k for _, k in CRITERIA].index("touchdown_speed_mps")
+    td = np.array([row[1][column] for row in table if not row[2]])
+    footnote(fig, SIM_NOTE)
+    heading(fig, "Wind and the pusher use up the most margin; every landing takes a large share of the "
+            "touchdown limit",
+            "Each row is one flight with one value at the low or high end of its range "
+            "(10 m/s straight mission). A cell shows how much of that check's\npass limit the flight "
+            f"used; red cells went past it. Numbers only from half the limit up. Touchdown speed used "
+            f"{np.nanmin(td):.0%} to {np.nanmax(td):.0%} of its limit\n({nominal[1][column]:.0%} "
+            f"nominal), so rows are ranked by the other checks. {len(quiet)} more cases stayed within "
+            "5 points of the nominal and are not shown.")
+    save(fig, name)
 
 
 # ---------------------------------------------------------------------------------------------
 # 5. How much of the weight the wing carries
 # ---------------------------------------------------------------------------------------------
 def wing_share_curve():
-    cfg = CFG
-    airspeed = np.linspace(4, 22, 200)
-    fig, ax = plt.subplots(figsize=(4.6, 3.2))
-    n = cfg["nominal"]
-    for incidence, color in zip((0.0, 2.0, 4.0), (LIGHT, MID, DARK)):
+    airspeed = np.linspace(2, 22, 200)
+    fig, ax = plt.subplots(figsize=(5.4, 3.5))
+    n = CFG["nominal"]
+
+    def share_at(speed, incidence):
         p = dict(n, wing_incidence_deg=incidence)
-        d = gz_model.derived(p)
-        share = d["wing_lift_fraction_cruise"] * (airspeed / p["cruise_mps"]) ** 2
-        ax.plot(airspeed, share, color=color, label=f"{incidence:g}°")
+        return gz_model.derived(p)["wing_lift_fraction_cruise"] * (speed / p["cruise_mps"]) ** 2
+    for incidence, color in zip((0.0, 2.0, 4.0), (LIGHT, MID, DARK)):
+        share = share_at(airspeed, incidence)
+        assumed = " (assumed for the vehicle)" if incidence == n["wing_incidence_deg"] else ""
+        ax.plot(airspeed, share, color=color, label=f"{incidence:g}°{assumed}")
         ax.annotate(f"{incidence:g}°", (airspeed[-1], min(share[-1], 1.17)), xytext=(4, 0),
                     textcoords="offset points", va="center", fontsize=7.5, color=INK2,
                     annotation_clip=False)
-    ax.axhline(0.4, color=MUTED, lw=1.0)
-    ax.text(4.3, 0.425, "40 %: proposed cap", fontsize=7.5, color=INK2)
+    ax.axhline(0.4, color=CRITICAL, lw=0.9)
+    ax.text(2.3, 0.425, "40%: the check used in simulation", fontsize=7.5, color=INK2)
+    for speed, text in ((5, "5 m/s\nsquare"), (10, "10 m/s\nstraight")):
+        ax.axvline(speed, color=AXIS, lw=0.9)
+        ax.text(speed, 1.13, text, fontsize=7, color=INK2, ha="center", va="top", linespacing=1.1)
     ax.set_ylim(0, 1.2)
-    ax.set_xlim(4, 22)
-    ax.set_xlabel("Airspeed (m/s)")
-    ax.set_title("Analytical level-flight wing share (assumed coefficients)", pad=20)
-    ax.text(0.0, 1.03, f"{n['mass_kg']:g} kg, NACA 4415 wing of {n['wing_span_m']:g} m by "
-            f"{n['wing_chord_m']:g} m", transform=ax.transAxes, fontsize=8, color=INK2)
-    ax.legend(loc="upper left", title="Wing incidence", title_fontsize=8)
+    ax.set_xlim(2, 22)
+    ax.yaxis.set_major_formatter(matplotlib.ticker.PercentFormatter(1.0))
+    ax.set_xlabel("Airspeed in level flight (m/s)")
+    ax.set_ylabel("Share of the weight on the wing")
+    ax.legend(loc="upper left", title="Wing incidence", title_fontsize=8, bbox_to_anchor=(0.01, 0.83))
+    i0 = n["wing_incidence_deg"]
+    heading(fig, f"At 5 m/s the wing carries {share_at(5.0, i0):.0%} of the weight; the lift rotors "
+            "carry the rest",
+            f"Level flight, {n['mass_kg']:g} kg, {n['wing_span_m']:g} × {n['wing_chord_m']:g} m "
+            f"NACA 4415 wing, assumed coefficients. At {i0:g}° incidence the share is "
+            f"{share_at(10.0, i0):.0%} at 10 m/s\nand {share_at(20.0, i0):.0%} at 20 m/s. When "
+            "braking, the nose comes up and the share rises above these curves.")
     save(fig, "fig5_wing_share")
 
 
 def main():
-    global CFG, OUT, FIGURES
+    global CFG, FIGURES
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    parser.add_argument("--mission", default=config.DEFAULT_MISSION,
-                        help="folder under missions/")
-    parser.add_argument("--vehicle-only", action="store_true",
-                        help="draw only the plan of the vehicle, which needs no simulation results")
+    parser.add_argument("--mission", default=config.DEFAULT_MISSION, help="folder under missions/")
     parser.add_argument("--model-revision", default=gz_model.MODEL_REVISION,
-                        help="result version; legacy reads the original report's paths")
-    parser.add_argument("--record", help="plot one run_case result JSON without a sweep")
+                        help="subfolder of figures/ to write into")
+    parser.add_argument("--flight", help="a run_case result JSON: ground track and time history")
+    parser.add_argument("--flight-label", default="Square mission")
+    parser.add_argument("--compare", help="a second result JSON, drawn on the ground track")
+    parser.add_argument("--compare-label", default="Another run")
+    parser.add_argument("--oscillation", nargs=3, metavar=("CLEAN", "BAD", "LEG"),
+                        help="two result JSONs: roll and sideways speed on this leg")
+    parser.add_argument("--braking", nargs="+", action="append", default=[], metavar="LABEL JSON",
+                        help="a label and the result JSONs of one version of the profile; give it "
+                             "once per version, the current one last")
+    parser.add_argument("--wind", nargs=2, action="append", default=[], metavar=("JSON", "LABEL"),
+                        help="a wind study's records and its label; may be given twice")
+    parser.add_argument("--oat", help="the one-at-a-time study's records")
     args = parser.parse_args()
     CFG = config.load(args.mission)
-    OUT = config.REPO / "out" / args.mission
-    FIGURES = config.REPO / "missions" / args.mission / "figures"
-    if args.model_revision != "legacy":
-        OUT /= args.model_revision
-        FIGURES /= args.model_revision
+    FIGURES = config.REPO / "missions" / args.mission / "figures" / args.model_revision
 
     vehicle_plan()
-    if args.vehicle_only:
-        return
-    if args.record:
-        nominal_flight(json.loads(Path(args.record).read_text()))
-    elif (OUT / "oat.json").is_file():
-        nominal_flight()
-    if (OUT / "oat.json").is_file():
-        one_at_a_time()
-    if (OUT / "wind.json").is_file():
-        wind_envelope()
-    if (OUT / "random_seed1.json").is_file():
-        random_study()
     wing_share_curve()
+    if args.flight:
+        flight(load(args.flight), args.flight_label,
+               load(args.compare) if args.compare else None, args.compare_label)
+    if args.oscillation:
+        clean, bad, leg = args.oscillation
+        oscillation(load(clean), load(bad), int(leg))
+    if args.braking:
+        if any(len(group) < 2 for group in args.braking):
+            parser.error("--braking takes a label and at least one result JSON")
+        braking([(label, [load(path) for path in paths]) for label, *paths in args.braking])
+    if args.wind:
+        sets = [(label, load(path)) for path, label in args.wind]
+        wind_envelope(sets)
+        pusher_thrust(sets)
+    if args.oat:
+        margins(load(args.oat))
 
 
 if __name__ == "__main__":

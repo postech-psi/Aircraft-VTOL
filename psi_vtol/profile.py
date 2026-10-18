@@ -4,8 +4,9 @@ Climb and hover, then fly the route: for each waypoint, turn the nose towards it
 up, cruise, slow down, and hover over it. Then descend and land on the last waypoint. The vehicle
 stops and turns at every waypoint instead of flying curves: in a hover the wing carries nothing,
 so the lift rotors have the most yaw authority (docs/02_control_concept.md). The "transition" is
-not a mode change: it is the commanded speed rising at the acceleration limit, and the "back
-transition" is the same ramp downwards.
+not a mode change: it is the commanded speed rising at the acceleration limit. The "back
+transition" eases the speed down to zero, gently at both ends, so the nose comes up smoothly and
+the pusher fades out instead of cutting off; holding the attitude matters more than the time.
 
 The simulation runner (psi_vtol/sim/run_case.py, over MAVLink) and the ROS 2 nodes
 (ros2/ws/src/vtol_mission) both fly from this module, so what was simulated is what the vehicle
@@ -109,10 +110,11 @@ class Profile:
             d = ((end[0] - start[0]) / length, (end[1] - start[1]) / length)
             leg_heading = math.atan2(d[1], d[0])
             turn = abs(_wrap(leg_heading - heading))
-            # Speeding up and slowing down take v^2/a; MIN_CRUISE_S at v takes v*T. The fastest
-            # speed that fits both in the leg solves v^2/a + v*T = length.
-            a, T = self.accel, MIN_CRUISE_S
-            fits = (-a * T + math.sqrt((a * T) ** 2 + 4 * a * length)) / 2
+            # Speeding up takes v^2/(2a), slowing down pi*v^2/(4a) (see _decel), MIN_CRUISE_S at
+            # v takes v*T. The fastest speed that fits all three in the leg solves
+            # k*v^2 + T*v = length.
+            k, T = (2 + math.pi) / (4 * self.accel), MIN_CRUISE_S
+            fits = (-T + math.sqrt(T ** 2 + 4 * k * length)) / (2 * k)
             legs.append({"start": start, "end": end, "dir": d, "length": length,
                          "heading": leg_heading, "turn_rad": turn,
                          "turn": turn > math.radians(1.0) and not self.into_wind,
@@ -133,7 +135,7 @@ class Profile:
             ramp = leg["speed"] / self.accel
             return {"turn": leg["turn_rad"] / TURN_RATE + TURN_SETTLE_S + 5, "accel": ramp + 5,
                     "cruise": max(0.0, leg["length"] / leg["speed"] - ramp) + 10,
-                    "decel": ramp + 25}[kind]
+                    "decel": self._braking_s(leg["speed"]) + 25}[kind]
         if kind == "hover":
             return self.hover1_s + 5 if self.phase == "hover1" else self.hover_s + 15
         return {"climb": 60.0, "descend": self.alt / DESCENT_MPS + 20, "land": 60.0}[kind]
@@ -187,6 +189,14 @@ class Profile:
         leg = self._leg_of(self.phase)
         return (leg["end"][0] - pos[0]) * self._dir[0] + (leg["end"][1] - pos[1]) * self._dir[1]
 
+    def _braking_s(self, speed):
+        """How long slowing down from speed takes: pi/2 times as long as at the limit throughout."""
+        return math.pi * speed / (2 * self.accel)
+
+    def _braking_m(self, speed):
+        """How far the vehicle goes while slowing down from speed."""
+        return speed * self._braking_s(speed) / 2
+
     # --- one method per kind of phase: (setpoint, finished) ----------------------------------
     def _climb(self, t, pos, vel, armed):
         reached = self.home[2] - pos[2] > self.alt - 0.5 and abs(vel[2]) < 0.3
@@ -213,17 +223,26 @@ class Profile:
         elapsed = t - self._t0 > top / self.accel
         along = vel[0] * self._dir[0] + vel[1] * self._dir[1]
         reached = abs(along - top) <= max(0.5, 0.1 * top)
-        braking = self._remaining(pos) <= top ** 2 / (2 * self.accel)
+        braking = self._remaining(pos) <= self._braking_m(top)
         return self._forward(self._speed, t), (elapsed and reached) or braking
 
     def _cruise(self, t, pos, vel, armed):
         """Hold the speed until the waypoint is one braking distance away."""
-        braking = self._remaining(pos) <= self._speed ** 2 / (2 * self.accel)
+        braking = self._remaining(pos) <= self._braking_m(self._speed)
         return self._forward(self._speed, t), braking
 
     def _decel(self, t, pos, vel, armed):
-        """The "back transition": the commanded speed falls, then the vehicle holds a point."""
-        self._speed = max(0.0, self._speed_at_decel - self.accel * (t - self._t0))
+        """The "back transition": the commanded speed eases down to zero, then holds a point.
+
+        The speed follows half a cosine: the slowing down starts from nothing, is strongest
+        (accel_mps2) halfway and fades out again. Cutting straight in at the limit steps the
+        pitch setpoint: in SITL PX4 then cut the pusher within 0.2 s and the nose jumped to
+        7.2 degrees; eased in, the pusher fades over 0.9 s and the nose rises to 5.4 degrees
+        (2026-10-18 report, section 6).
+        """
+        v0 = self._speed_at_decel
+        share = min(1.0, (t - self._t0) / self._braking_s(v0)) if v0 > 0.0 else 1.0
+        self._speed = 0.5 * v0 * (1.0 + math.cos(math.pi * share)) if share < 1.0 else 0.0
         return self._forward(self._speed, t), self._speed == 0.0 and math.hypot(vel[0], vel[1]) < 0.5
 
     def _descend(self, t, pos, vel, armed):

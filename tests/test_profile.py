@@ -69,13 +69,14 @@ def test_phase_lengths_follow_the_mission_file(p, side_m, turn_rad):
     profile = Profile(p, HOME, YAW0)
     fly(profile)
     length = {name: end - start for name, (start, end) in profile.times.items()}
-    ramp = p["cruise_mps"] / p["accel_mps2"]
-    cruise = (side_m - p["cruise_mps"] * ramp) / p["cruise_mps"]   # square 5 s, out and back 15 s
+    v = p["cruise_mps"]
+    ramp, braking = v / p["accel_mps2"], math.pi / 2 * v / p["accel_mps2"]
+    cruise = (side_m - v * ramp / 2 - v * braking / 2) / v       # square 3.6 s, out and back 12.1 s
     assert length["hover1"] == pytest.approx(p["hover_s"], abs=2 * DT)
     for leg in range(1, len(profile.legs) + 1):
         assert length[f"accel{leg}"] == pytest.approx(ramp, abs=2 * DT)
         assert length[f"cruise{leg}"] == pytest.approx(cruise, abs=2 * DT)
-        assert length[f"decel{leg}"] == pytest.approx(ramp, abs=1.0)
+        assert length[f"decel{leg}"] == pytest.approx(braking, abs=1.0)
         assert length[f"hover{leg + 1}"] >= p["hover_s"]
     assert length["turn2"] == pytest.approx(turn_rad / TURN_RATE + TURN_SETTLE_S, abs=3 * DT)
 
@@ -89,6 +90,23 @@ def test_commanded_speed_never_changes_faster_than_the_limit(p):
     for (t0, v0), (t1, v1) in zip(history, history[1:]):
         assert abs(v1 - v0) <= p["accel_mps2"] * (t1 - t0) + 1e-9
     assert max(v for _, v in history) == pytest.approx(p["cruise_mps"])
+
+
+@ROUTES
+def test_slowing_down_starts_and_ends_gently(p):
+    """A step into braking steps the pitch setpoint and cuts the pusher at once (report 10-18, §6)."""
+    profile = Profile(p, HOME, YAW0)
+    history = [(t, phase, math.hypot(sp.vx, sp.vy)) for t, phase, sp, _ in fly(profile)]
+    a = p["accel_mps2"]
+    for leg in range(1, len(profile.legs) + 1):
+        speeds = [(t, v) for t, phase, v in history if phase == f"decel{leg}"]
+        (t0, v0), stop = speeds[0], next(t for t, v in speeds if v == 0.0)
+        early = [v0 - v for t, v in speeds if t - t0 <= 0.5]
+        late = [v for t, v in speeds if 0.0 <= stop - t <= 0.5]
+        assert max(early) < 0.25 * a * 0.5         # at the limit from the start it would be a * 0.5
+        assert max(late) < 0.25 * a * 0.5
+        rates = [(va - vb) / (tb - ta) for (ta, va), (tb, vb) in zip(speeds, speeds[1:])]
+        assert max(rates) == pytest.approx(a, rel=0.01)    # the limit is reached, halfway
 
 
 @ROUTES
@@ -151,7 +169,8 @@ def test_a_waypoint_to_the_side_turns_first_and_a_short_leg_still_has_a_cruise()
     profile = Profile(p, HOME, YAW0)
     assert profile.phases[:3] == ("climb", "hover1", "turn1")
     v, a = profile.legs[0]["speed"], p["accel_mps2"]
-    assert v < 10.0 and v * v / a + v * MIN_CRUISE_S == pytest.approx(40.0)
+    speeding_up, slowing_down = v * v / (2 * a), math.pi * v * v / (4 * a)
+    assert v < 10.0 and speeding_up + v * MIN_CRUISE_S + slowing_down == pytest.approx(40.0)
     fly(profile)
     assert profile.done
     assert profile.times["cruise1"][1] - profile.times["cruise1"][0] == pytest.approx(MIN_CRUISE_S, abs=3 * DT)
