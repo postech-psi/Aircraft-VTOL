@@ -10,7 +10,7 @@ Companion computer에서 도는 미션 노드입니다. 패키지는 `ros2/ws/sr
 |---|---|---|
 | `mission_manager` | `mission_manager.py` | 임무를 단계 목록 순서대로 진행합니다. `WAIT_START → PATH → LANDING → MISSION_DONE`, 문제가 생기면 어디서든 `FAILSAFE` |
 | `setpoint_mux` | `setpoint_mux.py` | 지금 단계의 setpoint만 PX4로 보냅니다. PX4에 setpoint를 보내는 노드는 이것 하나입니다 |
-| `path_node` | `path_node.py` | 단계 `PATH`: arm하고 offboard로 바꾼 뒤 상승, 호버, 경로 비행. 경로는 통과 비행(기본)이나 멈춰서 돌기. 천이 명령은 보내지 않습니다 |
+| `path_node` | `path_node.py` | 단계 `PATH`: 상승, 호버, 경로 비행. 경로는 통과 비행(기본)이나 멈춰서 돌기. `auto_arm:=true`이면 스스로 offboard로 바꾸고 arm하고, 아니면 조종자가 합니다. 천이 명령은 보내지 않습니다 |
 | `landing_node` | `landing_node.py` | 단계 `LANDING`: 마지막 경유점(기본은 이륙 지점) 위에 자리를 잡고 기수를 바람 쪽으로 돌린 뒤 하강하다가, 4 m 아래에서 PX4 Land 모드에 넘깁니다 |
 
 | 토픽 | 보내는 쪽 | 받는 쪽 | 내용 |
@@ -23,7 +23,7 @@ Companion computer에서 도는 미션 노드입니다. 패키지는 `ros2/ws/sr
 | `/path/status`, `/landing/status` | 단계 노드 | mission_manager | `ACTIVE:…`, `DONE`, `FAILED:<이유>` |
 | `/setpoint_mux/status` | setpoint_mux | 운용자 | 지금 무엇을 보내는지 |
 | `/fmu/in/trajectory_setpoint`, `/fmu/in/offboard_control_mode` | setpoint_mux | PX4 | PX4가 따를 setpoint |
-| `/fmu/in/vehicle_command` | path_node, landing_node, mission_manager | PX4 | arm과 offboard(path_node), Land(landing_node), FAILSAFE의 Hold나 Land(mission_manager) |
+| `/fmu/in/vehicle_command` | path_node, landing_node, mission_manager | PX4 | offboard와 arm(path_node, `auto_arm`일 때), Land(landing_node), FAILSAFE의 Hold나 Land(mission_manager) |
 | `/fmu/out/vehicle_local_position_v1` | PX4 | 단계 노드, setpoint_mux | 위치, 속도, 기수 |
 | `/fmu/out/vehicle_attitude` | PX4 | 단계 노드 | 자세(회전이 끝났는지, 착륙 전 바람 방향) |
 | `/fmu/out/vehicle_status_v1` | PX4 | 단계 노드, mission_manager | arm 여부, 비행 모드 |
