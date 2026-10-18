@@ -25,7 +25,7 @@ def synthetic_log():
             ("actuator_motors", motors), ("control_allocator_status", allocator),
             ("vehicle_land_detected", landed)]
     flight = {"completed": True, "alt_m": 20., "cruise_mps": 10., "home": [0, 0, 0], "yaw0": 0.,
-        "landing_target": [1, 0, 0], "touchdown_speed_mps": 0.,
+        "landing_target": [1, 0, 0],
         "phases": dict(zip(["climb", "hover1", "accel", "cruise", "decel", "hover2", "descend", "land"],
                            [[0, 10], [10, 16], [16, 26], [26, 41], [41, 51], [51, 57], [57, 68], [68, 73]]))}
     return [SimpleNamespace(name=n, multi_id=0, data=d) for n, d in data], flight
@@ -41,6 +41,29 @@ def test_compute_catches_climb_tilt_zero_speed_and_landing_speed(monkeypatch):
     assert result["touchdown_speed_mps"] == 2
     assert result["touchdown_err_m"] == 1
     assert result["data_gap_max_s"] < .11
+
+
+@pytest.mark.parametrize("contact_field", [True, False])
+def test_touchdown_speed_is_the_impact_not_the_detector_delay(monkeypatch, contact_field):
+    """PX4 reports contact only once the vehicle has stopped; the impact came before that."""
+    data, flight = synthetic_log()
+    position, landed = data[1].data, data[4].data
+    t = position["timestamp"] * 1e-6
+    position["vz"] = np.where((t >= 68) & (t < 70), 2.0, 0.0)  # hits the ground at 2 m/s at t=70
+    landed["landed"] = t >= 71.7                               # detector delay after the impact
+    if contact_field:
+        landed["ground_contact"] = t >= 70.4
+    monkeypatch.setattr(metrics, "ULog", lambda *a, **kw: SimpleNamespace(data_list=data))
+    result = metrics.compute("synthetic.ulg", flight)
+    assert result["touchdown_speed_mps"] == pytest.approx(2)
+    assert not metrics.verdict(flight, dict(result, aero_covers_flight=True))[0]
+
+
+def test_touchdown_speed_is_missing_without_the_land_detector(monkeypatch):
+    data, flight = synthetic_log()
+    data = [d for d in data if d.name != "vehicle_land_detected"]
+    monkeypatch.setattr(metrics, "ULog", lambda *a, **kw: SimpleNamespace(data_list=data))
+    assert "touchdown_speed_mps" not in metrics.compute("synthetic.ulg", flight)
 
 
 def test_missing_flight_data_and_sustained_torque_loss_are_detected(monkeypatch):

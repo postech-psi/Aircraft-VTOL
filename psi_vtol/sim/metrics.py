@@ -24,6 +24,10 @@ LIMITS = {
     "wing_lift_fraction_max": 0.40,  # initial stock-controller envelope, not a universal limit
 }
 
+# PX4's land detector reports contact only after the vehicle has stopped moving, and landed
+# later still. The touchdown speed is the fastest the vehicle moved in this long before that.
+TOUCHDOWN_LOOKBACK_S = 3.0
+
 TOPICS = ["vehicle_attitude", "vehicle_attitude_setpoint", "vehicle_local_position",
           "actuator_motors", "rate_ctrl_status", "control_allocator_status", "airspeed_validated",
           "vehicle_land_detected"]
@@ -198,19 +202,22 @@ def compute(ulog_path, flight):
             m = _window(air, late)
             if m.any():
                 out["cruise_airspeed_mps"] = float(np.nanmean(air["true_airspeed_m_s"][m]))
-    for name in ("touchdown_err_m", "touchdown_speed_mps"):
-        if name in flight:
-            out[name] = flight[name]
+    if "touchdown_err_m" in flight:
+        out["touchdown_err_m"] = flight["touchdown_err_m"]
     landed = _topic(ulog, "vehicle_land_detected")
     if landed is not None and "land" in ph:
         m = _window(landed, ph["land"])
         out["landed_confirmed"] = bool(m.any() and landed["landed"][m][-1])
-        contact = m & landed["landed"].astype(bool)
+        flags = [landed[f].astype(bool) for f in ("ground_contact", "maybe_landed", "landed") if f in landed]
+        contact = m & np.logical_or.reduce(flags)
         if contact.any():
             touchdown_t = landed["timestamp"][contact][0]
             i = int(np.argmin(np.abs(pos["timestamp"].astype(float) - touchdown_t)))
-            if "vz" in pos:
-                out["touchdown_speed_mps"] = float(np.linalg.norm([pos[a][i] for a in ("vx", "vy", "vz")]))
+            before = ((pos["timestamp"] >= touchdown_t - TOUCHDOWN_LOOKBACK_S * 1e6)
+                      & (pos["timestamp"] <= touchdown_t))
+            if "vz" in pos and before.any():
+                speed = np.sqrt(pos["vx"][before] ** 2 + pos["vy"][before] ** 2 + pos["vz"][before] ** 2)
+                out["touchdown_speed_mps"] = float(speed.max())
             if "landing_target" in flight:
                 out["touchdown_err_m"] = float(math.hypot(pos["x"][i] - flight["landing_target"][0],
                                                          pos["y"][i] - flight["landing_target"][1]))

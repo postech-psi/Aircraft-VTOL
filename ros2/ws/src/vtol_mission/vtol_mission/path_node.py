@@ -32,8 +32,12 @@ class PathNode(SetpointSource):
         self.t_start = self.t_asked = 0.0
 
     def start(self):
-        self.flight = Profile(config.profile(self.mission), self.pos, self.heading,
-                              phases=PATH_PHASES)
+        try:                        # no wind estimate here: heading_into_wind cannot be flown
+            self.flight = Profile(config.profile(self.mission), self.pos, self.heading,
+                                  phases=PATH_PHASES)
+        except ValueError as error:
+            self.fail(str(error))
+            return
         self.flying = False
         self.t_start, self.t_asked = self.t, -1e9
         self.get_logger().info(f"PATH: flying mission {self.mission}, home {self.pos}, "

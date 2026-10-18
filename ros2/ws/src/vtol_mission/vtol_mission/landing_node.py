@@ -27,8 +27,12 @@ class LandingNode(SetpointSource):
 
     def start(self):
         ground = (self.pos[0], self.pos[1], self.ground_z)
-        self.flight = Profile(config.profile(self.mission), ground, self.heading,
-                              phases=LANDING_PHASES)
+        try:                        # no wind estimate here: heading_into_wind cannot be flown
+            self.flight = Profile(config.profile(self.mission), ground, self.heading,
+                                  phases=LANDING_PHASES)
+        except ValueError as error:
+            self.fail(str(error))
+            return
         self.t_asked = -1e9
         self.get_logger().info(f"LANDING: descending over {self.pos[:2]}.")
 

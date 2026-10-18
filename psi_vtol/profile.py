@@ -43,18 +43,21 @@ class Profile:
     p        the profile values of missions/<mission>/mission.yaml
     home     position where the vehicle stands when the profile is made; z is the ground level
     yaw0     heading at that moment; the vehicle flies along it
-    wind_ne  mean wind (north, east), used only by heading_into_wind
+    wind_ne  mean wind (north, east), needed only by heading_into_wind; None when unknown
     phases   the part of the flight this object flies; the default is all of it
     """
 
-    def __init__(self, p, home, yaw0, wind_ne=(0.0, 0.0), phases=PATH_PHASES + LANDING_PHASES):
+    def __init__(self, p, home, yaw0, wind_ne=None, phases=PATH_PHASES + LANDING_PHASES):
         self.alt, self.cruise, self.accel = p["alt_m"], p["cruise_mps"], p["accel_mps2"]
         self.cruise_s, self.hover_s = p["cruise_s"], p["hover_s"]
         # Heading policy. Off: hold the first heading, which is the direction of travel.
         # On: point the nose along the velocity relative to the air, as a weathervane would.
         self.into_wind = p["heading_into_wind"] >= 0.5
+        if self.into_wind and wind_ne is None:
+            raise ValueError("heading_into_wind needs the mean wind, and no wind estimate was given")
         self.hover1_s = self.hover_s + (TURN_TIME_S if self.into_wind else 0.0)
-        self.home, self.yaw0, self.wind_ne = tuple(home), yaw0, wind_ne
+        self.home, self.yaw0 = tuple(home), yaw0
+        self.wind_ne = (0.0, 0.0) if wind_ne is None else wind_ne
         self.z_fly = home[2] - self.alt
         self._cos0, self._sin0 = math.cos(yaw0), math.sin(yaw0)
         self._yaw_cmd, self._t_yaw = yaw0, None

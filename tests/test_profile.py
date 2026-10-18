@@ -114,6 +114,13 @@ def test_acceleration_does_not_finish_if_vehicle_never_reaches_speed():
     assert profile.overdue(40)
 
 
+def test_heading_into_wind_needs_the_wind():
+    """Without a wind it would quietly fly along the track, unlike the simulation."""
+    with pytest.raises(ValueError, match="wind"):
+        Profile(dict(P, heading_into_wind=1), HOME, YAW0)
+    Profile(dict(P, heading_into_wind=1), HOME, YAW0, wind_ne=(0.0, 0.0))  # a measured calm
+
+
 def test_heading_into_wind_turns_no_faster_than_the_turn_rate():
     profile = Profile(dict(P, heading_into_wind=1), HOME, 0.0, wind_ne=(0.0, -6.0))
     yaws = [(t, sp.yaw) for t, _, sp, _ in fly(profile)]
