@@ -4,7 +4,7 @@
 
 Never exports sim_only. It includes the failsafes of px4/params.yaml and the geofence and return
 height of the mission's route. Output functions and sensor calibration are board-specific and
-must be configured in QGroundControl as described in docs/02_control_concept.md.
+must be configured in QGroundControl as described in docs/03_px4_setup.md.
 """
 import argparse
 from pathlib import Path

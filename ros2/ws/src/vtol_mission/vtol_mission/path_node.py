@@ -3,7 +3,7 @@ slow down, and hover over it.
 
 The whole step is flown as a multicopter, on a planned reference: position, velocity,
 acceleration and heading together. It never sends a VTOL transition command: this vehicle has no
-control surfaces, and PX4's fixed-wing mode would lose it (docs/02_control_concept.md). The
+control surfaces, and PX4's fixed-wing mode would lose it (docs/03_px4_setup.md). The
 reference is psi_vtol.profile, the same code the simulation flew. A fault the profile sees (no
 forward speed, falling behind) fails the step with its reason; mission_manager acts on it.
 
@@ -34,7 +34,7 @@ class PathNode(SetpointSource):
         self.t_start = self.t_asked = 0.0
 
     def start(self):
-        try:                        # no wind estimate here: heading_into_wind cannot be flown
+        try:                        # a mission.yaml the profile refuses fails the step
             self.flight = Profile(config.profile(self.mission), self.pos, self.heading,
                                   part="path")
         except ValueError as error:

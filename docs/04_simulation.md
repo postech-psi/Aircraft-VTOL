@@ -1,4 +1,4 @@
-# 3. 시뮬레이션
+# 4. 시뮬레이션
 
 PX4 v1.17.0 SITL과 Gazebo Harmonic으로 기체 한 대가 임무 하나를 비행하게 합니다. PX4는 실제 펌웨어
 그대로이고, 이 저장소의 C++ 플러그인이 날개·동체 공력과 추진 손실을 더합니다. 현재 모델 이름은
@@ -10,21 +10,10 @@ PX4 v1.17.0 SITL과 Gazebo Harmonic으로 기체 한 대가 임무 하나를 비
 
 ## 1. 실행하기
 
-시뮬레이션은 Docker 안에서 돌립니다. 이미지에 Ubuntu 24.04, Gazebo Harmonic, PX4 v1.17.0 빌드가 들어
-있어서 호스트에는 Docker만 있으면 됩니다. 이미지 빌드 옵션과 custom PX4 연결은
-[simulation/README.md](../simulation/README.md)를 보세요. repo 최상위에서 실행합니다.
-
-```bash
-docker build -f simulation/Dockerfile -t psi-vtol-sitl:v1.17.0-harmonic simulation
-bash simulation/docker_run.sh cmake -S simulation/gazebo -B simulation/gazebo/build -DCMAKE_BUILD_TYPE=RelWithDebInfo
-bash simulation/docker_run.sh cmake --build simulation/gazebo/build -j2
-bash simulation/docker_run.sh python3 -m pytest -q
-bash simulation/docker_run.sh
-```
-
-`docker_run.sh`는 repo를 `/workspace`에 마운트한 새 컨테이너에서 명령을 실행하고, 인자가 없으면 기준
-기체로 임무를 한 번 비행합니다. 공력 플러그인을 빌드하지 않았으면 runner가 시작하지 않습니다. Python은
-마운트로 바로 반영되지만 C++을 고쳤다면 플러그인을 다시 빌드해야 합니다.
+시뮬레이션은 Docker 안에서 돌립니다. 이미지와 공력 플러그인을 처음 빌드하는 방법은
+[README의 빠른 시작](../README.md#빠른-시작)에, 이미지 옵션과 custom PX4 연결은
+[simulation/README.md](../simulation/README.md)에 있습니다. `docker_run.sh`는 repo를 `/workspace`에 마운트한
+새 컨테이너에서 명령을 실행하고, 인자가 없으면 기준 기체로 임무를 한 번 비행합니다.
 
 값을 바꿔서 비행하려면 `--set`을 씁니다. 바꿀 수 있는 이름은 `vehicle/psi_qp.yaml`, `study.yaml`의
 `environment`, `mission.yaml`의 `profile`에 있는 키입니다. PX4 파라미터는 `--px4`로 바꿉니다.
@@ -73,7 +62,7 @@ Return이나 Land는 PX4에 맡깁니다. PX4가 스스로 offboard에서 빠졌
 
 다음 중 하나가 일어나면 즉시 중단하고 실패로 기록합니다.
 
-- 단계 시간 상한 초과([비행 순서](02_control_concept.md#1-비행-순서))
+- 단계 시간 상한 초과([비행 순서](02_flight.md#1-임무))
 - roll 또는 pitch 60° 초과
 - 상승·착륙이 아닌 단계에서 disarm, offboard 이탈, 지면 1 m 이하
 - PX4 위치·자세 텔레메트리가 2초 넘게 끊김
@@ -214,10 +203,8 @@ Gazebo WindEffects가 world의 바람을 바꾸고 플러그인이 그 값을 �
 ```bash
 bash simulation/docker_run.sh python3 -m psi_vtol.sim.sweep oat
 bash simulation/docker_run.sh python3 -m psi_vtol.sim.sweep wind
-bash simulation/docker_run.sh python3 -m psi_vtol.sim.sweep corners
-bash simulation/docker_run.sh python3 -m psi_vtol.sim.sweep random --n 100 --seed 1
 bash simulation/docker_run.sh python3 -m psi_vtol.sim.sweep scenarios
-bash simulation/docker_run.sh python3 -m psi_vtol.plots
+bash simulation/docker_run.sh python3 -m psi_vtol.plots --help
 ```
 
 케이스는 기본으로 한 번에 하나씩 비행합니다. Gazebo는 PX4의 모터 명령을 기다리지 않으므로, 시뮬레이션을
@@ -227,18 +214,10 @@ bash simulation/docker_run.sh python3 -m psi_vtol.plots
 
 | 스터디 | 내용 | 케이스 수 |
 |---|---|---|
-| `oat` | 불확실한 값을 하나씩 범위의 양 끝으로 | 61 (기준 기체 포함) |
-| `wind` | 2/4/6/8 m/s × 8방향 × 기수 유지 정책 2가지 | 64 |
-| `corners` | 여러 불리한 조건을 일부러 겹친 시험 | 7 |
-| `random` | 모든 값을 범위 안에서 균등하게 무작위로 | `--n` |
+| `oat` | 불확실한 값을 하나씩 범위의 양 끝으로(범위는 `study.yaml`의 `sweep`) | 61 (기준 기체 포함) |
+| `wind` | 2/4/6/8 m/s × 8방향 | 32 |
 | `scenarios` | 순항 3–7 m/s × 통과 비행/멈춰서 돌기, 돌풍 섞인 6 m/s 바람, 위 다섯 가지 사건 | 30 |
 
-- 범위는 `study.yaml`의 `sweep`에 있습니다. random은 이 순서대로 값을 뽑으므로 순서를 바꾸면 같은
-  seed라도 다른 기체가 나옵니다.
-- wind의 soft 정책은 yaw 게인을 낮춰 기수가 바람에 밀리게 둔 설정입니다. 기수 오차 기준 20°는
-  그대로라서 실패할 수 있습니다.
-- corner는 실패 조건을 찾으려는 시험이므로, 통과하도록 수치를 맞추지 않습니다.
-- random은 정한 범위에서 고르게 뽑은 표본이라 통과율을 실제 성공 확률로 읽을 수 없습니다.
 - scenarios의 사건 케이스는 임무 합격이 아니라 결과로 판정합니다. 안전하게 내려왔는지(`safe`)와, 그
   사건에 대해 기대한 대응이 있었는지(`sweep.EXPECTED`, 예: 푸셔 고장이면 고장을 알아채고 Land)를 봅니다.
 
@@ -269,7 +248,7 @@ bash simulation/docker_run.sh python3 -m psi_vtol.plots
 ## 7. ROS 2 노드로 비행하기
 
 기본 Docker 이미지에는 ROS 2가 없습니다. ROS 2, Micro XRCE-DDS Agent, PX4가 서로 통신할 수 있는
-환경을 따로 준비해야 합니다([4. 탑재 소프트웨어](04_onboard.md)). `docker_run.sh`로 컨테이너를 세 개
+환경을 따로 준비해야 합니다([5. 탑재 소프트웨어](05_onboard.md)). `docker_run.sh`로 컨테이너를 세 개
 띄우면 서로 연결되지 않습니다.
 
 터미널 세 개에서 각각 실행합니다.

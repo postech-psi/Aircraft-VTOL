@@ -1,4 +1,4 @@
-# 4. 탑재 소프트웨어 (ROS 2)
+# 5. 탑재 소프트웨어 (ROS 2)
 
 Companion computer에서 도는 미션 노드입니다. 패키지는 `ros2/ws/src/vtol_mission` 하나입니다.
 
@@ -28,7 +28,8 @@ Companion computer에서 도는 미션 노드입니다. 패키지는 `ros2/ws/sr
 | `/fmu/out/vehicle_attitude` | PX4 | 단계 노드 | 자세(회전이 끝났는지, 착륙 전 바람 방향) |
 | `/fmu/out/vehicle_status_v1` | PX4 | 단계 노드, mission_manager | arm 여부, 비행 모드 |
 
-PX4 쪽 토픽 이름은 노드 파라미터 `px4_topic.*`로 바꿀 수 있습니다(`px4.py`).
+PX4 쪽 토픽 이름은 `px4.py` 한 곳에 있고 노드 파라미터 `px4_topic.*`로 바꿀 수 있습니다. PX4 v1.17.0과
+px4_msgs v1.17.0에 맞춰져 있습니다([버전](03_px4_setup.md#1-버전)).
 
 `path_node`와 `landing_node`의 setpoint는 `psi_vtol/profile.py`가 만듭니다. 시뮬레이션이 비행한 것과
 같은 코드이고, 고도·속도·가속 한계·경로는
@@ -46,7 +47,7 @@ PX4 쪽 토픽 이름은 노드 파라미터 `px4_topic.*`로 바꿀 수 있습�
 
 새 단계를 넣으려면 `SetpointSource`를 상속한 노드를 만들고 `launch/mission.launch.py`의 `STEPS`에 이름을
 추가합니다. `mission_manager`와 `setpoint_mux`는 고칠 필요가 없습니다. vision 정밀 착륙도 이렇게
-`LANDING` 자리에 들어갈 예정입니다([5. 할 일](05_roadmap.md#3-vision-vtol로-가는-길)).
+`LANDING` 자리에 들어갈 예정입니다([7. 할 일](07_roadmap.md#5-vision-vtol로-가는-길)).
 
 ### 문제가 생겼을 때
 
@@ -62,25 +63,12 @@ PX4 쪽 토픽 이름은 노드 파라미터 `px4_topic.*`로 바꿀 수 있습�
 | 선택된 단계의 setpoint가 0.5초 넘게 끊김 | mux가 HOLD(부드럽게 멈춤) |
 | mux가 받는 위치가 1초 넘게 끊기거나 유효하지 않음 | mux가 offboard 스트림을 멈춤. 이후 PX4의 `COM_OF_LOSS_T`와 loss 동작이 적용됨 |
 
-HOLD는 기체를 그 자리에 세웁니다. 들어가는 순간의 위치를 목표로 고정하지 않고, 지금 가던 방향으로
-1.5 m/s²까지(0.5초에 걸쳐 키우고 줄임) 감속해 멈춘 곳을 지킵니다(`psi_vtol.profile.Stop`). 5 m/s에서 9.6 m,
-3.8초가 걸립니다. 순항 중에 들어가는 순간의 위치를 목표로 고정하면, 이미 지나친 점으로 되돌아가려고
-SITL에서 기수가 48°까지 숙여졌습니다. 기수와 고도는 들어가는 순간의 값을 지키고, 그 뒤 기체가 밀려도
-목표를 옮기지 않습니다.
+HOLD가 기체를 멈추는 방법과 Hold·Land를 고르는 이유는 [2. 비행 방법](02_flight.md#5-고장-대응)에 있습니다.
+mission_manager는 PX4가 아직 offboard일 때만 기체를 넘기고, 조종사나 PX4 failsafe(지오펜스, 배터리, offboard
+상실)가 이미 가져갔으면 손대지 않습니다. Jetson이나 링크가 끊겨 mux의 스트림 자체가 멈추면 PX4가 1초 뒤 Hold에
+들어갑니다([3. PX4 설정](03_px4_setup.md#4-파라미터)).
 
-mission_manager는 PX4가 아직 offboard일 때만 기체를 넘깁니다. 조종사나 PX4 failsafe(지오펜스, 배터리,
-offboard 상실)가 이미 가져갔으면 손대지 않습니다. 넘긴 뒤에는 PX4의 Hold에서 조종사가 넘겨받거나 배터리
-failsafe가 귀환시킵니다. Jetson이나 링크가 끊겨 mux의 스트림 자체가 멈추면 PX4가 1초 뒤 Hold에 들어갑니다
-(`COM_OF_LOSS_T=1`, `COM_OBL_RC_ACT=5`, [2. 제어 개념](02_control_concept.md#37-failsafe를-sitl에서-확인한-결과)).
-그래서 움직이는 동안의 setpoint에는 수평 위치를 넣지 않고 보정한 속도만 넣습니다(`psi_vtol.profile.for_px4`).
-끊긴 뒤 PX4가 지키는 마지막 setpoint가 이미 지나친 점이면, PX4가 그 점으로 급하게 되돌아가기 때문입니다.
-
-## 2. PX4 연결
-
-PX4 v1.17.0과 px4_msgs v1.17.0에 맞춰져 있습니다. 토픽 이름은 `vtol_mission/px4.py` 한 곳에 있고
-([`px4/README.md`](../px4/README.md)), ROS 파라미터 `px4_topic.<이름>`으로 바꿀 수 있습니다.
-
-## 3. 빌드
+## 2. 빌드
 
 px4_msgs는 저장소에 넣지 않고 태그를 고정해서 받습니다.
 
@@ -98,7 +86,7 @@ colcon build
 source install/setup.bash
 ```
 
-## 4. 실행
+## 3. 실행
 
 ```bash
 ros2 launch vtol_mission mission.launch.py
@@ -111,7 +99,7 @@ ros2 topic pub --once /mission/start std_msgs/msg/String "{data: START}"
 - 진행 상황은 `/mission/status`, `/path/status`, `/landing/status`, `/setpoint_mux/status`를
   `ros2 topic echo`로 봅니다.
 
-## 5. Jetson
+## 4. Jetson
 
 `deploy/jetson/`에 Docker 구성이 있습니다. Pixhawk와 시리얼로 연결된 uXRCE-DDS agent 컨테이너와 ROS 2
 Humble 컨테이너 두 개이고, repo 전체가 `/workspace`에 마운트됩니다.
@@ -121,7 +109,7 @@ docker compose -f deploy/jetson/compose.yaml up -d --build
 docker exec -it ros2 bash
 ```
 
-컨테이너 안에서 3절의 px4_msgs clone과 `colcon build`를 한 번 하고, 4절대로 실행합니다. 시리얼 장치와
+컨테이너 안에서 2절의 px4_msgs clone과 `colcon build`를 한 번 하고, 3절대로 실행합니다. 시리얼 장치와
 속도는 `compose.yaml`의 `PX4_UXRCE_DEV`, `PX4_UXRCE_BAUD`로 바꿉니다.
 
 이 구성은 PSI-vtol-team의 Jetson 구성에서 카메라와 vision 패키지를 뺀 것입니다. 새 구성으로 Jetson에서

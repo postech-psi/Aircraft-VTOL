@@ -64,15 +64,15 @@ def test_replayed_position_cannot_refresh_watchdog():
 
 @pytest.mark.parametrize("filename, class_name", [("path_node.py", "PathNode"),
                                                   ("landing_node.py", "LandingNode")])
-def test_start_fails_cleanly_when_heading_into_wind_has_no_wind(filename, class_name):
-    into_wind = dict(config.profile(), heading_into_wind=1)
+def test_start_fails_cleanly_when_the_profile_refuses_the_mission(filename, class_name):
+    too_low = dict(config.profile(), alt_m=5.0)
     start = method(filename, class_name, "start", Profile=Profile,
-                   config=SimpleNamespace(profile=lambda mission: into_wind))
+                   config=SimpleNamespace(profile=lambda mission: too_low))
     failures = []
     state = SimpleNamespace(mission="2026_year_end", pos=(0., 0., -0.1), ground_z=-0.1, heading=0.,
                             t=0., fail=failures.append, flight=None)
     start(state)
-    assert state.flight is None and "wind" in failures[0]
+    assert state.flight is None and "alt_m" in failures[0]
 
 
 def test_missing_step_status_changes_to_failsafe():

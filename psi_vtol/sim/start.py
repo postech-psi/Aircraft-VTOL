@@ -36,7 +36,7 @@ def main():
         parser.error(str(error))
     plugin = gz_model.config_plugin_path(cfg) / "libpsi-aerodynamics.so"
     if not plugin.is_file():
-        raise SystemExit(f"Build the Gazebo plugin first: {plugin}; see docs/03_simulation.md")
+        raise SystemExit(f"Build the Gazebo plugin first: {plugin}; see docs/04_simulation.md")
     case_dir = Path(cfg["sim"]["run_root"]) / args.case / ("run-" + uuid.uuid4().hex[:12])
     case_dir.mkdir(parents=True, exist_ok=False)
     (case_dir / "manifest.json").write_text(json.dumps(run_case.provenance(cfg, p), indent=2))

@@ -1963,7 +1963,7 @@
   }
  },
  "notes": {
-  "earlier_versions": "the same cases before a fix, for the comparisons in report section 9",
+  "earlier_versions": "the same cases before a fix, for the comparisons in report section 4",
   "silence_*": "setpoints stopped 1.5 s into leg 2 at 5 m/s, COM_OF_LOSS_T 1 s (0.5 s where named)"
  }
 }

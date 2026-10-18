@@ -29,7 +29,7 @@ class LandingNode(SetpointSource):
 
     def start(self):
         ground = (self.pos[0], self.pos[1], self.ground_z)
-        try:                        # no wind estimate here: heading_into_wind cannot be flown
+        try:                        # a mission.yaml the profile refuses fails the step
             self.flight = Profile(config.profile(self.mission), ground, self.heading,
                                   part="landing")
         except ValueError as error:

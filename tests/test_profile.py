@@ -105,7 +105,7 @@ def test_phase_lengths_follow_the_mission_file(p, side_m, turn_rad):
 @ROUTES
 def test_speed_changes_build_up_and_fade_out_and_never_pass_the_limit(p):
     """PX4 uses offboard setpoints unsmoothed: a step into braking steps the pitch setpoint and
-    cuts the pusher at once (report 2026-10-18, section 6)."""
+    cuts the pusher at once (SITL)."""
     profile = Profile(p, HOME, YAW0)
     history = fly(profile)
     a = p["accel_mps2"]
@@ -194,7 +194,7 @@ def test_every_turn_is_flown_in_a_hover_over_its_waypoint(p):
 
 
 def test_a_turn_ends_only_when_the_nose_is_there():
-    """With a soft heading hold the nose lagged 29 degrees behind at the speed-up (report §4)."""
+    """A turn ended on the clock once let the speed-up start with the nose 29 degrees off (SITL)."""
     profile = Profile(STOP, HOME, YAW0)
     history = fly(profile)                  # to learn when turn2 starts
     t_turn = profile.times["turn2"][0]
@@ -376,22 +376,6 @@ def test_a_route_without_waypoints_or_with_a_leg_under_a_metre_is_refused():
         Profile(dict(P, route_m=[[250.0, 0.0], [250.0, 0.5]]), HOME, YAW0)
     with pytest.raises(ValueError, match="no waypoints"):
         Profile(dict(P, route_m=[]), HOME, YAW0)
-
-
-def test_heading_into_wind_needs_the_wind():
-    """Without a wind it would quietly fly along the track, unlike the simulation."""
-    with pytest.raises(ValueError, match="wind"):
-        Profile(dict(P, heading_into_wind=1), HOME, YAW0)
-    Profile(dict(P, heading_into_wind=1), HOME, YAW0, wind_ne=(0.0, 0.0))  # a measured calm
-
-
-def test_heading_into_wind_flies_no_turns_and_turns_no_faster_than_the_turn_rate():
-    profile = Profile(dict(P, heading_into_wind=1), HOME, 0.0, wind_ne=(0.0, -6.0))
-    assert not any(phase.startswith("turn") for phase in profile.phases)
-    yaws = [(t, sp.yaw) for t, phase, sp, _ in fly(profile, heading=0.0) if phase != "align"]
-    for (t0, y0), (t1, y1) in zip(yaws, yaws[1:]):
-        assert abs(math.remainder(y1 - y0, 2 * math.pi)) <= TURN_RATE * (t1 - t0) + 1e-9
-    assert max(y for _, y in yaws) > math.radians(30)           # the nose did turn into the wind
 
 
 def test_stop_brings_a_moving_vehicle_to_rest_without_a_step():

@@ -36,7 +36,6 @@ MIN_ALT_M = 6.0                 # pusher assist works above 5 m (VT_FWD_THRUST_E
 DESCENT_MPS = 1.5
 LAND_FROM_M = 4.0               # below this height the landing is handed to PX4's Land mode
 TURN_RATE = math.radians(20.0)  # how fast the commanded heading may change in a hover
-TURN_TIME_S = 9.0               # extra hover to turn the nose into the wind
 TURN_SETTLE_S = 2.0             # without an attitude to watch: hover this long after a turn
 TURN_ALIGNED = math.radians(3.0)    # a turn ends when the nose is this close to its heading
 TURN_ALIGNED_S = 1.0                # ... for this long
@@ -152,7 +151,6 @@ class Profile:
     home     position where the vehicle stands when the profile is made; z is the ground level
     yaw0     heading at that moment; route_m is written in the frame of this heading, unless
              route_heading_deg (>= 0) fixes the frame's heading from north
-    wind_ne  mean wind (north, east), needed only by heading_into_wind; None when unknown
     part     "all", "path" (take-off and route) or "landing" (align, descend and land where it is)
 
     The phases are climb, hover1, then per stretch of the route flown without stopping:
@@ -164,7 +162,7 @@ class Profile:
     tells whether the vehicle should land where it is.
     """
 
-    def __init__(self, p, home, yaw0, wind_ne=None, part="all"):
+    def __init__(self, p, home, yaw0, part="all"):
         self.alt, self.cruise, self.accel = p["alt_m"], p["cruise_mps"], p["accel_mps2"]
         if self.alt < MIN_ALT_M:
             raise ValueError(f"alt_m {self.alt:g} is below {MIN_ALT_M:g} m: PX4 switches the pusher "
@@ -172,15 +170,8 @@ class Profile:
         self.hover_s, self.ramp_s = p["hover_s"], p["brake_ramp_s"]
         self.through = p["fly_through"] >= 0.5
         self.radius, self.lateral = p["turn_radius_m"], p["lateral_mps2"]
-        # Heading policy. Off: point the nose along the path. On: point it along the velocity
-        # relative to the air, as a weathervane would; there are then no turns to fly.
-        self.into_wind = p["heading_into_wind"] >= 0.5
-        if self.into_wind and wind_ne is None:
-            raise ValueError("heading_into_wind needs the mean wind, and no wind estimate was given")
-        self.hover1_s = self.hover_s + (TURN_TIME_S if self.into_wind else 0.0)
         self.home, self.yaw0 = tuple(home), yaw0
         frame = math.radians(p["route_heading_deg"]) if p["route_heading_deg"] >= 0.0 else yaw0
-        self.wind_ne = (0.0, 0.0) if wind_ne is None else wind_ne
         self.z_fly = home[2] - self.alt
         self.legs = self._legs(p["route_m"], frame)
         self.runs = self._runs()
@@ -237,14 +228,14 @@ class Profile:
         return legs
 
     def _needs_turn(self, heading, leg):
-        return not self.into_wind and abs(_wrap(self.legs[leg]["heading"] - heading)) > math.radians(1.0)
+        return abs(_wrap(self.legs[leg]["heading"] - heading)) > math.radians(1.0)
 
     def _runs(self):
         """Stretches of the route flown without stopping, each with its path and speed plan."""
         runs, first = [], 0
         for i in range(len(self.legs)):
             sharp = i + 1 < len(self.legs) and self.legs[i + 1]["turn_rad"] > MAX_THROUGH_TURN
-            if not self.through or sharp or self.into_wind or i + 1 == len(self.legs):
+            if not self.through or sharp or i + 1 == len(self.legs):
                 legs = list(range(first, i + 1))
                 points = [self.legs[first]["start"]] + [self.legs[j]["end"] for j in legs]
                 speed = self.cruise
@@ -297,7 +288,7 @@ class Profile:
             leg = self.legs[int(self.phase[4:]) - 1]
             return leg["turn_rad"] / TURN_RATE + TURN_SETTLE_S + 15
         if kind == "hover":
-            return self.hover1_s + 5 if self.phase == "hover1" else self.hover_s + 15
+            return self.hover_s + 5 if self.phase == "hover1" else self.hover_s + 15
         return {"climb": 60.0, "align": ALIGN_TIMEOUT_S + 20, "descend": self.alt / DESCENT_MPS + 20,
                 "land": 60.0}[kind]
 
@@ -353,7 +344,7 @@ class Profile:
 
     def _hover(self, t, pos, vel, armed, att):
         if self.phase == "hover1":
-            return self._hover_over(self.home, t), t - self._t0 > self.hover1_s
+            return self._hover_over(self.home, t), t - self._t0 > self.hover_s
         arrived = math.hypot(self._point[0] - pos[0], self._point[1] - pos[1]) < ARRIVE_M
         return self._hover_over(self._point, t), t - self._t0 > self.hover_s and arrived
 
@@ -385,12 +376,8 @@ class Profile:
         lateral = v * v * curv              # towards the inside of the turn
         setpoint = Setpoint(x=n, y=e, z=self.z_fly, vx=v * c, vy=v * sn,
                             ax=a * c - lateral * sn, ay=a * sn + lateral * c)
-        if self.into_wind:
-            self._target_yaw = h
-            setpoint.yaw = self._heading(v, t, (c, sn))
-        else:
-            self._yaw_cmd, self._t_yaw = _wrap(h), t
-            setpoint.yaw, setpoint.yawspeed = self._yaw_cmd, v * curv
+        self._yaw_cmd, self._t_yaw = _wrap(h), t
+        setpoint.yaw, setpoint.yawspeed = self._yaw_cmd, v * curv
         # Faults: no forward speed at all, or stuck behind the plan, mean no forward thrust (the
         # pusher). Stuck is not just slower than planned, which a slow speed-up also is, but
         # gaining no speed while falling further behind, through any speed-up, corner or
@@ -458,19 +445,13 @@ class Profile:
 
     # --- setpoints ---------------------------------------------------------------------------
     def _hover_over(self, point, t):
-        return Setpoint(x=point[0], y=point[1], z=self.z_fly, yaw=self._heading(0.0, t))
+        return Setpoint(x=point[0], y=point[1], z=self.z_fly, yaw=self._heading(t))
 
-    def _heading(self, speed, t, direction=(1.0, 0.0)):
+    def _heading(self, t):
         """The commanded heading, turned towards its target no faster than TURN_RATE."""
-        target = self._target_yaw
-        if self.into_wind:
-            air_n = speed * direction[0] - self.wind_ne[0]
-            air_e = speed * direction[1] - self.wind_ne[1]
-            target = math.atan2(air_e, air_n) if math.hypot(air_n, air_e) > 1.0 else None
         # capped, so a pause between calls cannot turn the heading in one step
         dt = 0.0 if self._t_yaw is None else min(0.1, max(0.0, t - self._t_yaw))
         self._t_yaw = t
-        if target is not None:
-            error = _wrap(target - self._yaw_cmd)
-            self._yaw_cmd += max(-TURN_RATE * dt, min(TURN_RATE * dt, error))
+        error = _wrap(self._target_yaw - self._yaw_cmd)
+        self._yaw_cmd += max(-TURN_RATE * dt, min(TURN_RATE * dt, error))
         return self._yaw_cmd

@@ -14,17 +14,15 @@ def test_phases_group_into_take_off_legs_and_landing():
 def test_case_labels_put_units_the_usual_way():
     label = lambda **o: plots.case_label({"overrides": o})
     assert label() == "Nominal vehicle"
-    assert label(**{"px4:MC_YAW_P": 0.3}) == "Nominal vehicle"
     assert label(mass_kg=6.0) == "Mass 6 kg"
     assert label(wing_incidence_deg=4.0) == "Wing incidence 4°"
     assert label(wind_speed_mps=8.0, wind_from_deg=90.0) == "Wind 8 m/s from 90°"
     assert label(wind_speed_mps=5.0, wind_gust_pct=0.4) == "Gusts 40% of the mean (5 m/s wind)"
 
 
-def test_wind_cases_keep_the_firm_heading_hold():
-    records = [{"case": f"wind8_from90_{policy}", "passed": policy == "firm", "reasons": []}
-               for policy in ("firm", "soft")]
-    records.append({"case": "nominal", "passed": True, "reasons": []})
+def test_wind_cases_are_read_from_their_names():
+    records = [{"case": "wind8_from90", "passed": True, "reasons": []},
+               {"case": "nominal", "passed": True, "reasons": []}]
     assert {k: r["passed"] for k, r in plots.wind_cases(records).items()} == {(8.0, 90.0): True}
 
 

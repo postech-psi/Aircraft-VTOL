@@ -12,12 +12,8 @@ CFG = config.load()
 
 def test_the_studies_have_the_cases_the_docs_list():
     assert len(sweep.oat_cases(CFG)) == 61
-    assert len(sweep.wind_cases()) == 64
-    assert len(sweep.corner_cases()) == 7
+    assert len(sweep.wind_cases()) == 32
     assert len(sweep.scenario_cases()) == 30
-    random = sweep.random_cases(CFG, 40, seed=1)
-    assert random == sweep.random_cases(CFG, 40, seed=1)        # a seed names the same vehicles
-    assert all(set(overrides) == set(CFG["sweep"]) for _, overrides in random)
 
 
 def test_scenarios_fly_every_speed_in_both_modes_and_each_event():

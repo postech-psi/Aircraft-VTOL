@@ -1,6 +1,6 @@
 """PX4 over uXRCE-DDS: the topic names and QoS every node uses.
 
-The names are those of PX4 v1.17.0 (px4/README.md). PX4 appends _v<N> to the topic of a message
+The names are those of PX4 v1.17.0 (docs/03_px4_setup.md). PX4 appends _v<N> to the topic of a message
 whose definition has a version above 0, so the names change between PX4 releases. This is the
 one place they are written. Each is also a ROS parameter (px4_topic.<key>), so another firmware
 or a namespace needs no change in the code.

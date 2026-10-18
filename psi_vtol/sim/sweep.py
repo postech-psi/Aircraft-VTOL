@@ -3,7 +3,6 @@
 
     python3 -m psi_vtol.sim.sweep oat             # each swept value at its low and high end, alone
     python3 -m psi_vtol.sim.sweep wind            # steady wind by speed and direction
-    python3 -m psi_vtol.sim.sweep random --n 40   # all swept values drawn at once, uniformly
     python3 -m psi_vtol.sim.sweep scenarios       # speeds, both route modes, wind, failures
 
 Ranges come from missions/<mission>/study.yaml (sweep). Results go to out/<mission>/<study>.csv
@@ -14,7 +13,6 @@ import csv
 import fnmatch
 import json
 import queue
-import random
 import subprocess
 import sys
 import uuid
@@ -38,8 +36,6 @@ def oat_cases(cfg):
     cases = [("nominal", {})]
     top_wind = cfg["sweep"]["wind_speed_mps"][1]
     for name, (low, high) in cfg["sweep"].items():
-        if name == "wind_from_deg":
-            continue
         if name == "wind_speed_mps":        # a wind needs a direction to mean anything
             for direction in (0, 90, 180, 270):
                 cases.append((f"wind{top_wind:g}_from{direction}",
@@ -52,38 +48,11 @@ def oat_cases(cfg):
     return cases
 
 
-# Heading holds compared by the wind study. "firm" is the nominal one of px4/params.yaml: PX4's
-# own yaw gains. "soft" lets the heading give way to whatever turns the nose in a side wind.
-POLICIES = {"firm": {},
-            "soft": {"px4:MC_YAW_P": 0.3, "px4:MC_YAWRATE_I": 0.0}}
-
-
 def wind_cases():
-    """Steady wind by speed and direction, under each heading hold; the rest nominal."""
-    return [(f"wind{speed}_from{direction}_{label}",
-             {"wind_speed_mps": float(speed), "wind_from_deg": float(direction), **policy})
-            for speed in (2, 4, 6, 8) for direction in range(0, 360, 45)
-            for label, policy in POLICIES.items()]
-
-
-def corner_cases():
-    """Deliberate combined stresses; random draws rarely hit these combinations."""
-    return [
-        ("weak_pusher_headwind", {"pusher_thrust_max_n": 15., "pusher_zero_thrust_mps": 25.,
-                                 "wind_speed_mps": 8., "wind_from_deg": 0.}),
-        # high lift needs speed, and speed needs a long leg: out and back over 300 m
-        ("high_lift_braking", {"mass_kg": 6., "wing_incidence_deg": 4., "cruise_mps": 14.,
-                               "accel_mps2": 2., "wing_cm0": -.15,
-                               "route_m": [[300., 0.], [0., 0.]]}),
-        ("heavy_low_voltage_front_loss", {"mass_kg": 8., "motor_voltage_end_ratio": .8,
-             "motor_voltage_decay_s": 90., "front_rotor_efficiency": .65, "lift_thrust_max_n": 27.5}),
-        ("heavy_low_voltage_rear_loss", {"mass_kg": 8., "motor_voltage_end_ratio": .8,
-             "motor_voltage_decay_s": 90., "rear_rotor_efficiency": .65, "lift_thrust_max_n": 27.5}),
-        *[(f"sidewind_gust_{d}", {"wind_speed_mps": 8., "wind_from_deg": float(d),
-              "wind_gust_pct": .4, "wind_vertical_gust_mps": 1., "side_cp_x_m": .4,
-              "lift_moment_m": .02}) for d in (90, 270)],
-        ("tailwind_low_speed", {"wind_speed_mps": 8., "wind_from_deg": 180., "cruise_mps": 6.}),
-    ]
+    """Steady wind by speed and direction; the rest nominal."""
+    return [(f"wind{speed}_from{direction}",
+             {"wind_speed_mps": float(speed), "wind_from_deg": float(direction)})
+            for speed in (2, 4, 6, 8) for direction in range(0, 360, 45)]
 
 
 # What each injected event should end in. Every case, event or not, must end on the ground
@@ -161,13 +130,6 @@ def scenario_cases():
     return cases
 
 
-def random_cases(cfg, count, seed):
-    rng = random.Random(seed)
-    return [(f"rand{seed}_{i:03d}", {name: rng.uniform(low, high)
-                                     for name, (low, high) in cfg["sweep"].items()})
-            for i in range(count)]
-
-
 def run_one(case, overrides, common, mission, instances, study):
     instance = instances.get()
     try:
@@ -178,8 +140,6 @@ def run_one(case, overrides, common, mission, instances, study):
         for name, value in {**common, **overrides}.items():
             if name == "event":
                 cmd += ["--event", value]
-            elif name.startswith("px4:"):       # a PX4 parameter rather than a vehicle value
-                cmd += ["--px4", f"{name[4:]}={value}"]
             else:
                 cmd += ["--set", f"{name}={json.dumps(value) if isinstance(value, list) else value}"]
         done = subprocess.run(cmd, capture_output=True, text=True, cwd=config.REPO)
@@ -197,11 +157,9 @@ def run_one(case, overrides, common, mission, instances, study):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    parser.add_argument("study", choices=["oat", "wind", "random", "corners", "scenarios"])
+    parser.add_argument("study", choices=["oat", "wind", "scenarios"])
     parser.add_argument("--mission", default=config.DEFAULT_MISSION,
                         help="folder under missions/")
-    parser.add_argument("--n", type=int, default=40, help="number of random cases")
-    parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--set", action="append", default=[], metavar="NAME=VALUE",
                         help="a vehicle value for every case of the study; may be repeated")
     parser.add_argument("--name", help="name of the output files; default: the study")
@@ -214,14 +172,13 @@ def main():
                         help="fly only the cases named like this (e.g. 'pusher_off*'), and put them "
                              "in place of their earlier records in the study's table; may be repeated")
     args = parser.parse_args()
-    if args.jobs < 1 or args.n < 1:
-        parser.error("--jobs and --n must be positive")
+    if args.jobs < 1:
+        parser.error("--jobs must be positive")
 
     cfg = config.load(args.mission)
     cases = {"oat": lambda: oat_cases(cfg), "wind": wind_cases,
-             "random": lambda: random_cases(cfg, args.n, args.seed), "corners": corner_cases,
              "scenarios": scenario_cases}[args.study]()
-    study = args.name or (f"random_seed{args.seed}" if args.study == "random" else args.study)
+    study = args.name or args.study
     order = [case for case, _ in cases]
     if args.only:
         cases = [(c, o) for c, o in cases if any(fnmatch.fnmatch(c, pat) for pat in args.only)]

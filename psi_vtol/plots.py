@@ -480,14 +480,12 @@ def reason(record):
 
 
 def wind_cases(records):
-    """{(speed, from_deg): record}, with the firm heading hold where the study has two."""
+    """{(speed, from_deg): record} of a wind study, whose cases are named wind<speed>_from<deg>."""
     cases = {}
     for r in records:
-        parts = r["case"].split("_")
-        if not parts[0].startswith("wind") or (len(parts) > 2 and parts[2] != "firm"):
-            continue
-        speed, direction = float(parts[0][4:]), float(parts[1][4:])
-        cases[(speed, direction)] = r
+        speed, _, direction = r["case"].partition("_from")
+        if speed.startswith("wind") and direction:
+            cases[(float(speed[4:]), float(direction.partition("_")[0]))] = r
     return cases
 
 
@@ -540,7 +538,7 @@ def wind_envelope(sets, name="fig2_wind_envelope"):
     else:
         title = "Which steady winds the vehicle handles"
     footnote(fig, SIM_NOTE)
-    heading(fig, title, "Each mark is one full simulated flight in a steady wind (firm heading hold). "
+    heading(fig, title, "Each mark is one full simulated flight in a steady wind. "
             "Direction is measured from the nose at take-off;\non the square the vehicle meets the "
             "wind from all four sides once per lap.")
     save(fig, name)
@@ -647,7 +645,7 @@ CRITERIA = [("Tilt", "tilt_max_deg"), ("Pusher\nsaturation", "pusher_sat_frac"),
 
 
 def case_label(record):
-    o = {k: v for k, v in record["overrides"].items() if ":" not in k}
+    o = record["overrides"]
     if not o:
         return "Nominal vehicle"
     if "wind_from_deg" in o and len(o) == 2:

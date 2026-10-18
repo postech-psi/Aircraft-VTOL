@@ -2,22 +2,10 @@
 
 PX4 v1.17.0 SITL, Gazebo Harmonic, Python 의존성을 담은 Linux 이미지와, 그 안에서 명령을 실행하는
 wrapper입니다. 호스트에는 Docker만 있으면 되고, macOS(Apple silicon 포함)에서도 headless로 돌아갑니다.
-시뮬레이션이 무엇을 계산하는지는 [3. 시뮬레이션](../docs/03_simulation.md)을 보세요.
+처음 빌드하는 명령은 [README의 빠른 시작](../README.md#빠른-시작)에, 시뮬레이션이 무엇을 계산하고 어떻게
+쓰는지는 [4. 시뮬레이션](../docs/04_simulation.md)에 있습니다.
 
-## 처음 한 번
-
-repo 최상위에서 실행합니다.
-
-```bash
-docker build -f simulation/Dockerfile -t psi-vtol-sitl:v1.17.0-harmonic simulation
-bash simulation/docker_run.sh cmake -S simulation/gazebo -B simulation/gazebo/build -DCMAKE_BUILD_TYPE=RelWithDebInfo
-bash simulation/docker_run.sh cmake --build simulation/gazebo/build -j2
-bash simulation/docker_run.sh python3 -m pytest -q
-bash simulation/docker_run.sh
-```
-
-첫 이미지 빌드는 PX4 소스를 받아 컴파일하므로 오래 걸리고 수 GB를 씁니다. 마지막 명령은 기준 기체로
-임무를 한 번 비행합니다.
+## 이미지
 
 Docker Hub에서 base image를 받지 못하면 공개 mirror를 지정합니다.
 
@@ -25,29 +13,9 @@ Docker Hub에서 base image를 받지 못하면 공개 mirror를 지정합니다
 docker build --build-arg BASE_IMAGE=mirror.gcr.io/library/ubuntu:24.04 -f simulation/Dockerfile -t psi-vtol-sitl:v1.17.0-harmonic simulation
 ```
 
-## 자주 쓰는 명령
-
-`docker_run.sh` 뒤에 명령을 붙이면 같은 이미지의 새 컨테이너에서 실행됩니다.
-
-```bash
-bash simulation/docker_run.sh python3 -m psi_vtol.sim.run_case --set wind_speed_mps=4 --set wind_from_deg=90
-bash simulation/docker_run.sh python3 -m psi_vtol.sim.sweep corners
-bash simulation/docker_run.sh python3 -m psi_vtol.sim.sweep oat
-bash simulation/docker_run.sh python3 -m psi_vtol.sim.sweep wind
-bash simulation/docker_run.sh python3 -m psi_vtol.sim.sweep random --n 100 --seed 1
-bash simulation/docker_run.sh python3 -m psi_vtol.plots
-bash simulation/docker_run.sh python3 -m psi_vtol.px4_setup --output /workspace/out/psi_candidate.params
-```
-
-한 번 비행한 결과로 바로 그림을 만들려면 결과 JSON을 지정합니다.
-
-```bash
-bash simulation/docker_run.sh python3 -m psi_vtol.sim.run_case --case nominal --json /workspace/out/nominal.json
-bash simulation/docker_run.sh python3 -m psi_vtol.plots --record out/nominal.json
-```
-
 ## 동작 방식
 
+- `docker_run.sh` 뒤에 명령을 붙이면 같은 이미지의 새 컨테이너에서 실행됩니다.
 - repo가 컨테이너의 `/workspace`에 마운트되므로 Python 수정은 이미지를 다시 빌드하지 않아도 반영됩니다.
   C++ 플러그인을 고쳤다면 cmake 빌드만 다시 합니다.
 - 이미지 안의 PX4는 `/opt/px4`에 있습니다.
@@ -76,4 +44,4 @@ stock으로 돌아가려면 `unset PSI_PX4_CHECKOUT`. runner가 펌웨어를 수
   보드의 NuttX toolchain이 따로 필요합니다.
 - **ROS 2 노드 시험.** 이미지에 ROS 2가 없고, `docker_run.sh`는 매번 새 컨테이너를 만들어서 DDS 네트워크를
   구성하지 않습니다. MAVLink 시험은 PX4, Gazebo, runner가 한 컨테이너 안에서 통신하므로 문제없습니다.
-  ROS 2 시험은 [3. 시뮬레이션 7절](../docs/03_simulation.md#7-ros-2-노드로-비행하기)을 따릅니다.
+  ROS 2 시험은 [4. 시뮬레이션 7절](../docs/04_simulation.md#7-ros-2-노드로-비행하기)을 따릅니다.

@@ -1,5 +1,5 @@
-# PX4 parameters of the control concept (docs/02_control_concept.md, section 3). PX4 itself is
-# stock v1.17.0 (px4/README.md): nothing in the firmware is changed, only these parameters.
+# PX4 parameters of the control concept (docs/03_px4_setup.md). PX4 itself is
+# stock v1.17.0: nothing in the firmware is changed, only these parameters.
 #
 # The simulation applies all three groups on top of airframe 4004 (standard VTOL). The motor
 # positions (CA_ROTORn_PX, _PY) are not here: they are written from vehicle/<name>.yaml.
@@ -21,7 +21,7 @@ concept:
 
   # There are no control surfaces, so a front transition must never finish. A transition asked for
   # by a button, a switch or a mission item finds no pusher thrust, cannot reach 30 m/s, and is
-  # cancelled after 0.5 s; PX4 then flies on as a plain quad (SITL; docs/02_control_concept.md).
+  # cancelled after 0.5 s; PX4 then flies on as a plain quad (SITL; docs/03_px4_setup.md).
   VT_ARSP_TRANS: 30.0         # the highest PX4 allows; the pusher runs out near 15 m/s
   VT_F_TRANS_DUR: 20.0        # without airspeed the transition would end after this; the timeout
   VT_TRANS_TIMEOUT: 0.5       #   comes first. While it lasts PX4 ignores our setpoints: 3 s of it

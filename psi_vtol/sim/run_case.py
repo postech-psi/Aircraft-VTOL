@@ -3,7 +3,7 @@
 
 Starts PX4 SITL with a headless Gazebo, flies the mission profile (psi_vtol/profile.py) in
 offboard mode over MAVLink (the same setpoints the ROS 2 nodes send: profile.for_px4), lands,
-and reads the PX4 log. Runs in the project's Linux Docker image (docs/03_simulation.md).
+and reads the PX4 log. Runs in the project's Linux Docker image (docs/04_simulation.md).
 
     python3 -m psi_vtol.sim.run_case                             # the nominal vehicle
     python3 -m psi_vtol.sim.run_case --set wind_speed_mps=6 --set wind_from_deg=90
@@ -164,14 +164,6 @@ class Link:
         return {"complete": len(values) == expected, "expected_count": expected, "values": values}
 
 
-def wind_ne(p, yaw0):
-    """The case's mean wind as (north, east). wind_from_deg is measured from the nose."""
-    a = math.radians(p["wind_from_deg"])
-    cos0, sin0 = math.cos(yaw0), math.sin(yaw0)
-    return (-p["wind_speed_mps"] * (math.cos(a) * cos0 + math.sin(a) * sin0),
-            -p["wind_speed_mps"] * (math.cos(a) * sin0 - math.sin(a) * cos0))
-
-
 # Events a case can inject, at a phase plus seconds ("abort@cruise2+1.5"), to see what a real
 # flight could meet. GPS loss cannot be injected: PX4 v1.17 simulates no GPS failure in Gazebo,
 # and its motor failure injection only blanks the ESC telemetry, so the pusher is stopped in
@@ -275,8 +267,7 @@ def fly(p, params, instance, wall_limit_s=420.0, event=None, gz_env=None):
         result["effective_params"] = link.parameter_snapshot()
         home, yaw0 = link.pos, link.att[2]
         result["home"], result["yaw0"] = list(home), yaw0
-        # With heading_into_wind the true mean wind is used; the vehicle will need an estimate.
-        flight = Profile(p, home, yaw0, wind_ne(p, yaw0))
+        flight = Profile(p, home, yaw0)
         result["phases"] = flight.times
         result["legs"] = [{k: leg[k] for k in ("start", "end", "heading", "speed")} for leg in flight.legs]
         result["path"] = [[round(n, 2), round(e, 2)] for n, e in flight.polyline(1.0)]
@@ -433,7 +424,7 @@ def run(cfg, overrides, case_id, instance, event=None):
     p = case_values(cfg, overrides)
     plugin = gz_model.config_plugin_path(cfg) / "libpsi-aerodynamics.so"
     if not plugin.is_file():
-        raise RuntimeError(f"Build the Gazebo plugin first: {plugin}; see docs/03_simulation.md")
+        raise RuntimeError(f"Build the Gazebo plugin first: {plugin}; see docs/04_simulation.md")
     case_dir = Path(cfg["sim"]["run_root"]) / case_id / ("run-" + uuid.uuid4().hex[:12])
     case_dir.mkdir(parents=True, exist_ok=False)
     manifest = provenance(cfg, p)

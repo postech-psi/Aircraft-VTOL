@@ -12,10 +12,8 @@ environment:
   motor_voltage_end_ratio: 0.9 # ASSUMED scripted voltage decline; thrust scales as ratio^2
   motor_voltage_decay_s: 600.0 # seconds from Gazebo world time zero, not a battery/energy model
 
-# Range of each swept quantity: [low, high]. psi_vtol/sim/sweep.py uses these for the
-# one-at-a-time and the random study. Values the airframe team has given are not swept, except
-# the mass. Keep the order: the random study draws the values in this order, so reordering
-# changes which vehicle a given seed produces.
+# Range of each uncertain value: [low, high]. The one-at-a-time study (psi_vtol/sim/sweep.py)
+# flies each end alone. Values the airframe team has given are not swept, except the mass.
 sweep:
   mass_kg: [6.0, 8.0]
   inertia_scale: [0.6, 1.6]
@@ -46,7 +44,6 @@ sweep:
   side_cp_x_m: [-0.3, 0.4]
   air_density: [1.10, 1.29]
   wind_speed_mps: [0.0, 8.0]
-  wind_from_deg: [0.0, 360.0]
   wind_gust_pct: [0.0, 0.4]
   cruise_mps: [3.0, 7.0]
   accel_mps2: [0.5, 2.0]

@@ -16,7 +16,7 @@ ros2/ws/build/
 ros2/ws/install/
 ros2/ws/log/
 
-# External repository, cloned at the tag px4/README.md names
+# External repository, cloned at the tag docs/03_px4_setup.md names
 ros2/ws/src/px4_msgs/
 
 # Flight and simulation logs

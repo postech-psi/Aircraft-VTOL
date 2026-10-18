@@ -15,350 +15,8 @@
   "gazebo_versions": "8.10.0",
   "plugin_sha256": "e52611503eb5e94d027a03f0dd0cfc6d10d628a18c8719649e08aa6fb83993ce"
  },
- "single_cases": {
-  "nominal_straight": {
-   "case": "nominal",
-   "passed": true,
-   "reasons": [],
-   "overrides": {},
-   "figures": {
-    "tilt_max_deg": 5.9032,
-    "alt_err_max_m": 0.1482,
-    "fwd_yaw_err_max_deg": 1.8654,
-    "cross_track_max_m": 0.3363,
-    "cruise_speed_err_mps": 0.1711,
-    "pusher_max_cmd": 0.7779,
-    "pusher_sat_frac": 0.0,
-    "lift_max_cmd": 0.5541,
-    "lift_min_cmd": 0.4576,
-    "lift_sat_frac": 0.0,
-    "torque_unachieved_frac": 0.0,
-    "pitch_integ_max": 0.0149,
-    "touchdown_err_m": 0.0329,
-    "touchdown_speed_mps": 0.5845,
-    "wing_lift_fraction_max": 0.1221,
-    "cruise_airspeed_mps": 9.8279,
-    "cruise_speed_mps": 9.8368,
-    "cruise_pusher_cmd": 0.4764,
-    "true_airspeed_max_mps": 9.9022
-   }
-  },
-  "crosswind4_left": {
-   "case": "crosswind4_left",
-   "passed": true,
-   "reasons": [],
-   "overrides": {
-    "wind_speed_mps": 4.0,
-    "wind_from_deg": 90.0
-   },
-   "figures": {
-    "tilt_max_deg": 7.0955,
-    "alt_err_max_m": 0.1288,
-    "fwd_yaw_err_max_deg": 1.4219,
-    "cross_track_max_m": 0.6169,
-    "cruise_speed_err_mps": 0.0959,
-    "pusher_max_cmd": 0.7413,
-    "pusher_sat_frac": 0.0,
-    "lift_max_cmd": 0.5587,
-    "lift_min_cmd": 0.4633,
-    "lift_sat_frac": 0.0,
-    "torque_unachieved_frac": 0.0,
-    "pitch_integ_max": 0.0078,
-    "touchdown_err_m": 0.0362,
-    "touchdown_speed_mps": 0.6497,
-    "wing_lift_fraction_max": 0.1016,
-    "cruise_airspeed_mps": 9.9003,
-    "cruise_speed_mps": 9.9092,
-    "cruise_pusher_cmd": 0.4228,
-    "true_airspeed_max_mps": 10.3988
-   }
-  },
-  "crosswind4_right": {
-   "case": "crosswind4_right",
-   "passed": true,
-   "reasons": [],
-   "overrides": {
-    "wind_speed_mps": 4.0,
-    "wind_from_deg": 270.0
-   },
-   "figures": {
-    "tilt_max_deg": 5.3144,
-    "alt_err_max_m": 0.1497,
-    "fwd_yaw_err_max_deg": 4.0502,
-    "cross_track_max_m": 0.5084,
-    "cruise_speed_err_mps": 0.1527,
-    "pusher_max_cmd": 0.8243,
-    "pusher_sat_frac": 0.0,
-    "lift_max_cmd": 0.5834,
-    "lift_min_cmd": 0.4761,
-    "lift_sat_frac": 0.0,
-    "torque_unachieved_frac": 0.0,
-    "pitch_integ_max": 0.0066,
-    "touchdown_err_m": 0.0266,
-    "touchdown_speed_mps": 0.7077,
-    "wing_lift_fraction_max": 0.0894,
-    "cruise_airspeed_mps": 9.8332,
-    "cruise_speed_mps": 9.8544,
-    "cruise_pusher_cmd": 0.5103,
-    "true_airspeed_max_mps": 11.1126
-   }
-  }
- },
  "studies": {
   "straight_10mps": {
-   "corners": [
-    {
-     "case": "weak_pusher_headwind",
-     "passed": false,
-     "reasons": [
-      "timeout in accel",
-      "touchdown not confirmed by land detector",
-      "aerodynamic telemetry missing or incomplete",
-      "pusher_sat_frac 0.95 > 0.1",
-      "cruise_speed_err_mps missing",
-      "touchdown_err_m missing",
-      "touchdown_speed_mps missing"
-     ],
-     "overrides": {
-      "pusher_thrust_max_n": 15.0,
-      "pusher_zero_thrust_mps": 25.0,
-      "wind_speed_mps": 8.0,
-      "wind_from_deg": 0.0
-     },
-     "figures": {
-      "tilt_max_deg": 7.8821,
-      "alt_err_max_m": 0.254,
-      "fwd_yaw_err_max_deg": 0.7585,
-      "cross_track_max_m": 1.5996,
-      "pusher_max_cmd": 0.9,
-      "pusher_sat_frac": 0.9536,
-      "lift_max_cmd": 0.5117,
-      "lift_min_cmd": 0.4607,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0123,
-      "wing_lift_fraction_max": 0.1893,
-      "true_airspeed_max_mps": 10.6282
-     }
-    },
-    {
-     "case": "high_lift_braking",
-     "passed": false,
-     "reasons": [
-      "pusher_sat_frac 0.12 > 0.1",
-      "wing_lift_fraction_max 0.51 > 0.4"
-     ],
-     "overrides": {
-      "mass_kg": 6.0,
-      "wing_incidence_deg": 4.0,
-      "cruise_mps": 14.0,
-      "accel_mps2": 2.0,
-      "wing_cm0": -0.15
-     },
-     "figures": {
-      "tilt_max_deg": 14.422,
-      "alt_err_max_m": 0.5283,
-      "fwd_yaw_err_max_deg": 4.7862,
-      "cross_track_max_m": 0.3817,
-      "cruise_speed_err_mps": 0.8019,
-      "pusher_max_cmd": 0.9,
-      "pusher_sat_frac": 0.125,
-      "lift_max_cmd": 0.5101,
-      "lift_min_cmd": 0.1591,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0812,
-      "touchdown_err_m": 0.0316,
-      "touchdown_speed_mps": 0.6554,
-      "wing_lift_fraction_max": 0.5131,
-      "cruise_airspeed_mps": 13.2148,
-      "cruise_speed_mps": 13.2086,
-      "cruise_pusher_cmd": 0.6686,
-      "true_airspeed_max_mps": 13.3004
-     }
-    },
-    {
-     "case": "heavy_low_voltage_front_loss",
-     "passed": false,
-     "reasons": [
-      "timeout in climb",
-      "touchdown not confirmed by land detector",
-      "aerodynamic telemetry missing or incomplete",
-      "alt_err_max_m missing",
-      "lift_sat_frac missing",
-      "torque_unachieved_frac missing",
-      "lift_low_frac missing",
-      "pusher_sat_frac missing",
-      "fwd_yaw_err_max_deg missing",
-      "cross_track_max_m missing",
-      "cruise_speed_err_mps missing",
-      "touchdown_err_m missing",
-      "touchdown_speed_mps missing",
-      "torque_unachieved_max_s missing"
-     ],
-     "overrides": {
-      "mass_kg": 8.0,
-      "motor_voltage_end_ratio": 0.8,
-      "motor_voltage_decay_s": 90.0,
-      "front_rotor_efficiency": 0.65,
-      "lift_thrust_max_n": 27.5
-     },
-     "figures": {
-      "tilt_max_deg": 11.2894,
-      "wing_lift_fraction_max": 0.0066,
-      "true_airspeed_max_mps": 1.0554
-     }
-    },
-    {
-     "case": "heavy_low_voltage_rear_loss",
-     "passed": false,
-     "reasons": [
-      "timeout in climb",
-      "touchdown not confirmed by land detector",
-      "aerodynamic telemetry missing or incomplete",
-      "alt_err_max_m missing",
-      "lift_sat_frac missing",
-      "torque_unachieved_frac missing",
-      "lift_low_frac missing",
-      "pusher_sat_frac missing",
-      "fwd_yaw_err_max_deg missing",
-      "cross_track_max_m missing",
-      "cruise_speed_err_mps missing",
-      "touchdown_err_m missing",
-      "touchdown_speed_mps missing",
-      "torque_unachieved_max_s missing"
-     ],
-     "overrides": {
-      "mass_kg": 8.0,
-      "motor_voltage_end_ratio": 0.8,
-      "motor_voltage_decay_s": 90.0,
-      "rear_rotor_efficiency": 0.65,
-      "lift_thrust_max_n": 27.5
-     },
-     "figures": {
-      "tilt_max_deg": 8.8722,
-      "wing_lift_fraction_max": 0.0066,
-      "true_airspeed_max_mps": 1.0554
-     }
-    },
-    {
-     "case": "sidewind_gust_90",
-     "passed": false,
-     "reasons": [
-      "tilt_max_deg 33.62 > 30.0",
-      "alt_err_max_m 4.67 > 3.0",
-      "lift_sat_frac 1.00 > 0.05",
-      "torque_unachieved_frac 1.00 > 0.1",
-      "fwd_yaw_err_max_deg 143.66 > 20.0",
-      "torque_unachieved_max_s 35.00 > 1.0"
-     ],
-     "overrides": {
-      "wind_speed_mps": 8.0,
-      "wind_from_deg": 90.0,
-      "wind_gust_pct": 0.4,
-      "wind_vertical_gust_mps": 1.0,
-      "side_cp_x_m": 0.4,
-      "lift_moment_m": 0.02
-     },
-     "figures": {
-      "tilt_max_deg": 33.6202,
-      "alt_err_max_m": 4.668,
-      "fwd_yaw_err_max_deg": 143.6575,
-      "cross_track_max_m": 0.9743,
-      "cruise_speed_err_mps": 0.5551,
-      "pusher_max_cmd": 0.4066,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 1.0,
-      "lift_min_cmd": 0.0418,
-      "lift_sat_frac": 1.0,
-      "torque_unachieved_frac": 1.0,
-      "pitch_integ_max": 0.0758,
-      "touchdown_err_m": 0.1147,
-      "touchdown_speed_mps": 0.8419,
-      "wing_lift_fraction_max": 0.3094,
-      "cruise_airspeed_mps": -3.4795,
-      "cruise_speed_mps": 10.0253,
-      "cruise_pusher_cmd": 0.0078,
-      "true_airspeed_max_mps": 14.4558
-     }
-    },
-    {
-     "case": "sidewind_gust_270",
-     "passed": false,
-     "reasons": [
-      "tilt_max_deg 34.40 > 30.0",
-      "alt_err_max_m 16.74 > 3.0",
-      "lift_sat_frac 1.00 > 0.05",
-      "torque_unachieved_frac 1.00 > 0.1",
-      "fwd_yaw_err_max_deg 162.82 > 20.0",
-      "cross_track_max_m 3.57 > 3.0",
-      "torque_unachieved_max_s 35.00 > 1.0",
-      "wing_lift_fraction_max 0.52 > 0.4"
-     ],
-     "overrides": {
-      "wind_speed_mps": 8.0,
-      "wind_from_deg": 270.0,
-      "wind_gust_pct": 0.4,
-      "wind_vertical_gust_mps": 1.0,
-      "side_cp_x_m": 0.4,
-      "lift_moment_m": 0.02
-     },
-     "figures": {
-      "tilt_max_deg": 34.4006,
-      "alt_err_max_m": 16.7365,
-      "fwd_yaw_err_max_deg": 162.8165,
-      "cross_track_max_m": 3.5745,
-      "cruise_speed_err_mps": 0.6166,
-      "pusher_max_cmd": 0.3602,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 1.0,
-      "lift_min_cmd": 0.0,
-      "lift_sat_frac": 1.0,
-      "torque_unachieved_frac": 1.0,
-      "pitch_integ_max": 0.0965,
-      "touchdown_err_m": 0.0674,
-      "touchdown_speed_mps": 0.6884,
-      "wing_lift_fraction_max": 0.5176,
-      "cruise_airspeed_mps": -4.301,
-      "cruise_speed_mps": 9.9351,
-      "cruise_pusher_cmd": 0.0,
-      "true_airspeed_max_mps": 16.7683
-     }
-    },
-    {
-     "case": "tailwind_low_speed",
-     "passed": false,
-     "reasons": [
-      "tilt_max_deg 38.66 > 30.0"
-     ],
-     "overrides": {
-      "wind_speed_mps": 8.0,
-      "wind_from_deg": 180.0,
-      "cruise_mps": 6.0
-     },
-     "figures": {
-      "tilt_max_deg": 38.6642,
-      "alt_err_max_m": 0.1946,
-      "fwd_yaw_err_max_deg": 0.7631,
-      "cross_track_max_m": 0.1294,
-      "cruise_speed_err_mps": 0.013,
-      "pusher_max_cmd": 0.2768,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.6375,
-      "lift_min_cmd": 0.5152,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0094,
-      "touchdown_err_m": 0.0614,
-      "touchdown_speed_mps": 0.7004,
-      "wing_lift_fraction_max": 0.0804,
-      "cruise_airspeed_mps": 5.954,
-      "cruise_speed_mps": 6.0049,
-      "cruise_pusher_cmd": 0.0,
-      "true_airspeed_max_mps": 9.7083
-     }
-    }
-   ],
    "oat": [
     {
      "case": "nominal",
@@ -2149,7 +1807,7 @@
    ],
    "wind": [
     {
-     "case": "wind2_from0_firm",
+     "case": "wind2_from0",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -2179,37 +1837,7 @@
      }
     },
     {
-     "case": "wind2_from0_soft",
-     "passed": true,
-     "reasons": [],
-     "overrides": {
-      "wind_speed_mps": 2.0,
-      "wind_from_deg": 0.0
-     },
-     "figures": {
-      "tilt_max_deg": 5.4676,
-      "alt_err_max_m": 0.1378,
-      "fwd_yaw_err_max_deg": 4.318,
-      "cross_track_max_m": 0.4386,
-      "cruise_speed_err_mps": 0.247,
-      "pusher_max_cmd": 0.8842,
-      "pusher_sat_frac": 0.0029,
-      "lift_max_cmd": 0.5388,
-      "lift_min_cmd": 0.4402,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0163,
-      "touchdown_err_m": 0.0147,
-      "touchdown_speed_mps": 0.8722,
-      "wing_lift_fraction_max": 0.1511,
-      "cruise_airspeed_mps": 9.7676,
-      "cruise_speed_mps": 9.7589,
-      "cruise_pusher_cmd": 0.581,
-      "true_airspeed_max_mps": 11.7919
-     }
-    },
-    {
-     "case": "wind2_from45_firm",
+     "case": "wind2_from45",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -2239,37 +1867,7 @@
      }
     },
     {
-     "case": "wind2_from45_soft",
-     "passed": true,
-     "reasons": [],
-     "overrides": {
-      "wind_speed_mps": 2.0,
-      "wind_from_deg": 45.0
-     },
-     "figures": {
-      "tilt_max_deg": 5.1511,
-      "alt_err_max_m": 0.1649,
-      "fwd_yaw_err_max_deg": 5.7734,
-      "cross_track_max_m": 0.7317,
-      "cruise_speed_err_mps": 0.2444,
-      "pusher_max_cmd": 0.849,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.5476,
-      "lift_min_cmd": 0.4383,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0178,
-      "touchdown_err_m": 0.0084,
-      "touchdown_speed_mps": 0.7398,
-      "wing_lift_fraction_max": 0.148,
-      "cruise_airspeed_mps": 9.7549,
-      "cruise_speed_mps": 9.7617,
-      "cruise_pusher_cmd": 0.5634,
-      "true_airspeed_max_mps": 11.1819
-     }
-    },
-    {
-     "case": "wind2_from90_firm",
+     "case": "wind2_from90",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -2299,37 +1897,7 @@
      }
     },
     {
-     "case": "wind2_from90_soft",
-     "passed": true,
-     "reasons": [],
-     "overrides": {
-      "wind_speed_mps": 2.0,
-      "wind_from_deg": 90.0
-     },
-     "figures": {
-      "tilt_max_deg": 6.345,
-      "alt_err_max_m": 0.1709,
-      "fwd_yaw_err_max_deg": 5.6845,
-      "cross_track_max_m": 0.3771,
-      "cruise_speed_err_mps": 0.1398,
-      "pusher_max_cmd": 0.7472,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.5511,
-      "lift_min_cmd": 0.4584,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0128,
-      "touchdown_err_m": 0.0159,
-      "touchdown_speed_mps": 0.72,
-      "wing_lift_fraction_max": 0.1219,
-      "cruise_airspeed_mps": 9.894,
-      "cruise_speed_mps": 9.8757,
-      "cruise_pusher_cmd": 0.4489,
-      "true_airspeed_max_mps": 9.917
-     }
-    },
-    {
-     "case": "wind2_from135_firm",
+     "case": "wind2_from135",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -2359,37 +1927,7 @@
      }
     },
     {
-     "case": "wind2_from135_soft",
-     "passed": true,
-     "reasons": [],
-     "overrides": {
-      "wind_speed_mps": 2.0,
-      "wind_from_deg": 135.0
-     },
-     "figures": {
-      "tilt_max_deg": 6.8185,
-      "alt_err_max_m": 0.1688,
-      "fwd_yaw_err_max_deg": 4.1625,
-      "cross_track_max_m": 0.3807,
-      "cruise_speed_err_mps": 0.0917,
-      "pusher_max_cmd": 0.6846,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.5538,
-      "lift_min_cmd": 0.4609,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0122,
-      "touchdown_err_m": 0.0042,
-      "touchdown_speed_mps": 0.6593,
-      "wing_lift_fraction_max": 0.1139,
-      "cruise_airspeed_mps": 9.9203,
-      "cruise_speed_mps": 9.9127,
-      "cruise_pusher_cmd": 0.3616,
-      "true_airspeed_max_mps": 8.543
-     }
-    },
-    {
-     "case": "wind2_from180_firm",
+     "case": "wind2_from180",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -2419,37 +1957,7 @@
      }
     },
     {
-     "case": "wind2_from180_soft",
-     "passed": true,
-     "reasons": [],
-     "overrides": {
-      "wind_speed_mps": 2.0,
-      "wind_from_deg": 180.0
-     },
-     "figures": {
-      "tilt_max_deg": 7.0266,
-      "alt_err_max_m": 0.1557,
-      "fwd_yaw_err_max_deg": 4.4797,
-      "cross_track_max_m": 0.2843,
-      "cruise_speed_err_mps": 0.0779,
-      "pusher_max_cmd": 0.645,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.5526,
-      "lift_min_cmd": 0.4643,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0112,
-      "touchdown_err_m": 0.029,
-      "touchdown_speed_mps": 0.6352,
-      "wing_lift_fraction_max": 0.1076,
-      "cruise_airspeed_mps": 9.9274,
-      "cruise_speed_mps": 9.9263,
-      "cruise_pusher_cmd": 0.3304,
-      "true_airspeed_max_mps": 8.0293
-     }
-    },
-    {
-     "case": "wind2_from225_firm",
+     "case": "wind2_from225",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -2479,37 +1987,7 @@
      }
     },
     {
-     "case": "wind2_from225_soft",
-     "passed": true,
-     "reasons": [],
-     "overrides": {
-      "wind_speed_mps": 2.0,
-      "wind_from_deg": 225.0
-     },
-     "figures": {
-      "tilt_max_deg": 6.2413,
-      "alt_err_max_m": 0.1665,
-      "fwd_yaw_err_max_deg": 4.5573,
-      "cross_track_max_m": 0.718,
-      "cruise_speed_err_mps": 0.1089,
-      "pusher_max_cmd": 0.7024,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.5538,
-      "lift_min_cmd": 0.4594,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0118,
-      "touchdown_err_m": 0.0391,
-      "touchdown_speed_mps": 0.8151,
-      "wing_lift_fraction_max": 0.1127,
-      "cruise_airspeed_mps": 9.8787,
-      "cruise_speed_mps": 9.8949,
-      "cruise_pusher_cmd": 0.3953,
-      "true_airspeed_max_mps": 8.8734
-     }
-    },
-    {
-     "case": "wind2_from270_firm",
+     "case": "wind2_from270",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -2539,37 +2017,7 @@
      }
     },
     {
-     "case": "wind2_from270_soft",
-     "passed": true,
-     "reasons": [],
-     "overrides": {
-      "wind_speed_mps": 2.0,
-      "wind_from_deg": 270.0
-     },
-     "figures": {
-      "tilt_max_deg": 5.531,
-      "alt_err_max_m": 0.1608,
-      "fwd_yaw_err_max_deg": 4.2489,
-      "cross_track_max_m": 0.7565,
-      "cruise_speed_err_mps": 0.1743,
-      "pusher_max_cmd": 0.7828,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.5493,
-      "lift_min_cmd": 0.4584,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0145,
-      "touchdown_err_m": 0.0627,
-      "touchdown_speed_mps": 0.6783,
-      "wing_lift_fraction_max": 0.122,
-      "cruise_airspeed_mps": 9.8575,
-      "cruise_speed_mps": 9.831,
-      "cruise_pusher_cmd": 0.4927,
-      "true_airspeed_max_mps": 10.3098
-     }
-    },
-    {
-     "case": "wind2_from315_firm",
+     "case": "wind2_from315",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -2599,37 +2047,7 @@
      }
     },
     {
-     "case": "wind2_from315_soft",
-     "passed": true,
-     "reasons": [],
-     "overrides": {
-      "wind_speed_mps": 2.0,
-      "wind_from_deg": 315.0
-     },
-     "figures": {
-      "tilt_max_deg": 5.8962,
-      "alt_err_max_m": 0.1343,
-      "fwd_yaw_err_max_deg": 4.3453,
-      "cross_track_max_m": 0.364,
-      "cruise_speed_err_mps": 0.2396,
-      "pusher_max_cmd": 0.8595,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.5415,
-      "lift_min_cmd": 0.4194,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.018,
-      "touchdown_err_m": 0.0403,
-      "touchdown_speed_mps": 0.6644,
-      "wing_lift_fraction_max": 0.1578,
-      "cruise_airspeed_mps": 9.7563,
-      "cruise_speed_mps": 9.7917,
-      "cruise_pusher_cmd": 0.5621,
-      "true_airspeed_max_mps": 11.4579
-     }
-    },
-    {
-     "case": "wind4_from0_firm",
+     "case": "wind4_from0",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -2659,37 +2077,7 @@
      }
     },
     {
-     "case": "wind4_from0_soft",
-     "passed": true,
-     "reasons": [],
-     "overrides": {
-      "wind_speed_mps": 4.0,
-      "wind_from_deg": 0.0
-     },
-     "figures": {
-      "tilt_max_deg": 4.7492,
-      "alt_err_max_m": 0.152,
-      "fwd_yaw_err_max_deg": 4.4078,
-      "cross_track_max_m": 0.1762,
-      "cruise_speed_err_mps": 0.356,
-      "pusher_max_cmd": 0.9,
-      "pusher_sat_frac": 0.0769,
-      "lift_max_cmd": 0.5401,
-      "lift_min_cmd": 0.4278,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0208,
-      "touchdown_err_m": 0.1528,
-      "touchdown_speed_mps": 0.7631,
-      "wing_lift_fraction_max": 0.1796,
-      "cruise_airspeed_mps": 9.6723,
-      "cruise_speed_mps": 9.652,
-      "cruise_pusher_cmd": 0.7258,
-      "true_airspeed_max_mps": 13.698
-     }
-    },
-    {
-     "case": "wind4_from45_firm",
+     "case": "wind4_from45",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -2719,37 +2107,7 @@
      }
     },
     {
-     "case": "wind4_from45_soft",
-     "passed": true,
-     "reasons": [],
-     "overrides": {
-      "wind_speed_mps": 4.0,
-      "wind_from_deg": 45.0
-     },
-     "figures": {
-      "tilt_max_deg": 4.998,
-      "alt_err_max_m": 0.1521,
-      "fwd_yaw_err_max_deg": 4.3759,
-      "cross_track_max_m": 0.7081,
-      "cruise_speed_err_mps": 0.2945,
-      "pusher_max_cmd": 0.9,
-      "pusher_sat_frac": 0.0314,
-      "lift_max_cmd": 0.5436,
-      "lift_min_cmd": 0.4383,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0178,
-      "touchdown_err_m": 0.0439,
-      "touchdown_speed_mps": 0.769,
-      "wing_lift_fraction_max": 0.1578,
-      "cruise_airspeed_mps": 9.7328,
-      "cruise_speed_mps": 9.7136,
-      "cruise_pusher_cmd": 0.6384,
-      "true_airspeed_max_mps": 12.6882
-     }
-    },
-    {
-     "case": "wind4_from90_firm",
+     "case": "wind4_from90",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -2779,37 +2137,7 @@
      }
     },
     {
-     "case": "wind4_from90_soft",
-     "passed": true,
-     "reasons": [],
-     "overrides": {
-      "wind_speed_mps": 4.0,
-      "wind_from_deg": 90.0
-     },
-     "figures": {
-      "tilt_max_deg": 6.2679,
-      "alt_err_max_m": 0.129,
-      "fwd_yaw_err_max_deg": 2.367,
-      "cross_track_max_m": 1.1511,
-      "cruise_speed_err_mps": 0.1314,
-      "pusher_max_cmd": 0.7618,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.5568,
-      "lift_min_cmd": 0.4729,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0075,
-      "touchdown_err_m": 0.0532,
-      "touchdown_speed_mps": 0.7299,
-      "wing_lift_fraction_max": 0.0949,
-      "cruise_airspeed_mps": 9.9053,
-      "cruise_speed_mps": 9.8819,
-      "cruise_pusher_cmd": 0.4609,
-      "true_airspeed_max_mps": 10.3142
-     }
-    },
-    {
-     "case": "wind4_from135_firm",
+     "case": "wind4_from135",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -2839,37 +2167,7 @@
      }
     },
     {
-     "case": "wind4_from135_soft",
-     "passed": true,
-     "reasons": [],
-     "overrides": {
-      "wind_speed_mps": 4.0,
-      "wind_from_deg": 135.0
-     },
-     "figures": {
-      "tilt_max_deg": 7.89,
-      "alt_err_max_m": 0.2015,
-      "fwd_yaw_err_max_deg": 2.3172,
-      "cross_track_max_m": 0.3475,
-      "cruise_speed_err_mps": 0.064,
-      "pusher_max_cmd": 0.6038,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.566,
-      "lift_min_cmd": 0.4742,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0085,
-      "touchdown_err_m": 0.0364,
-      "touchdown_speed_mps": 0.617,
-      "wing_lift_fraction_max": 0.0927,
-      "cruise_airspeed_mps": 9.9599,
-      "cruise_speed_mps": 9.9434,
-      "cruise_pusher_cmd": 0.2889,
-      "true_airspeed_max_mps": 7.3786
-     }
-    },
-    {
-     "case": "wind4_from180_firm",
+     "case": "wind4_from180",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -2899,37 +2197,7 @@
      }
     },
     {
-     "case": "wind4_from180_soft",
-     "passed": true,
-     "reasons": [],
-     "overrides": {
-      "wind_speed_mps": 4.0,
-      "wind_from_deg": 180.0
-     },
-     "figures": {
-      "tilt_max_deg": 7.4052,
-      "alt_err_max_m": 0.1065,
-      "fwd_yaw_err_max_deg": 2.8837,
-      "cross_track_max_m": 0.2836,
-      "cruise_speed_err_mps": 0.0512,
-      "pusher_max_cmd": 0.534,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.5703,
-      "lift_min_cmd": 0.4935,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0048,
-      "touchdown_err_m": 0.0059,
-      "touchdown_speed_mps": 0.6244,
-      "wing_lift_fraction_max": 0.0694,
-      "cruise_airspeed_mps": 9.9452,
-      "cruise_speed_mps": 9.9563,
-      "cruise_pusher_cmd": 0.2317,
-      "true_airspeed_max_mps": 6.0915
-     }
-    },
-    {
-     "case": "wind4_from225_firm",
+     "case": "wind4_from225",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -2959,37 +2227,7 @@
      }
     },
     {
-     "case": "wind4_from225_soft",
-     "passed": true,
-     "reasons": [],
-     "overrides": {
-      "wind_speed_mps": 4.0,
-      "wind_from_deg": 225.0
-     },
-     "figures": {
-      "tilt_max_deg": 8.1487,
-      "alt_err_max_m": 0.1305,
-      "fwd_yaw_err_max_deg": 2.6501,
-      "cross_track_max_m": 0.69,
-      "cruise_speed_err_mps": 0.0509,
-      "pusher_max_cmd": 0.6059,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.5664,
-      "lift_min_cmd": 0.4782,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0056,
-      "touchdown_err_m": 0.0507,
-      "touchdown_speed_mps": 0.7002,
-      "wing_lift_fraction_max": 0.0834,
-      "cruise_airspeed_mps": 9.9445,
-      "cruise_speed_mps": 9.9535,
-      "cruise_pusher_cmd": 0.2854,
-      "true_airspeed_max_mps": 8.1144
-     }
-    },
-    {
-     "case": "wind4_from270_firm",
+     "case": "wind4_from270",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -3019,37 +2257,7 @@
      }
     },
     {
-     "case": "wind4_from270_soft",
-     "passed": true,
-     "reasons": [],
-     "overrides": {
-      "wind_speed_mps": 4.0,
-      "wind_from_deg": 270.0
-     },
-     "figures": {
-      "tilt_max_deg": 5.5281,
-      "alt_err_max_m": 0.1513,
-      "fwd_yaw_err_max_deg": 2.3901,
-      "cross_track_max_m": 0.6992,
-      "cruise_speed_err_mps": 0.1455,
-      "pusher_max_cmd": 0.8023,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.5576,
-      "lift_min_cmd": 0.4811,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0064,
-      "touchdown_err_m": 0.0722,
-      "touchdown_speed_mps": 0.7454,
-      "wing_lift_fraction_max": 0.0915,
-      "cruise_airspeed_mps": 9.8614,
-      "cruise_speed_mps": 9.8603,
-      "cruise_pusher_cmd": 0.502,
-      "true_airspeed_max_mps": 11.056
-     }
-    },
-    {
-     "case": "wind4_from315_firm",
+     "case": "wind4_from315",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -3079,37 +2287,7 @@
      }
     },
     {
-     "case": "wind4_from315_soft",
-     "passed": true,
-     "reasons": [],
-     "overrides": {
-      "wind_speed_mps": 4.0,
-      "wind_from_deg": 315.0
-     },
-     "figures": {
-      "tilt_max_deg": 4.652,
-      "alt_err_max_m": 0.1367,
-      "fwd_yaw_err_max_deg": 4.9381,
-      "cross_track_max_m": 1.7002,
-      "cruise_speed_err_mps": 0.3808,
-      "pusher_max_cmd": 0.9,
-      "pusher_sat_frac": 0.057,
-      "lift_max_cmd": 0.5454,
-      "lift_min_cmd": 0.4182,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0231,
-      "touchdown_err_m": 0.0382,
-      "touchdown_speed_mps": 0.7348,
-      "wing_lift_fraction_max": 0.1817,
-      "cruise_airspeed_mps": 9.6127,
-      "cruise_speed_mps": 9.6328,
-      "cruise_pusher_cmd": 0.6938,
-      "true_airspeed_max_mps": 12.9841
-     }
-    },
-    {
-     "case": "wind6_from0_firm",
+     "case": "wind6_from0",
      "passed": false,
      "reasons": [
       "timeout in accel",
@@ -3141,39 +2319,7 @@
      }
     },
     {
-     "case": "wind6_from0_soft",
-     "passed": false,
-     "reasons": [
-      "pusher_sat_frac 0.55 > 0.1"
-     ],
-     "overrides": {
-      "wind_speed_mps": 6.0,
-      "wind_from_deg": 0.0
-     },
-     "figures": {
-      "tilt_max_deg": 6.1429,
-      "alt_err_max_m": 0.2217,
-      "fwd_yaw_err_max_deg": 3.8927,
-      "cross_track_max_m": 0.2919,
-      "cruise_speed_err_mps": 0.5867,
-      "pusher_max_cmd": 0.9,
-      "pusher_sat_frac": 0.5518,
-      "lift_max_cmd": 0.525,
-      "lift_min_cmd": 0.3836,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0338,
-      "touchdown_err_m": 0.0162,
-      "touchdown_speed_mps": 0.6333,
-      "wing_lift_fraction_max": 0.2437,
-      "cruise_airspeed_mps": 9.4459,
-      "cruise_speed_mps": 9.4247,
-      "cruise_pusher_cmd": 0.883,
-      "true_airspeed_max_mps": 15.4783
-     }
-    },
-    {
-     "case": "wind6_from45_firm",
+     "case": "wind6_from45",
      "passed": false,
      "reasons": [
       "pusher_sat_frac 0.10 > 0.1"
@@ -3205,39 +2351,7 @@
      }
     },
     {
-     "case": "wind6_from45_soft",
-     "passed": false,
-     "reasons": [
-      "pusher_sat_frac 0.11 > 0.1"
-     ],
-     "overrides": {
-      "wind_speed_mps": 6.0,
-      "wind_from_deg": 45.0
-     },
-     "figures": {
-      "tilt_max_deg": 6.6017,
-      "alt_err_max_m": 0.141,
-      "fwd_yaw_err_max_deg": 2.852,
-      "cross_track_max_m": 2.1898,
-      "cruise_speed_err_mps": 0.4264,
-      "pusher_max_cmd": 0.9,
-      "pusher_sat_frac": 0.1136,
-      "lift_max_cmd": 0.5525,
-      "lift_min_cmd": 0.4268,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.02,
-      "touchdown_err_m": 0.1249,
-      "touchdown_speed_mps": 0.8059,
-      "wing_lift_fraction_max": 0.1767,
-      "cruise_airspeed_mps": 9.5511,
-      "cruise_speed_mps": 9.5866,
-      "cruise_pusher_cmd": 0.7669,
-      "true_airspeed_max_mps": 14.1961
-     }
-    },
-    {
-     "case": "wind6_from90_firm",
+     "case": "wind6_from90",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -3267,37 +2381,7 @@
      }
     },
     {
-     "case": "wind6_from90_soft",
-     "passed": true,
-     "reasons": [],
-     "overrides": {
-      "wind_speed_mps": 6.0,
-      "wind_from_deg": 90.0
-     },
-     "figures": {
-      "tilt_max_deg": 8.57,
-      "alt_err_max_m": 0.1531,
-      "fwd_yaw_err_max_deg": 2.2894,
-      "cross_track_max_m": 1.1986,
-      "cruise_speed_err_mps": 0.0868,
-      "pusher_max_cmd": 0.7743,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.5707,
-      "lift_min_cmd": 0.5014,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0117,
-      "touchdown_err_m": 0.0237,
-      "touchdown_speed_mps": 0.6005,
-      "wing_lift_fraction_max": 0.0488,
-      "cruise_airspeed_mps": 9.9228,
-      "cruise_speed_mps": 9.9255,
-      "cruise_pusher_cmd": 0.4661,
-      "true_airspeed_max_mps": 11.0728
-     }
-    },
-    {
-     "case": "wind6_from135_firm",
+     "case": "wind6_from135",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -3327,37 +2411,7 @@
      }
     },
     {
-     "case": "wind6_from135_soft",
-     "passed": true,
-     "reasons": [],
-     "overrides": {
-      "wind_speed_mps": 6.0,
-      "wind_from_deg": 135.0
-     },
-     "figures": {
-      "tilt_max_deg": 12.2645,
-      "alt_err_max_m": 0.1323,
-      "fwd_yaw_err_max_deg": 2.874,
-      "cross_track_max_m": 0.7921,
-      "cruise_speed_err_mps": 0.0458,
-      "pusher_max_cmd": 0.5154,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.5862,
-      "lift_min_cmd": 0.5014,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.005,
-      "touchdown_err_m": 0.0916,
-      "touchdown_speed_mps": 0.7423,
-      "wing_lift_fraction_max": 0.0529,
-      "cruise_airspeed_mps": 9.9496,
-      "cruise_speed_mps": 9.9623,
-      "cruise_pusher_cmd": 0.216,
-      "true_airspeed_max_mps": 7.0017
-     }
-    },
-    {
-     "case": "wind6_from180_firm",
+     "case": "wind6_from180",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -3387,37 +2441,7 @@
      }
     },
     {
-     "case": "wind6_from180_soft",
-     "passed": true,
-     "reasons": [],
-     "overrides": {
-      "wind_speed_mps": 6.0,
-      "wind_from_deg": 180.0
-     },
-     "figures": {
-      "tilt_max_deg": 15.2682,
-      "alt_err_max_m": 0.154,
-      "fwd_yaw_err_max_deg": 2.7489,
-      "cross_track_max_m": 0.4258,
-      "cruise_speed_err_mps": 0.0251,
-      "pusher_max_cmd": 0.4658,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.598,
-      "lift_min_cmd": 0.5137,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.006,
-      "touchdown_err_m": 0.0366,
-      "touchdown_speed_mps": 0.7411,
-      "wing_lift_fraction_max": 0.0575,
-      "cruise_airspeed_mps": 10.0069,
-      "cruise_speed_mps": 9.978,
-      "cruise_pusher_cmd": 0.1361,
-      "true_airspeed_max_mps": 7.2171
-     }
-    },
-    {
-     "case": "wind6_from225_firm",
+     "case": "wind6_from225",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -3447,37 +2471,7 @@
      }
     },
     {
-     "case": "wind6_from225_soft",
-     "passed": true,
-     "reasons": [],
-     "overrides": {
-      "wind_speed_mps": 6.0,
-      "wind_from_deg": 225.0
-     },
-     "figures": {
-      "tilt_max_deg": 7.6276,
-      "alt_err_max_m": 0.1249,
-      "fwd_yaw_err_max_deg": 2.8083,
-      "cross_track_max_m": 0.5809,
-      "cruise_speed_err_mps": 0.0333,
-      "pusher_max_cmd": 0.552,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.581,
-      "lift_min_cmd": 0.5053,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0087,
-      "touchdown_err_m": 0.0388,
-      "touchdown_speed_mps": 0.8064,
-      "wing_lift_fraction_max": 0.0441,
-      "cruise_airspeed_mps": 9.9603,
-      "cruise_speed_mps": 9.9731,
-      "cruise_pusher_cmd": 0.2344,
-      "true_airspeed_max_mps": 7.8412
-     }
-    },
-    {
-     "case": "wind6_from270_firm",
+     "case": "wind6_from270",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -3507,37 +2501,7 @@
      }
     },
     {
-     "case": "wind6_from270_soft",
-     "passed": true,
-     "reasons": [],
-     "overrides": {
-      "wind_speed_mps": 6.0,
-      "wind_from_deg": 270.0
-     },
-     "figures": {
-      "tilt_max_deg": 9.0876,
-      "alt_err_max_m": 0.1505,
-      "fwd_yaw_err_max_deg": 3.099,
-      "cross_track_max_m": 1.1152,
-      "cruise_speed_err_mps": 0.0971,
-      "pusher_max_cmd": 0.8156,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.5878,
-      "lift_min_cmd": 0.5102,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0164,
-      "touchdown_err_m": 0.0533,
-      "touchdown_speed_mps": 0.8596,
-      "wing_lift_fraction_max": 0.0441,
-      "cruise_airspeed_mps": 9.9213,
-      "cruise_speed_mps": 9.9115,
-      "cruise_pusher_cmd": 0.5217,
-      "true_airspeed_max_mps": 12.2049
-     }
-    },
-    {
-     "case": "wind6_from315_firm",
+     "case": "wind6_from315",
      "passed": false,
      "reasons": [
       "pusher_sat_frac 0.15 > 0.1"
@@ -3569,39 +2533,7 @@
      }
     },
     {
-     "case": "wind6_from315_soft",
-     "passed": false,
-     "reasons": [
-      "pusher_sat_frac 0.13 > 0.1"
-     ],
-     "overrides": {
-      "wind_speed_mps": 6.0,
-      "wind_from_deg": 315.0
-     },
-     "figures": {
-      "tilt_max_deg": 5.2027,
-      "alt_err_max_m": 0.1882,
-      "fwd_yaw_err_max_deg": 5.0491,
-      "cross_track_max_m": 1.9877,
-      "cruise_speed_err_mps": 0.4728,
-      "pusher_max_cmd": 0.9,
-      "pusher_sat_frac": 0.1324,
-      "lift_max_cmd": 0.565,
-      "lift_min_cmd": 0.4137,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0225,
-      "touchdown_err_m": 0.1072,
-      "touchdown_speed_mps": 0.6947,
-      "wing_lift_fraction_max": 0.1949,
-      "cruise_airspeed_mps": 9.534,
-      "cruise_speed_mps": 9.5427,
-      "cruise_pusher_cmd": 0.793,
-      "true_airspeed_max_mps": 14.74
-     }
-    },
-    {
-     "case": "wind8_from0_firm",
+     "case": "wind8_from0",
      "passed": false,
      "reasons": [
       "timeout in accel",
@@ -3633,39 +2565,7 @@
      }
     },
     {
-     "case": "wind8_from0_soft",
-     "passed": false,
-     "reasons": [
-      "timeout in accel",
-      "touchdown not confirmed by land detector",
-      "aerodynamic telemetry missing or incomplete",
-      "pusher_sat_frac 0.75 > 0.1",
-      "cruise_speed_err_mps missing",
-      "touchdown_err_m missing",
-      "touchdown_speed_mps missing"
-     ],
-     "overrides": {
-      "wind_speed_mps": 8.0,
-      "wind_from_deg": 0.0
-     },
-     "figures": {
-      "tilt_max_deg": 7.4198,
-      "alt_err_max_m": 0.2202,
-      "fwd_yaw_err_max_deg": 5.037,
-      "cross_track_max_m": 0.5508,
-      "pusher_max_cmd": 0.9,
-      "pusher_sat_frac": 0.7533,
-      "lift_max_cmd": 0.508,
-      "lift_min_cmd": 0.3559,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0425,
-      "wing_lift_fraction_max": 0.2776,
-      "true_airspeed_max_mps": 15.1665
-     }
-    },
-    {
-     "case": "wind8_from45_firm",
+     "case": "wind8_from45",
      "passed": false,
      "reasons": [
       "pusher_sat_frac 0.35 > 0.1"
@@ -3697,40 +2597,7 @@
      }
     },
     {
-     "case": "wind8_from45_soft",
-     "passed": false,
-     "reasons": [
-      "pusher_sat_frac 0.53 > 0.1",
-      "cross_track_max_m 3.96 > 3.0"
-     ],
-     "overrides": {
-      "wind_speed_mps": 8.0,
-      "wind_from_deg": 45.0
-     },
-     "figures": {
-      "tilt_max_deg": 8.8938,
-      "alt_err_max_m": 0.2093,
-      "fwd_yaw_err_max_deg": 6.338,
-      "cross_track_max_m": 3.9585,
-      "cruise_speed_err_mps": 0.4063,
-      "pusher_max_cmd": 0.9,
-      "pusher_sat_frac": 0.53,
-      "lift_max_cmd": 0.5749,
-      "lift_min_cmd": 0.4428,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0133,
-      "touchdown_err_m": 0.1047,
-      "touchdown_speed_mps": 0.7262,
-      "wing_lift_fraction_max": 0.1553,
-      "cruise_airspeed_mps": 9.5714,
-      "cruise_speed_mps": 9.6007,
-      "cruise_pusher_cmd": 0.8811,
-      "true_airspeed_max_mps": 15.8468
-     }
-    },
-    {
-     "case": "wind8_from90_firm",
+     "case": "wind8_from90",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -3760,37 +2627,7 @@
      }
     },
     {
-     "case": "wind8_from90_soft",
-     "passed": true,
-     "reasons": [],
-     "overrides": {
-      "wind_speed_mps": 8.0,
-      "wind_from_deg": 90.0
-     },
-     "figures": {
-      "tilt_max_deg": 11.8838,
-      "alt_err_max_m": 0.113,
-      "fwd_yaw_err_max_deg": 14.7526,
-      "cross_track_max_m": 0.4902,
-      "cruise_speed_err_mps": 0.0066,
-      "pusher_max_cmd": 0.7595,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.6311,
-      "lift_min_cmd": 0.4815,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0307,
-      "touchdown_err_m": 0.0773,
-      "touchdown_speed_mps": 0.7248,
-      "wing_lift_fraction_max": 0.0076,
-      "cruise_airspeed_mps": 10.0085,
-      "cruise_speed_mps": 9.9989,
-      "cruise_pusher_cmd": 0.4359,
-      "true_airspeed_max_mps": 12.2189
-     }
-    },
-    {
-     "case": "wind8_from135_firm",
+     "case": "wind8_from135",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -3820,37 +2657,7 @@
      }
     },
     {
-     "case": "wind8_from135_soft",
-     "passed": true,
-     "reasons": [],
-     "overrides": {
-      "wind_speed_mps": 8.0,
-      "wind_from_deg": 135.0
-     },
-     "figures": {
-      "tilt_max_deg": 14.9581,
-      "alt_err_max_m": 0.1449,
-      "fwd_yaw_err_max_deg": 3.2627,
-      "cross_track_max_m": 1.2812,
-      "cruise_speed_err_mps": 0.0294,
-      "pusher_max_cmd": 0.4604,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.627,
-      "lift_min_cmd": 0.4885,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0096,
-      "touchdown_err_m": 0.0742,
-      "touchdown_speed_mps": 0.7329,
-      "wing_lift_fraction_max": 0.0568,
-      "cruise_airspeed_mps": 9.9689,
-      "cruise_speed_mps": 9.9786,
-      "cruise_pusher_cmd": 0.1298,
-      "true_airspeed_max_mps": 8.8261
-     }
-    },
-    {
-     "case": "wind8_from180_firm",
+     "case": "wind8_from180",
      "passed": false,
      "reasons": [
       "tilt_max_deg 37.31 > 30.0"
@@ -3882,40 +2689,7 @@
      }
     },
     {
-     "case": "wind8_from180_soft",
-     "passed": false,
-     "reasons": [
-      "tilt_max_deg 45.13 > 30.0",
-      "touchdown_speed_mps 2.34 > 1.0"
-     ],
-     "overrides": {
-      "wind_speed_mps": 8.0,
-      "wind_from_deg": 180.0
-     },
-     "figures": {
-      "tilt_max_deg": 45.1309,
-      "alt_err_max_m": 0.2512,
-      "fwd_yaw_err_max_deg": 2.9167,
-      "cross_track_max_m": 1.02,
-      "cruise_speed_err_mps": 0.0128,
-      "pusher_max_cmd": 0.3648,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.6536,
-      "lift_min_cmd": 0.506,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0132,
-      "touchdown_err_m": 0.5376,
-      "touchdown_speed_mps": 2.3406,
-      "wing_lift_fraction_max": 0.1913,
-      "cruise_airspeed_mps": 9.9825,
-      "cruise_speed_mps": 9.9924,
-      "cruise_pusher_cmd": 0.057,
-      "true_airspeed_max_mps": 9.564
-     }
-    },
-    {
-     "case": "wind8_from225_firm",
+     "case": "wind8_from225",
      "passed": false,
      "reasons": [
       "tilt_max_deg 44.49 > 30.0"
@@ -3947,37 +2721,7 @@
      }
     },
     {
-     "case": "wind8_from225_soft",
-     "passed": true,
-     "reasons": [],
-     "overrides": {
-      "wind_speed_mps": 8.0,
-      "wind_from_deg": 225.0
-     },
-     "figures": {
-      "tilt_max_deg": 16.2365,
-      "alt_err_max_m": 0.1183,
-      "fwd_yaw_err_max_deg": 3.0363,
-      "cross_track_max_m": 0.7948,
-      "cruise_speed_err_mps": 0.0253,
-      "pusher_max_cmd": 0.511,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.6183,
-      "lift_min_cmd": 0.5279,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.014,
-      "touchdown_err_m": 0.0594,
-      "touchdown_speed_mps": 0.7357,
-      "wing_lift_fraction_max": 0.0407,
-      "cruise_airspeed_mps": 9.999,
-      "cruise_speed_mps": 9.985,
-      "cruise_pusher_cmd": 0.1735,
-      "true_airspeed_max_mps": 8.996
-     }
-    },
-    {
-     "case": "wind8_from270_firm",
+     "case": "wind8_from270",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -4007,37 +2751,7 @@
      }
     },
     {
-     "case": "wind8_from270_soft",
-     "passed": true,
-     "reasons": [],
-     "overrides": {
-      "wind_speed_mps": 8.0,
-      "wind_from_deg": 270.0
-     },
-     "figures": {
-      "tilt_max_deg": 11.8843,
-      "alt_err_max_m": 0.1137,
-      "fwd_yaw_err_max_deg": 4.2898,
-      "cross_track_max_m": 1.2494,
-      "cruise_speed_err_mps": 0.08,
-      "pusher_max_cmd": 0.8995,
-      "pusher_sat_frac": 0.0057,
-      "lift_max_cmd": 0.6389,
-      "lift_min_cmd": 0.536,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0293,
-      "touchdown_err_m": 0.1125,
-      "touchdown_speed_mps": 0.8278,
-      "wing_lift_fraction_max": 0.0114,
-      "cruise_airspeed_mps": 9.8892,
-      "cruise_speed_mps": 9.9312,
-      "cruise_pusher_cmd": 0.6035,
-      "true_airspeed_max_mps": 13.4741
-     }
-    },
-    {
-     "case": "wind8_from315_firm",
+     "case": "wind8_from315",
      "passed": false,
      "reasons": [
       "timeout in accel",
@@ -4067,45 +2781,13 @@
       "wing_lift_fraction_max": 0.2157,
       "true_airspeed_max_mps": 15.6778
      }
-    },
-    {
-     "case": "wind8_from315_soft",
-     "passed": false,
-     "reasons": [
-      "timeout in accel",
-      "touchdown not confirmed by land detector",
-      "aerodynamic telemetry missing or incomplete",
-      "pusher_sat_frac 0.65 > 0.1",
-      "cruise_speed_err_mps missing",
-      "touchdown_err_m missing",
-      "touchdown_speed_mps missing"
-     ],
-     "overrides": {
-      "wind_speed_mps": 8.0,
-      "wind_from_deg": 315.0
-     },
-     "figures": {
-      "tilt_max_deg": 8.5052,
-      "alt_err_max_m": 0.2724,
-      "fwd_yaw_err_max_deg": 2.6242,
-      "cross_track_max_m": 1.7603,
-      "pusher_max_cmd": 0.9,
-      "pusher_sat_frac": 0.6533,
-      "lift_max_cmd": 0.5615,
-      "lift_min_cmd": 0.409,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0257,
-      "wing_lift_fraction_max": 0.213,
-      "true_airspeed_max_mps": 15.5921
-     }
     }
    ]
   },
   "square_5mps": {
    "wind": [
     {
-     "case": "wind2_from0_firm",
+     "case": "wind2_from0",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -4135,39 +2817,7 @@
      }
     },
     {
-     "case": "wind2_from0_soft",
-     "passed": false,
-     "reasons": [
-      "fwd_yaw_err_max_deg 29.02 > 20.0"
-     ],
-     "overrides": {
-      "wind_speed_mps": 2.0,
-      "wind_from_deg": 0.0
-     },
-     "figures": {
-      "tilt_max_deg": 8.7642,
-      "alt_err_max_m": 0.1634,
-      "fwd_yaw_err_max_deg": 29.0185,
-      "cross_track_max_m": 0.34,
-      "cruise_speed_err_mps": 0.2353,
-      "pusher_max_cmd": 0.5999,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.5744,
-      "lift_min_cmd": 0.4741,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0085,
-      "touchdown_err_m": 0.0397,
-      "touchdown_speed_mps": 0.7517,
-      "wing_lift_fraction_max": 0.0933,
-      "cruise_airspeed_mps": 5.0019,
-      "cruise_speed_mps": 5.0342,
-      "cruise_pusher_cmd": 0.1889,
-      "true_airspeed_max_mps": 7.0216
-     }
-    },
-    {
-     "case": "wind2_from45_firm",
+     "case": "wind2_from45",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -4197,39 +2847,7 @@
      }
     },
     {
-     "case": "wind2_from45_soft",
-     "passed": false,
-     "reasons": [
-      "fwd_yaw_err_max_deg 28.98 > 20.0"
-     ],
-     "overrides": {
-      "wind_speed_mps": 2.0,
-      "wind_from_deg": 45.0
-     },
-     "figures": {
-      "tilt_max_deg": 8.3734,
-      "alt_err_max_m": 0.1453,
-      "fwd_yaw_err_max_deg": 28.9782,
-      "cross_track_max_m": 0.2189,
-      "cruise_speed_err_mps": 0.2372,
-      "pusher_max_cmd": 0.5948,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.5734,
-      "lift_min_cmd": 0.4876,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0069,
-      "touchdown_err_m": 0.0462,
-      "touchdown_speed_mps": 0.7416,
-      "wing_lift_fraction_max": 0.0836,
-      "cruise_airspeed_mps": 4.9814,
-      "cruise_speed_mps": 5.0321,
-      "cruise_pusher_cmd": 0.1876,
-      "true_airspeed_max_mps": 6.726
-     }
-    },
-    {
-     "case": "wind2_from90_firm",
+     "case": "wind2_from90",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -4259,39 +2877,7 @@
      }
     },
     {
-     "case": "wind2_from90_soft",
-     "passed": false,
-     "reasons": [
-      "fwd_yaw_err_max_deg 28.93 > 20.0"
-     ],
-     "overrides": {
-      "wind_speed_mps": 2.0,
-      "wind_from_deg": 90.0
-     },
-     "figures": {
-      "tilt_max_deg": 8.6352,
-      "alt_err_max_m": 0.2353,
-      "fwd_yaw_err_max_deg": 28.9259,
-      "cross_track_max_m": 0.3411,
-      "cruise_speed_err_mps": 0.234,
-      "pusher_max_cmd": 0.6126,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.5723,
-      "lift_min_cmd": 0.4828,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0095,
-      "touchdown_err_m": 0.0525,
-      "touchdown_speed_mps": 0.7505,
-      "wing_lift_fraction_max": 0.0983,
-      "cruise_airspeed_mps": 4.9972,
-      "cruise_speed_mps": 5.0319,
-      "cruise_pusher_cmd": 0.1856,
-      "true_airspeed_max_mps": 7.0168
-     }
-    },
-    {
-     "case": "wind2_from135_firm",
+     "case": "wind2_from135",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -4321,39 +2907,7 @@
      }
     },
     {
-     "case": "wind2_from135_soft",
-     "passed": false,
-     "reasons": [
-      "fwd_yaw_err_max_deg 28.64 > 20.0"
-     ],
-     "overrides": {
-      "wind_speed_mps": 2.0,
-      "wind_from_deg": 135.0
-     },
-     "figures": {
-      "tilt_max_deg": 8.6924,
-      "alt_err_max_m": 0.1728,
-      "fwd_yaw_err_max_deg": 28.6445,
-      "cross_track_max_m": 0.356,
-      "cruise_speed_err_mps": 0.2399,
-      "pusher_max_cmd": 0.5757,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.5655,
-      "lift_min_cmd": 0.4923,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0073,
-      "touchdown_err_m": 0.0555,
-      "touchdown_speed_mps": 0.773,
-      "wing_lift_fraction_max": 0.0848,
-      "cruise_airspeed_mps": 5.0428,
-      "cruise_speed_mps": 5.0364,
-      "cruise_pusher_cmd": 0.1709,
-      "true_airspeed_max_mps": 6.7432
-     }
-    },
-    {
-     "case": "wind2_from180_firm",
+     "case": "wind2_from180",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -4383,39 +2937,7 @@
      }
     },
     {
-     "case": "wind2_from180_soft",
-     "passed": false,
-     "reasons": [
-      "fwd_yaw_err_max_deg 29.59 > 20.0"
-     ],
-     "overrides": {
-      "wind_speed_mps": 2.0,
-      "wind_from_deg": 180.0
-     },
-     "figures": {
-      "tilt_max_deg": 8.4124,
-      "alt_err_max_m": 0.21,
-      "fwd_yaw_err_max_deg": 29.5878,
-      "cross_track_max_m": 0.2567,
-      "cruise_speed_err_mps": 0.2285,
-      "pusher_max_cmd": 0.6211,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.5664,
-      "lift_min_cmd": 0.4846,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0089,
-      "touchdown_err_m": 0.0408,
-      "touchdown_speed_mps": 0.7036,
-      "wing_lift_fraction_max": 0.0966,
-      "cruise_airspeed_mps": 4.9684,
-      "cruise_speed_mps": 5.0378,
-      "cruise_pusher_cmd": 0.1909,
-      "true_airspeed_max_mps": 7.0583
-     }
-    },
-    {
-     "case": "wind2_from225_firm",
+     "case": "wind2_from225",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -4445,39 +2967,7 @@
      }
     },
     {
-     "case": "wind2_from225_soft",
-     "passed": false,
-     "reasons": [
-      "fwd_yaw_err_max_deg 29.33 > 20.0"
-     ],
-     "overrides": {
-      "wind_speed_mps": 2.0,
-      "wind_from_deg": 225.0
-     },
-     "figures": {
-      "tilt_max_deg": 8.861,
-      "alt_err_max_m": 0.1488,
-      "fwd_yaw_err_max_deg": 29.3298,
-      "cross_track_max_m": 0.3441,
-      "cruise_speed_err_mps": 0.2457,
-      "pusher_max_cmd": 0.5755,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.5692,
-      "lift_min_cmd": 0.4838,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.007,
-      "touchdown_err_m": 0.0064,
-      "touchdown_speed_mps": 0.7792,
-      "wing_lift_fraction_max": 0.0851,
-      "cruise_airspeed_mps": 4.997,
-      "cruise_speed_mps": 5.0412,
-      "cruise_pusher_cmd": 0.1685,
-      "true_airspeed_max_mps": 6.7205
-     }
-    },
-    {
-     "case": "wind2_from270_firm",
+     "case": "wind2_from270",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -4507,39 +2997,7 @@
      }
     },
     {
-     "case": "wind2_from270_soft",
-     "passed": false,
-     "reasons": [
-      "fwd_yaw_err_max_deg 28.96 > 20.0"
-     ],
-     "overrides": {
-      "wind_speed_mps": 2.0,
-      "wind_from_deg": 270.0
-     },
-     "figures": {
-      "tilt_max_deg": 9.0938,
-      "alt_err_max_m": 0.281,
-      "fwd_yaw_err_max_deg": 28.9554,
-      "cross_track_max_m": 0.6236,
-      "cruise_speed_err_mps": 0.2461,
-      "pusher_max_cmd": 0.6011,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.5762,
-      "lift_min_cmd": 0.4818,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0071,
-      "touchdown_err_m": 0.0277,
-      "touchdown_speed_mps": 0.7022,
-      "wing_lift_fraction_max": 0.0891,
-      "cruise_airspeed_mps": 5.0079,
-      "cruise_speed_mps": 5.0379,
-      "cruise_pusher_cmd": 0.1815,
-      "true_airspeed_max_mps": 7.0491
-     }
-    },
-    {
-     "case": "wind2_from315_firm",
+     "case": "wind2_from315",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -4569,39 +3027,7 @@
      }
     },
     {
-     "case": "wind2_from315_soft",
-     "passed": false,
-     "reasons": [
-      "fwd_yaw_err_max_deg 29.14 > 20.0"
-     ],
-     "overrides": {
-      "wind_speed_mps": 2.0,
-      "wind_from_deg": 315.0
-     },
-     "figures": {
-      "tilt_max_deg": 8.466,
-      "alt_err_max_m": 0.1449,
-      "fwd_yaw_err_max_deg": 29.1446,
-      "cross_track_max_m": 0.3582,
-      "cruise_speed_err_mps": 0.2466,
-      "pusher_max_cmd": 0.5794,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.5684,
-      "lift_min_cmd": 0.4816,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.007,
-      "touchdown_err_m": 0.0587,
-      "touchdown_speed_mps": 0.6766,
-      "wing_lift_fraction_max": 0.0825,
-      "cruise_airspeed_mps": 5.0034,
-      "cruise_speed_mps": 5.033,
-      "cruise_pusher_cmd": 0.189,
-      "true_airspeed_max_mps": 6.6974
-     }
-    },
-    {
-     "case": "wind4_from0_firm",
+     "case": "wind4_from0",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -4631,39 +3057,7 @@
      }
     },
     {
-     "case": "wind4_from0_soft",
-     "passed": false,
-     "reasons": [
-      "fwd_yaw_err_max_deg 29.10 > 20.0"
-     ],
-     "overrides": {
-      "wind_speed_mps": 4.0,
-      "wind_from_deg": 0.0
-     },
-     "figures": {
-      "tilt_max_deg": 9.8371,
-      "alt_err_max_m": 0.2372,
-      "fwd_yaw_err_max_deg": 29.1011,
-      "cross_track_max_m": 0.3284,
-      "cruise_speed_err_mps": 0.2531,
-      "pusher_max_cmd": 0.6996,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.5796,
-      "lift_min_cmd": 0.4559,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0117,
-      "touchdown_err_m": 0.0401,
-      "touchdown_speed_mps": 0.8058,
-      "wing_lift_fraction_max": 0.1159,
-      "cruise_airspeed_mps": 4.9877,
-      "cruise_speed_mps": 5.0265,
-      "cruise_pusher_cmd": 0.1969,
-      "true_airspeed_max_mps": 8.9162
-     }
-    },
-    {
-     "case": "wind4_from45_firm",
+     "case": "wind4_from45",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -4693,39 +3087,7 @@
      }
     },
     {
-     "case": "wind4_from45_soft",
-     "passed": false,
-     "reasons": [
-      "fwd_yaw_err_max_deg 28.88 > 20.0"
-     ],
-     "overrides": {
-      "wind_speed_mps": 4.0,
-      "wind_from_deg": 45.0
-     },
-     "figures": {
-      "tilt_max_deg": 9.4769,
-      "alt_err_max_m": 0.1609,
-      "fwd_yaw_err_max_deg": 28.885,
-      "cross_track_max_m": 0.3245,
-      "cruise_speed_err_mps": 0.2519,
-      "pusher_max_cmd": 0.6734,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.5851,
-      "lift_min_cmd": 0.4753,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0084,
-      "touchdown_err_m": 0.0029,
-      "touchdown_speed_mps": 0.7264,
-      "wing_lift_fraction_max": 0.1,
-      "cruise_airspeed_mps": 5.0028,
-      "cruise_speed_mps": 5.0225,
-      "cruise_pusher_cmd": 0.2042,
-      "true_airspeed_max_mps": 8.5402
-     }
-    },
-    {
-     "case": "wind4_from90_firm",
+     "case": "wind4_from90",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -4755,39 +3117,7 @@
      }
     },
     {
-     "case": "wind4_from90_soft",
-     "passed": false,
-     "reasons": [
-      "fwd_yaw_err_max_deg 28.83 > 20.0"
-     ],
-     "overrides": {
-      "wind_speed_mps": 4.0,
-      "wind_from_deg": 90.0
-     },
-     "figures": {
-      "tilt_max_deg": 9.7274,
-      "alt_err_max_m": 0.1964,
-      "fwd_yaw_err_max_deg": 28.8268,
-      "cross_track_max_m": 0.4085,
-      "cruise_speed_err_mps": 0.2419,
-      "pusher_max_cmd": 0.7151,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.5784,
-      "lift_min_cmd": 0.4673,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0145,
-      "touchdown_err_m": 0.1922,
-      "touchdown_speed_mps": 0.7689,
-      "wing_lift_fraction_max": 0.1214,
-      "cruise_airspeed_mps": 4.9913,
-      "cruise_speed_mps": 5.0212,
-      "cruise_pusher_cmd": 0.2082,
-      "true_airspeed_max_mps": 8.9779
-     }
-    },
-    {
-     "case": "wind4_from135_firm",
+     "case": "wind4_from135",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -4817,39 +3147,7 @@
      }
     },
     {
-     "case": "wind4_from135_soft",
-     "passed": false,
-     "reasons": [
-      "fwd_yaw_err_max_deg 28.73 > 20.0"
-     ],
-     "overrides": {
-      "wind_speed_mps": 4.0,
-      "wind_from_deg": 135.0
-     },
-     "figures": {
-      "tilt_max_deg": 9.1526,
-      "alt_err_max_m": 0.1401,
-      "fwd_yaw_err_max_deg": 28.7283,
-      "cross_track_max_m": 0.2098,
-      "cruise_speed_err_mps": 0.2415,
-      "pusher_max_cmd": 0.6559,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.577,
-      "lift_min_cmd": 0.4656,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0104,
-      "touchdown_err_m": 0.0462,
-      "touchdown_speed_mps": 0.7181,
-      "wing_lift_fraction_max": 0.1099,
-      "cruise_airspeed_mps": 4.9914,
-      "cruise_speed_mps": 5.0236,
-      "cruise_pusher_cmd": 0.2101,
-      "true_airspeed_max_mps": 8.5241
-     }
-    },
-    {
-     "case": "wind4_from180_firm",
+     "case": "wind4_from180",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -4879,39 +3177,7 @@
      }
     },
     {
-     "case": "wind4_from180_soft",
-     "passed": false,
-     "reasons": [
-      "fwd_yaw_err_max_deg 29.35 > 20.0"
-     ],
-     "overrides": {
-      "wind_speed_mps": 4.0,
-      "wind_from_deg": 180.0
-     },
-     "figures": {
-      "tilt_max_deg": 9.8606,
-      "alt_err_max_m": 0.1411,
-      "fwd_yaw_err_max_deg": 29.3488,
-      "cross_track_max_m": 0.3456,
-      "cruise_speed_err_mps": 0.2429,
-      "pusher_max_cmd": 0.7113,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.5765,
-      "lift_min_cmd": 0.4653,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0128,
-      "touchdown_err_m": 0.0347,
-      "touchdown_speed_mps": 0.6757,
-      "wing_lift_fraction_max": 0.1165,
-      "cruise_airspeed_mps": 4.9842,
-      "cruise_speed_mps": 5.0252,
-      "cruise_pusher_cmd": 0.2039,
-      "true_airspeed_max_mps": 8.9514
-     }
-    },
-    {
-     "case": "wind4_from225_firm",
+     "case": "wind4_from225",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -4941,39 +3207,7 @@
      }
     },
     {
-     "case": "wind4_from225_soft",
-     "passed": false,
-     "reasons": [
-      "fwd_yaw_err_max_deg 29.64 > 20.0"
-     ],
-     "overrides": {
-      "wind_speed_mps": 4.0,
-      "wind_from_deg": 225.0
-     },
-     "figures": {
-      "tilt_max_deg": 10.027,
-      "alt_err_max_m": 0.1484,
-      "fwd_yaw_err_max_deg": 29.6379,
-      "cross_track_max_m": 0.6491,
-      "cruise_speed_err_mps": 0.2501,
-      "pusher_max_cmd": 0.6436,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.5772,
-      "lift_min_cmd": 0.4651,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0101,
-      "touchdown_err_m": 0.0241,
-      "touchdown_speed_mps": 0.6514,
-      "wing_lift_fraction_max": 0.1078,
-      "cruise_airspeed_mps": 5.0074,
-      "cruise_speed_mps": 5.0296,
-      "cruise_pusher_cmd": 0.1971,
-      "true_airspeed_max_mps": 8.5116
-     }
-    },
-    {
-     "case": "wind4_from270_firm",
+     "case": "wind4_from270",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -5003,39 +3237,7 @@
      }
     },
     {
-     "case": "wind4_from270_soft",
-     "passed": false,
-     "reasons": [
-      "fwd_yaw_err_max_deg 29.33 > 20.0"
-     ],
-     "overrides": {
-      "wind_speed_mps": 4.0,
-      "wind_from_deg": 270.0
-     },
-     "figures": {
-      "tilt_max_deg": 9.6907,
-      "alt_err_max_m": 0.1464,
-      "fwd_yaw_err_max_deg": 29.3324,
-      "cross_track_max_m": 0.6142,
-      "cruise_speed_err_mps": 0.2469,
-      "pusher_max_cmd": 0.7291,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.5797,
-      "lift_min_cmd": 0.4598,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0144,
-      "touchdown_err_m": 0.0385,
-      "touchdown_speed_mps": 0.8621,
-      "wing_lift_fraction_max": 0.1229,
-      "cruise_airspeed_mps": 5.0024,
-      "cruise_speed_mps": 5.022,
-      "cruise_pusher_cmd": 0.2037,
-      "true_airspeed_max_mps": 8.9803
-     }
-    },
-    {
-     "case": "wind4_from315_firm",
+     "case": "wind4_from315",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -5065,39 +3267,7 @@
      }
     },
     {
-     "case": "wind4_from315_soft",
-     "passed": false,
-     "reasons": [
-      "fwd_yaw_err_max_deg 29.48 > 20.0"
-     ],
-     "overrides": {
-      "wind_speed_mps": 4.0,
-      "wind_from_deg": 315.0
-     },
-     "figures": {
-      "tilt_max_deg": 9.9934,
-      "alt_err_max_m": 0.1807,
-      "fwd_yaw_err_max_deg": 29.48,
-      "cross_track_max_m": 0.4035,
-      "cruise_speed_err_mps": 0.2488,
-      "pusher_max_cmd": 0.6512,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.5788,
-      "lift_min_cmd": 0.4672,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.009,
-      "touchdown_err_m": 0.0431,
-      "touchdown_speed_mps": 0.8408,
-      "wing_lift_fraction_max": 0.0987,
-      "cruise_airspeed_mps": 4.9913,
-      "cruise_speed_mps": 5.0276,
-      "cruise_pusher_cmd": 0.1944,
-      "true_airspeed_max_mps": 8.527
-     }
-    },
-    {
-     "case": "wind6_from0_firm",
+     "case": "wind6_from0",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -5127,39 +3297,7 @@
      }
     },
     {
-     "case": "wind6_from0_soft",
-     "passed": false,
-     "reasons": [
-      "fwd_yaw_err_max_deg 29.43 > 20.0"
-     ],
-     "overrides": {
-      "wind_speed_mps": 6.0,
-      "wind_from_deg": 0.0
-     },
-     "figures": {
-      "tilt_max_deg": 10.0249,
-      "alt_err_max_m": 0.1479,
-      "fwd_yaw_err_max_deg": 29.4328,
-      "cross_track_max_m": 0.4474,
-      "cruise_speed_err_mps": 0.2557,
-      "pusher_max_cmd": 0.84,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.6053,
-      "lift_min_cmd": 0.4471,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0161,
-      "touchdown_err_m": 0.0413,
-      "touchdown_speed_mps": 0.7372,
-      "wing_lift_fraction_max": 0.1391,
-      "cruise_airspeed_mps": 4.9595,
-      "cruise_speed_mps": 5.0062,
-      "cruise_pusher_cmd": 0.2297,
-      "true_airspeed_max_mps": 10.8404
-     }
-    },
-    {
-     "case": "wind6_from45_firm",
+     "case": "wind6_from45",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -5189,39 +3327,7 @@
      }
     },
     {
-     "case": "wind6_from45_soft",
-     "passed": false,
-     "reasons": [
-      "fwd_yaw_err_max_deg 28.76 > 20.0"
-     ],
-     "overrides": {
-      "wind_speed_mps": 6.0,
-      "wind_from_deg": 45.0
-     },
-     "figures": {
-      "tilt_max_deg": 10.0392,
-      "alt_err_max_m": 0.2019,
-      "fwd_yaw_err_max_deg": 28.7638,
-      "cross_track_max_m": 0.3866,
-      "cruise_speed_err_mps": 0.242,
-      "pusher_max_cmd": 0.7541,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.6157,
-      "lift_min_cmd": 0.4761,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0125,
-      "touchdown_err_m": 0.0173,
-      "touchdown_speed_mps": 0.6553,
-      "wing_lift_fraction_max": 0.1202,
-      "cruise_airspeed_mps": 4.9765,
-      "cruise_speed_mps": 5.0062,
-      "cruise_pusher_cmd": 0.2196,
-      "true_airspeed_max_mps": 10.338
-     }
-    },
-    {
-     "case": "wind6_from90_firm",
+     "case": "wind6_from90",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -5251,42 +3357,7 @@
      }
     },
     {
-     "case": "wind6_from90_soft",
-     "passed": false,
-     "reasons": [
-      "tumbled in land",
-      "touchdown not confirmed by land detector",
-      "tilt_max_deg 56.53 > 30.0",
-      "fwd_yaw_err_max_deg 28.54 > 20.0",
-      "touchdown_err_m missing",
-      "touchdown_speed_mps missing"
-     ],
-     "overrides": {
-      "wind_speed_mps": 6.0,
-      "wind_from_deg": 90.0
-     },
-     "figures": {
-      "tilt_max_deg": 56.5315,
-      "alt_err_max_m": 0.2316,
-      "fwd_yaw_err_max_deg": 28.542,
-      "cross_track_max_m": 0.2614,
-      "cruise_speed_err_mps": 0.2562,
-      "pusher_max_cmd": 0.8503,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.6043,
-      "lift_min_cmd": 0.4622,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0182,
-      "wing_lift_fraction_max": 0.288,
-      "cruise_airspeed_mps": 4.9542,
-      "cruise_speed_mps": 5.0002,
-      "cruise_pusher_cmd": 0.2202,
-      "true_airspeed_max_mps": 10.8379
-     }
-    },
-    {
-     "case": "wind6_from135_firm",
+     "case": "wind6_from135",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -5294,61 +3365,30 @@
       "wind_from_deg": 135.0
      },
      "figures": {
-      "tilt_max_deg": 26.059,
-      "alt_err_max_m": 0.3205,
-      "fwd_yaw_err_max_deg": 1.3679,
-      "cross_track_max_m": 0.49,
-      "cruise_speed_err_mps": 0.2247,
-      "pusher_max_cmd": 0.7665,
+      "tilt_max_deg": 9.893,
+      "alt_err_max_m": 0.2363,
+      "fwd_yaw_err_max_deg": 1.6088,
+      "cross_track_max_m": 0.2715,
+      "cruise_speed_err_mps": 0.2308,
+      "pusher_max_cmd": 0.789,
       "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.6135,
-      "lift_min_cmd": 0.4717,
+      "lift_max_cmd": 0.5956,
+      "lift_min_cmd": 0.4758,
       "lift_sat_frac": 0.0,
       "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0084,
-      "touchdown_err_m": 0.1226,
-      "touchdown_speed_mps": 0.8324,
-      "wing_lift_fraction_max": 0.0957,
-      "cruise_airspeed_mps": 4.9882,
-      "cruise_speed_mps": 5.015,
-      "cruise_pusher_cmd": 0.2227,
-      "true_airspeed_max_mps": 10.3252
-     }
-    },
-    {
-     "case": "wind6_from135_soft",
-     "passed": false,
-     "reasons": [
-      "fwd_yaw_err_max_deg 28.56 > 20.0"
-     ],
-     "overrides": {
-      "wind_speed_mps": 6.0,
-      "wind_from_deg": 135.0
+      "pitch_integ_max": 0.0076,
+      "touchdown_err_m": 0.116,
+      "touchdown_speed_mps": 0.8533,
+      "wing_lift_fraction_max": 0.0951,
+      "cruise_airspeed_mps": 4.9896,
+      "cruise_speed_mps": 5.0153,
+      "cruise_pusher_cmd": 0.2278,
+      "true_airspeed_max_mps": 10.3437
      },
-     "figures": {
-      "tilt_max_deg": 9.4913,
-      "alt_err_max_m": 0.2628,
-      "fwd_yaw_err_max_deg": 28.5604,
-      "cross_track_max_m": 0.4257,
-      "cruise_speed_err_mps": 0.24,
-      "pusher_max_cmd": 0.7769,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.6103,
-      "lift_min_cmd": 0.4727,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0113,
-      "touchdown_err_m": 0.1096,
-      "touchdown_speed_mps": 0.6939,
-      "wing_lift_fraction_max": 0.1046,
-      "cruise_airspeed_mps": 4.9507,
-      "cruise_speed_mps": 4.9983,
-      "cruise_pusher_cmd": 0.2487,
-      "true_airspeed_max_mps": 10.3347
-     }
+     "rerun_alone": true
     },
     {
-     "case": "wind6_from180_firm",
+     "case": "wind6_from180",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -5378,39 +3418,7 @@
      }
     },
     {
-     "case": "wind6_from180_soft",
-     "passed": false,
-     "reasons": [
-      "fwd_yaw_err_max_deg 29.73 > 20.0"
-     ],
-     "overrides": {
-      "wind_speed_mps": 6.0,
-      "wind_from_deg": 180.0
-     },
-     "figures": {
-      "tilt_max_deg": 11.5462,
-      "alt_err_max_m": 0.2075,
-      "fwd_yaw_err_max_deg": 29.7265,
-      "cross_track_max_m": 0.597,
-      "cruise_speed_err_mps": 0.2625,
-      "pusher_max_cmd": 0.8413,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.6815,
-      "lift_min_cmd": 0.4413,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0199,
-      "touchdown_err_m": 0.0137,
-      "touchdown_speed_mps": 0.6187,
-      "wing_lift_fraction_max": 0.1478,
-      "cruise_airspeed_mps": 4.9606,
-      "cruise_speed_mps": 4.9942,
-      "cruise_pusher_cmd": 0.2473,
-      "true_airspeed_max_mps": 10.7906
-     }
-    },
-    {
-     "case": "wind6_from225_firm",
+     "case": "wind6_from225",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -5440,39 +3448,7 @@
      }
     },
     {
-     "case": "wind6_from225_soft",
-     "passed": false,
-     "reasons": [
-      "fwd_yaw_err_max_deg 30.23 > 20.0"
-     ],
-     "overrides": {
-      "wind_speed_mps": 6.0,
-      "wind_from_deg": 225.0
-     },
-     "figures": {
-      "tilt_max_deg": 10.6893,
-      "alt_err_max_m": 0.1989,
-      "fwd_yaw_err_max_deg": 30.229,
-      "cross_track_max_m": 0.4555,
-      "cruise_speed_err_mps": 0.2596,
-      "pusher_max_cmd": 0.7733,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.6192,
-      "lift_min_cmd": 0.4801,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0112,
-      "touchdown_err_m": 0.0585,
-      "touchdown_speed_mps": 0.6675,
-      "wing_lift_fraction_max": 0.1048,
-      "cruise_airspeed_mps": 4.9506,
-      "cruise_speed_mps": 5.0025,
-      "cruise_pusher_cmd": 0.2458,
-      "true_airspeed_max_mps": 10.3528
-     }
-    },
-    {
-     "case": "wind6_from270_firm",
+     "case": "wind6_from270",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -5480,61 +3456,30 @@
       "wind_from_deg": 270.0
      },
      "figures": {
-      "tilt_max_deg": 18.7263,
-      "alt_err_max_m": 0.2368,
-      "fwd_yaw_err_max_deg": 1.6036,
-      "cross_track_max_m": 0.7857,
-      "cruise_speed_err_mps": 0.2539,
-      "pusher_max_cmd": 0.8401,
+      "tilt_max_deg": 10.684,
+      "alt_err_max_m": 0.1951,
+      "fwd_yaw_err_max_deg": 3.926,
+      "cross_track_max_m": 0.8283,
+      "cruise_speed_err_mps": 0.2507,
+      "pusher_max_cmd": 0.8548,
       "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.6495,
-      "lift_min_cmd": 0.445,
+      "lift_max_cmd": 0.6073,
+      "lift_min_cmd": 0.4464,
       "lift_sat_frac": 0.0,
       "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0255,
-      "touchdown_err_m": 0.0548,
-      "touchdown_speed_mps": 0.7222,
-      "wing_lift_fraction_max": 0.1434,
-      "cruise_airspeed_mps": 4.9253,
-      "cruise_speed_mps": 4.9961,
-      "cruise_pusher_cmd": 0.2171,
-      "true_airspeed_max_mps": 10.7868
-     }
-    },
-    {
-     "case": "wind6_from270_soft",
-     "passed": false,
-     "reasons": [
-      "fwd_yaw_err_max_deg 30.01 > 20.0"
-     ],
-     "overrides": {
-      "wind_speed_mps": 6.0,
-      "wind_from_deg": 270.0
+      "pitch_integ_max": 0.0176,
+      "touchdown_err_m": 0.0281,
+      "touchdown_speed_mps": 0.7115,
+      "wing_lift_fraction_max": 0.1449,
+      "cruise_airspeed_mps": 4.9432,
+      "cruise_speed_mps": 4.9982,
+      "cruise_pusher_cmd": 0.2204,
+      "true_airspeed_max_mps": 10.8101
      },
-     "figures": {
-      "tilt_max_deg": 29.8238,
-      "alt_err_max_m": 0.3186,
-      "fwd_yaw_err_max_deg": 30.0119,
-      "cross_track_max_m": 0.7363,
-      "cruise_speed_err_mps": 0.2639,
-      "pusher_max_cmd": 0.8493,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.7224,
-      "lift_min_cmd": 0.45,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0348,
-      "touchdown_err_m": 0.0489,
-      "touchdown_speed_mps": 0.6305,
-      "wing_lift_fraction_max": 0.1396,
-      "cruise_airspeed_mps": 4.9762,
-      "cruise_speed_mps": 5.0001,
-      "cruise_pusher_cmd": 0.2226,
-      "true_airspeed_max_mps": 10.8279
-     }
+     "rerun_alone": true
     },
     {
-     "case": "wind6_from315_firm",
+     "case": "wind6_from315",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -5564,39 +3509,7 @@
      }
     },
     {
-     "case": "wind6_from315_soft",
-     "passed": false,
-     "reasons": [
-      "fwd_yaw_err_max_deg 29.71 > 20.0"
-     ],
-     "overrides": {
-      "wind_speed_mps": 6.0,
-      "wind_from_deg": 315.0
-     },
-     "figures": {
-      "tilt_max_deg": 10.1348,
-      "alt_err_max_m": 0.1771,
-      "fwd_yaw_err_max_deg": 29.715,
-      "cross_track_max_m": 0.8707,
-      "cruise_speed_err_mps": 0.2501,
-      "pusher_max_cmd": 0.7734,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.6155,
-      "lift_min_cmd": 0.4715,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0178,
-      "touchdown_err_m": 0.0297,
-      "touchdown_speed_mps": 0.6811,
-      "wing_lift_fraction_max": 0.0947,
-      "cruise_airspeed_mps": 4.9747,
-      "cruise_speed_mps": 5.0154,
-      "cruise_pusher_cmd": 0.2362,
-      "true_airspeed_max_mps": 10.3258
-     }
-    },
-    {
-     "case": "wind8_from0_firm",
+     "case": "wind8_from0",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -5626,39 +3539,7 @@
      }
     },
     {
-     "case": "wind8_from0_soft",
-     "passed": false,
-     "reasons": [
-      "fwd_yaw_err_max_deg 29.83 > 20.0"
-     ],
-     "overrides": {
-      "wind_speed_mps": 8.0,
-      "wind_from_deg": 0.0
-     },
-     "figures": {
-      "tilt_max_deg": 13.1768,
-      "alt_err_max_m": 0.35,
-      "fwd_yaw_err_max_deg": 29.8322,
-      "cross_track_max_m": 0.746,
-      "cruise_speed_err_mps": 0.2812,
-      "pusher_max_cmd": 0.9,
-      "pusher_sat_frac": 0.0278,
-      "lift_max_cmd": 0.6498,
-      "lift_min_cmd": 0.4204,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0288,
-      "touchdown_err_m": 0.0952,
-      "touchdown_speed_mps": 0.7588,
-      "wing_lift_fraction_max": 0.1893,
-      "cruise_airspeed_mps": 4.9483,
-      "cruise_speed_mps": 4.9832,
-      "cruise_pusher_cmd": 0.2621,
-      "true_airspeed_max_mps": 12.7642
-     }
-    },
-    {
-     "case": "wind8_from45_firm",
+     "case": "wind8_from45",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -5688,103 +3569,38 @@
      }
     },
     {
-     "case": "wind8_from45_soft",
-     "passed": false,
-     "reasons": [
-      "fwd_yaw_err_max_deg 29.27 > 20.0"
-     ],
-     "overrides": {
-      "wind_speed_mps": 8.0,
-      "wind_from_deg": 45.0
-     },
-     "figures": {
-      "tilt_max_deg": 12.1184,
-      "alt_err_max_m": 0.3019,
-      "fwd_yaw_err_max_deg": 29.2729,
-      "cross_track_max_m": 1.0868,
-      "cruise_speed_err_mps": 0.2554,
-      "pusher_max_cmd": 0.8728,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.6686,
-      "lift_min_cmd": 0.469,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0199,
-      "touchdown_err_m": 0.0419,
-      "touchdown_speed_mps": 0.6245,
-      "wing_lift_fraction_max": 0.1538,
-      "cruise_airspeed_mps": 4.934,
-      "cruise_speed_mps": 4.9465,
-      "cruise_pusher_cmd": 0.2867,
-      "true_airspeed_max_mps": 12.1565
-     }
-    },
-    {
-     "case": "wind8_from90_firm",
-     "passed": false,
-     "reasons": [
-      "tilt_max_deg 35.52 > 30.0"
-     ],
+     "case": "wind8_from90",
+     "passed": true,
+     "reasons": [],
      "overrides": {
       "wind_speed_mps": 8.0,
       "wind_from_deg": 90.0
      },
      "figures": {
-      "tilt_max_deg": 35.5164,
-      "alt_err_max_m": 0.3729,
-      "fwd_yaw_err_max_deg": 13.7375,
-      "cross_track_max_m": 0.6868,
-      "cruise_speed_err_mps": 0.3883,
+      "tilt_max_deg": 11.9064,
+      "alt_err_max_m": 0.2219,
+      "fwd_yaw_err_max_deg": 12.8395,
+      "cross_track_max_m": 0.5767,
+      "cruise_speed_err_mps": 0.3826,
       "pusher_max_cmd": 0.9,
-      "pusher_sat_frac": 0.0326,
-      "lift_max_cmd": 0.9498,
-      "lift_min_cmd": 0.2633,
+      "pusher_sat_frac": 0.0343,
+      "lift_max_cmd": 0.7644,
+      "lift_min_cmd": 0.3478,
       "lift_sat_frac": 0.0,
       "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.1408,
-      "touchdown_err_m": 0.0808,
-      "touchdown_speed_mps": 0.7225,
-      "wing_lift_fraction_max": 0.2841,
-      "cruise_airspeed_mps": 4.9099,
-      "cruise_speed_mps": 4.9579,
-      "cruise_pusher_cmd": 0.2639,
-      "true_airspeed_max_mps": 12.5926
-     }
-    },
-    {
-     "case": "wind8_from90_soft",
-     "passed": false,
-     "reasons": [
-      "fwd_yaw_err_max_deg 28.80 > 20.0"
-     ],
-     "overrides": {
-      "wind_speed_mps": 8.0,
-      "wind_from_deg": 90.0
+      "pitch_integ_max": 0.0288,
+      "touchdown_err_m": 0.0248,
+      "touchdown_speed_mps": 0.8691,
+      "wing_lift_fraction_max": 0.2837,
+      "cruise_airspeed_mps": 4.9247,
+      "cruise_speed_mps": 4.9571,
+      "cruise_pusher_cmd": 0.2534,
+      "true_airspeed_max_mps": 12.6082
      },
-     "figures": {
-      "tilt_max_deg": 12.1477,
-      "alt_err_max_m": 0.2813,
-      "fwd_yaw_err_max_deg": 28.8007,
-      "cross_track_max_m": 0.8615,
-      "cruise_speed_err_mps": 0.4092,
-      "pusher_max_cmd": 0.9,
-      "pusher_sat_frac": 0.0293,
-      "lift_max_cmd": 0.6475,
-      "lift_min_cmd": 0.4184,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0273,
-      "touchdown_err_m": 0.0588,
-      "touchdown_speed_mps": 0.9277,
-      "wing_lift_fraction_max": 0.2836,
-      "cruise_airspeed_mps": 4.9459,
-      "cruise_speed_mps": 4.9551,
-      "cruise_pusher_cmd": 0.2565,
-      "true_airspeed_max_mps": 12.6575
-     }
+     "rerun_alone": true
     },
     {
-     "case": "wind8_from135_firm",
+     "case": "wind8_from135",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -5792,126 +3608,63 @@
       "wind_from_deg": 135.0
      },
      "figures": {
-      "tilt_max_deg": 26.0424,
-      "alt_err_max_m": 0.2958,
-      "fwd_yaw_err_max_deg": 1.4095,
-      "cross_track_max_m": 0.6911,
-      "cruise_speed_err_mps": 0.2192,
-      "pusher_max_cmd": 0.8948,
-      "pusher_sat_frac": 0.0066,
-      "lift_max_cmd": 0.6322,
-      "lift_min_cmd": 0.5006,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0137,
-      "touchdown_err_m": 0.0485,
-      "touchdown_speed_mps": 0.8024,
-      "wing_lift_fraction_max": 0.122,
-      "cruise_airspeed_mps": 4.9837,
-      "cruise_speed_mps": 5.0019,
-      "cruise_pusher_cmd": 0.2798,
-      "true_airspeed_max_mps": 12.2369
-     }
-    },
-    {
-     "case": "wind8_from135_soft",
-     "passed": false,
-     "reasons": [
-      "fwd_yaw_err_max_deg 27.89 > 20.0"
-     ],
-     "overrides": {
-      "wind_speed_mps": 8.0,
-      "wind_from_deg": 135.0
-     },
-     "figures": {
-      "tilt_max_deg": 19.8561,
-      "alt_err_max_m": 0.3051,
-      "fwd_yaw_err_max_deg": 27.8923,
-      "cross_track_max_m": 0.5036,
-      "cruise_speed_err_mps": 0.232,
-      "pusher_max_cmd": 0.8612,
+      "tilt_max_deg": 21.9254,
+      "alt_err_max_m": 0.205,
+      "fwd_yaw_err_max_deg": 1.3602,
+      "cross_track_max_m": 0.6305,
+      "cruise_speed_err_mps": 0.2094,
+      "pusher_max_cmd": 0.8721,
       "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.6543,
-      "lift_min_cmd": 0.4811,
+      "lift_max_cmd": 0.6281,
+      "lift_min_cmd": 0.4958,
       "lift_sat_frac": 0.0,
       "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0211,
-      "touchdown_err_m": 0.0559,
-      "touchdown_speed_mps": 0.6492,
-      "wing_lift_fraction_max": 0.124,
-      "cruise_airspeed_mps": 4.9485,
-      "cruise_speed_mps": 4.9784,
-      "cruise_pusher_cmd": 0.2773,
-      "true_airspeed_max_mps": 12.169
-     }
+      "pitch_integ_max": 0.014,
+      "touchdown_err_m": 0.0516,
+      "touchdown_speed_mps": 0.7052,
+      "wing_lift_fraction_max": 0.1194,
+      "cruise_airspeed_mps": 4.9715,
+      "cruise_speed_mps": 5.0155,
+      "cruise_pusher_cmd": 0.2676,
+      "true_airspeed_max_mps": 12.2634
+     },
+     "rerun_alone": true
     },
     {
-     "case": "wind8_from180_firm",
+     "case": "wind8_from180",
      "passed": false,
      "reasons": [
-      "tilt_max_deg 41.72 > 30.0"
+      "tilt_max_deg 34.80 > 30.0"
      ],
      "overrides": {
       "wind_speed_mps": 8.0,
       "wind_from_deg": 180.0
      },
      "figures": {
-      "tilt_max_deg": 41.7205,
-      "alt_err_max_m": 0.3016,
-      "fwd_yaw_err_max_deg": 1.7073,
-      "cross_track_max_m": 0.6812,
-      "cruise_speed_err_mps": 0.3274,
+      "tilt_max_deg": 34.7951,
+      "alt_err_max_m": 0.2087,
+      "fwd_yaw_err_max_deg": 1.6997,
+      "cross_track_max_m": 0.7263,
+      "cruise_speed_err_mps": 0.3813,
       "pusher_max_cmd": 0.9,
       "pusher_sat_frac": 0.031,
-      "lift_max_cmd": 0.6442,
-      "lift_min_cmd": 0.4312,
+      "lift_max_cmd": 0.6406,
+      "lift_min_cmd": 0.4128,
       "lift_sat_frac": 0.0,
       "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.026,
-      "touchdown_err_m": 0.0543,
-      "touchdown_speed_mps": 0.682,
-      "wing_lift_fraction_max": 0.1768,
-      "cruise_airspeed_mps": 4.9545,
-      "cruise_speed_mps": 4.9723,
-      "cruise_pusher_cmd": 0.2473,
-      "true_airspeed_max_mps": 12.6974
-     }
-    },
-    {
-     "case": "wind8_from180_soft",
-     "passed": false,
-     "reasons": [
-      "tilt_max_deg 34.41 > 30.0",
-      "fwd_yaw_err_max_deg 29.99 > 20.0"
-     ],
-     "overrides": {
-      "wind_speed_mps": 8.0,
-      "wind_from_deg": 180.0
+      "pitch_integ_max": 0.0281,
+      "touchdown_err_m": 0.0497,
+      "touchdown_speed_mps": 0.6706,
+      "wing_lift_fraction_max": 0.1978,
+      "cruise_airspeed_mps": 4.8988,
+      "cruise_speed_mps": 4.9583,
+      "cruise_pusher_cmd": 0.2612,
+      "true_airspeed_max_mps": 12.6238
      },
-     "figures": {
-      "tilt_max_deg": 34.4112,
-      "alt_err_max_m": 0.1815,
-      "fwd_yaw_err_max_deg": 29.9925,
-      "cross_track_max_m": 0.7741,
-      "cruise_speed_err_mps": 0.347,
-      "pusher_max_cmd": 0.9,
-      "pusher_sat_frac": 0.0245,
-      "lift_max_cmd": 0.6533,
-      "lift_min_cmd": 0.4337,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0271,
-      "touchdown_err_m": 0.0217,
-      "touchdown_speed_mps": 0.8192,
-      "wing_lift_fraction_max": 0.1733,
-      "cruise_airspeed_mps": 4.9222,
-      "cruise_speed_mps": 4.9684,
-      "cruise_pusher_cmd": 0.2716,
-      "true_airspeed_max_mps": 12.6935
-     }
+     "rerun_alone": true
     },
     {
-     "case": "wind8_from225_firm",
+     "case": "wind8_from225",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -5941,39 +3694,7 @@
      }
     },
     {
-     "case": "wind8_from225_soft",
-     "passed": false,
-     "reasons": [
-      "fwd_yaw_err_max_deg 30.70 > 20.0"
-     ],
-     "overrides": {
-      "wind_speed_mps": 8.0,
-      "wind_from_deg": 225.0
-     },
-     "figures": {
-      "tilt_max_deg": 17.8908,
-      "alt_err_max_m": 0.2544,
-      "fwd_yaw_err_max_deg": 30.6977,
-      "cross_track_max_m": 0.678,
-      "cruise_speed_err_mps": 0.238,
-      "pusher_max_cmd": 0.8764,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.6529,
-      "lift_min_cmd": 0.4905,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0218,
-      "touchdown_err_m": 0.0611,
-      "touchdown_speed_mps": 0.5698,
-      "wing_lift_fraction_max": 0.0887,
-      "cruise_airspeed_mps": 4.9352,
-      "cruise_speed_mps": 4.9942,
-      "cruise_pusher_cmd": 0.2755,
-      "true_airspeed_max_mps": 12.1773
-     }
-    },
-    {
-     "case": "wind8_from270_firm",
+     "case": "wind8_from270",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -6003,39 +3724,7 @@
      }
     },
     {
-     "case": "wind8_from270_soft",
-     "passed": false,
-     "reasons": [
-      "fwd_yaw_err_max_deg 30.50 > 20.0"
-     ],
-     "overrides": {
-      "wind_speed_mps": 8.0,
-      "wind_from_deg": 270.0
-     },
-     "figures": {
-      "tilt_max_deg": 11.9906,
-      "alt_err_max_m": 0.1835,
-      "fwd_yaw_err_max_deg": 30.5047,
-      "cross_track_max_m": 1.2614,
-      "cruise_speed_err_mps": 0.3831,
-      "pusher_max_cmd": 0.9,
-      "pusher_sat_frac": 0.0228,
-      "lift_max_cmd": 0.6512,
-      "lift_min_cmd": 0.4135,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.027,
-      "touchdown_err_m": 0.0286,
-      "touchdown_speed_mps": 0.7376,
-      "wing_lift_fraction_max": 0.1876,
-      "cruise_airspeed_mps": 4.9234,
-      "cruise_speed_mps": 4.9565,
-      "cruise_pusher_cmd": 0.2474,
-      "true_airspeed_max_mps": 12.6383
-     }
-    },
-    {
-     "case": "wind8_from315_firm",
+     "case": "wind8_from315",
      "passed": true,
      "reasons": [],
      "overrides": {
@@ -6063,1114 +3752,12 @@
       "cruise_pusher_cmd": 0.265,
       "true_airspeed_max_mps": 12.1348
      }
-    },
-    {
-     "case": "wind8_from315_soft",
-     "passed": false,
-     "reasons": [
-      "fwd_yaw_err_max_deg 30.40 > 20.0"
-     ],
-     "overrides": {
-      "wind_speed_mps": 8.0,
-      "wind_from_deg": 315.0
-     },
-     "figures": {
-      "tilt_max_deg": 12.5981,
-      "alt_err_max_m": 0.1982,
-      "fwd_yaw_err_max_deg": 30.4,
-      "cross_track_max_m": 1.0014,
-      "cruise_speed_err_mps": 0.2432,
-      "pusher_max_cmd": 0.8777,
-      "pusher_sat_frac": 0.0,
-      "lift_max_cmd": 0.6783,
-      "lift_min_cmd": 0.4547,
-      "lift_sat_frac": 0.0,
-      "torque_unachieved_frac": 0.0,
-      "pitch_integ_max": 0.0166,
-      "touchdown_err_m": 0.1132,
-      "touchdown_speed_mps": 0.7953,
-      "wing_lift_fraction_max": 0.1289,
-      "cruise_airspeed_mps": 4.9322,
-      "cruise_speed_mps": 4.9817,
-      "cruise_pusher_cmd": 0.2779,
-      "true_airspeed_max_mps": 12.0615
-     }
     }
    ]
   }
  },
- "route_missions": {
-  "out_and_back": {
-   "case": "out_and_back",
-   "passed": true,
-   "reasons": [],
-   "overrides": {},
-   "figures": {
-    "tilt_max_deg": 7.1049,
-    "alt_err_max_m": 0.1424,
-    "fwd_yaw_err_max_deg": 3.0062,
-    "cross_track_max_m": 0.3953,
-    "cruise_speed_err_mps": 0.1743,
-    "pusher_max_cmd": 0.7894,
-    "pusher_sat_frac": 0.0,
-    "lift_max_cmd": 0.5659,
-    "lift_min_cmd": 0.4569,
-    "lift_sat_frac": 0.0,
-    "torque_unachieved_frac": 0.0,
-    "pitch_integ_max": 0.0155,
-    "touchdown_err_m": 0.0791,
-    "touchdown_speed_mps": 0.7463,
-    "wing_lift_fraction_max": 0.1263,
-    "cruise_airspeed_mps": 9.8563,
-    "cruise_speed_mps": 9.8529,
-    "cruise_pusher_cmd": 0.4768,
-    "true_airspeed_max_mps": 9.9746
-   }
-  },
-  "square": {
-   "case": "square",
-   "passed": false,
-   "reasons": [
-    "tilt_max_deg 44.85 > 30.0"
-   ],
-   "overrides": {},
-   "figures": {
-    "tilt_max_deg": 44.8508,
-    "alt_err_max_m": 0.2794,
-    "fwd_yaw_err_max_deg": 9.8855,
-    "cross_track_max_m": 2.3094,
-    "cruise_speed_err_mps": 0.2297,
-    "pusher_max_cmd": 0.5258,
-    "pusher_sat_frac": 0.0,
-    "lift_max_cmd": 1.0,
-    "lift_min_cmd": 0.0,
-    "lift_sat_frac": 0.0033,
-    "torque_unachieved_frac": 0.0033,
-    "pitch_integ_max": 0.0201,
-    "touchdown_err_m": 0.011,
-    "touchdown_speed_mps": 0.661,
-    "wing_lift_fraction_max": 0.0552,
-    "cruise_airspeed_mps": 5.0234,
-    "cruise_speed_mps": 5.0367,
-    "cruise_pusher_cmd": 0.1933,
-    "true_airspeed_max_mps": 5.1089
-   }
-  },
-  "square2": {
-   "case": "square",
-   "passed": true,
-   "reasons": [],
-   "overrides": {},
-   "figures": {
-    "tilt_max_deg": 8.7584,
-    "alt_err_max_m": 0.1287,
-    "fwd_yaw_err_max_deg": 1.9954,
-    "cross_track_max_m": 0.172,
-    "cruise_speed_err_mps": 0.2178,
-    "pusher_max_cmd": 0.5185,
-    "pusher_sat_frac": 0.0,
-    "lift_max_cmd": 0.5803,
-    "lift_min_cmd": 0.4862,
-    "lift_sat_frac": 0.0,
-    "torque_unachieved_frac": 0.0,
-    "pitch_integ_max": 0.0087,
-    "touchdown_err_m": 0.0207,
-    "touchdown_speed_mps": 0.6835,
-    "wing_lift_fraction_max": 0.0575,
-    "cruise_airspeed_mps": 4.9758,
-    "cruise_speed_mps": 5.0379,
-    "cruise_pusher_cmd": 0.1786,
-    "true_airspeed_max_mps": 5.083
-   }
-  },
-  "square3": {
-   "case": "square",
-   "passed": true,
-   "reasons": [],
-   "overrides": {},
-   "figures": {
-    "tilt_max_deg": 17.0215,
-    "alt_err_max_m": 0.1915,
-    "fwd_yaw_err_max_deg": 2.2024,
-    "cross_track_max_m": 0.3459,
-    "cruise_speed_err_mps": 0.2318,
-    "pusher_max_cmd": 0.5056,
-    "pusher_sat_frac": 0.0,
-    "lift_max_cmd": 0.6685,
-    "lift_min_cmd": 0.3689,
-    "lift_sat_frac": 0.0,
-    "torque_unachieved_frac": 0.0,
-    "pitch_integ_max": 0.058,
-    "touchdown_err_m": 0.0365,
-    "touchdown_speed_mps": 0.7536,
-    "wing_lift_fraction_max": 0.0951,
-    "cruise_airspeed_mps": 4.9956,
-    "cruise_speed_mps": 5.039,
-    "cruise_pusher_cmd": 0.1734,
-    "true_airspeed_max_mps": 5.1037
-   }
-  },
-  "headwind8_pitchmin5": {
-   "case": "eval/headwind8_pitchmin5",
-   "passed": false,
-   "reasons": [
-    "timeout in accel",
-    "touchdown not confirmed by land detector",
-    "aerodynamic telemetry missing or incomplete",
-    "pusher_sat_frac 0.72 > 0.1",
-    "cruise_speed_err_mps missing",
-    "touchdown_err_m missing",
-    "touchdown_speed_mps missing"
-   ],
-   "overrides": {
-    "wind_speed_mps": 8.0,
-    "wind_from_deg": 0.0
-   },
-   "figures": {
-    "tilt_max_deg": 6.5998,
-    "alt_err_max_m": 0.1915,
-    "fwd_yaw_err_max_deg": 1.0151,
-    "cross_track_max_m": 0.5011,
-    "pusher_max_cmd": 0.9,
-    "pusher_sat_frac": 0.72,
-    "lift_max_cmd": 0.5168,
-    "lift_min_cmd": 0.3966,
-    "lift_sat_frac": 0.0,
-    "torque_unachieved_frac": 0.0,
-    "pitch_integ_max": 0.0297,
-    "wing_lift_fraction_max": 0.2281,
-    "true_airspeed_max_mps": 15.5216
-   }
-  },
-  "square_rep4": {
-   "case": "eval/square_rep4",
-   "passed": true,
-   "reasons": [],
-   "overrides": {},
-   "figures": {
-    "tilt_max_deg": 7.6191,
-    "alt_err_max_m": 0.1716,
-    "fwd_yaw_err_max_deg": 1.6247,
-    "cross_track_max_m": 0.268,
-    "cruise_speed_err_mps": 0.2204,
-    "pusher_max_cmd": 0.5083,
-    "pusher_sat_frac": 0.0,
-    "lift_max_cmd": 0.5734,
-    "lift_min_cmd": 0.4985,
-    "lift_sat_frac": 0.0,
-    "torque_unachieved_frac": 0.0,
-    "pitch_integ_max": 0.0047,
-    "touchdown_err_m": 0.0317,
-    "touchdown_speed_mps": 0.7208,
-    "wing_lift_fraction_max": 0.0557,
-    "cruise_airspeed_mps": 5.0125,
-    "cruise_speed_mps": 5.0424,
-    "cruise_pusher_cmd": 0.176,
-    "true_airspeed_max_mps": 5.0869
-   }
-  },
-  "square_rep5": {
-   "case": "eval/square_rep5",
-   "passed": true,
-   "reasons": [],
-   "overrides": {},
-   "figures": {
-    "tilt_max_deg": 7.137,
-    "alt_err_max_m": 0.1439,
-    "fwd_yaw_err_max_deg": 1.7954,
-    "cross_track_max_m": 0.272,
-    "cruise_speed_err_mps": 0.2182,
-    "pusher_max_cmd": 0.511,
-    "pusher_sat_frac": 0.0,
-    "lift_max_cmd": 0.5746,
-    "lift_min_cmd": 0.5014,
-    "lift_sat_frac": 0.0,
-    "torque_unachieved_frac": 0.0,
-    "pitch_integ_max": 0.0048,
-    "touchdown_err_m": 0.0169,
-    "touchdown_speed_mps": 0.6345,
-    "wing_lift_fraction_max": 0.0549,
-    "cruise_airspeed_mps": 4.9766,
-    "cruise_speed_mps": 5.0378,
-    "cruise_pusher_cmd": 0.1902,
-    "true_airspeed_max_mps": 5.1021
-   }
-  },
-  "square_rep6": {
-   "case": "eval/square_rep6",
-   "passed": true,
-   "reasons": [],
-   "overrides": {},
-   "figures": {
-    "tilt_max_deg": 7.2365,
-    "alt_err_max_m": 0.1679,
-    "fwd_yaw_err_max_deg": 2.5136,
-    "cross_track_max_m": 0.2697,
-    "cruise_speed_err_mps": 0.2234,
-    "pusher_max_cmd": 0.5344,
-    "pusher_sat_frac": 0.0,
-    "lift_max_cmd": 0.5707,
-    "lift_min_cmd": 0.4995,
-    "lift_sat_frac": 0.0,
-    "torque_unachieved_frac": 0.0,
-    "pitch_integ_max": 0.0054,
-    "touchdown_err_m": 0.0142,
-    "touchdown_speed_mps": 0.7583,
-    "wing_lift_fraction_max": 0.0561,
-    "cruise_airspeed_mps": 4.9951,
-    "cruise_speed_mps": 5.0373,
-    "cruise_pusher_cmd": 0.1933,
-    "true_airspeed_max_mps": 5.1156
-   }
-  },
-  "square_rep7": {
-   "case": "eval/square_rep7",
-   "passed": true,
-   "reasons": [],
-   "overrides": {},
-   "figures": {
-    "tilt_max_deg": 8.0694,
-    "alt_err_max_m": 0.1357,
-    "fwd_yaw_err_max_deg": 3.4708,
-    "cross_track_max_m": 0.2342,
-    "cruise_speed_err_mps": 0.2257,
-    "pusher_max_cmd": 0.5097,
-    "pusher_sat_frac": 0.0,
-    "lift_max_cmd": 0.5728,
-    "lift_min_cmd": 0.4889,
-    "lift_sat_frac": 0.0,
-    "torque_unachieved_frac": 0.0,
-    "pitch_integ_max": 0.0053,
-    "touchdown_err_m": 0.041,
-    "touchdown_speed_mps": 0.6985,
-    "wing_lift_fraction_max": 0.06,
-    "cruise_airspeed_mps": 4.9992,
-    "cruise_speed_mps": 5.0397,
-    "cruise_pusher_cmd": 0.1753,
-    "true_airspeed_max_mps": 5.0931
-   }
-  },
-  "square_rep8": {
-   "case": "eval/square_rep8",
-   "passed": true,
-   "reasons": [],
-   "overrides": {},
-   "figures": {
-    "tilt_max_deg": 7.3712,
-    "alt_err_max_m": 0.181,
-    "fwd_yaw_err_max_deg": 3.0929,
-    "cross_track_max_m": 0.2132,
-    "cruise_speed_err_mps": 0.2282,
-    "pusher_max_cmd": 0.5126,
-    "pusher_sat_frac": 0.0,
-    "lift_max_cmd": 0.5795,
-    "lift_min_cmd": 0.4931,
-    "lift_sat_frac": 0.0,
-    "torque_unachieved_frac": 0.0,
-    "pitch_integ_max": 0.0052,
-    "touchdown_err_m": 0.0598,
-    "touchdown_speed_mps": 0.7529,
-    "wing_lift_fraction_max": 0.0559,
-    "cruise_airspeed_mps": 4.9925,
-    "cruise_speed_mps": 5.04,
-    "cruise_pusher_cmd": 0.1835,
-    "true_airspeed_max_mps": 5.1378
-   }
-  },
-  "square_rep9": {
-   "case": "eval/square_rep9",
-   "passed": true,
-   "reasons": [],
-   "overrides": {},
-   "figures": {
-    "tilt_max_deg": 7.6658,
-    "alt_err_max_m": 0.1779,
-    "fwd_yaw_err_max_deg": 2.7767,
-    "cross_track_max_m": 0.2885,
-    "cruise_speed_err_mps": 0.224,
-    "pusher_max_cmd": 0.5114,
-    "pusher_sat_frac": 0.0,
-    "lift_max_cmd": 0.5753,
-    "lift_min_cmd": 0.5018,
-    "lift_sat_frac": 0.0,
-    "torque_unachieved_frac": 0.0,
-    "pitch_integ_max": 0.0055,
-    "touchdown_err_m": 0.0799,
-    "touchdown_speed_mps": 0.6994,
-    "wing_lift_fraction_max": 0.0566,
-    "cruise_airspeed_mps": 5.0304,
-    "cruise_speed_mps": 5.0403,
-    "cruise_pusher_cmd": 0.1804,
-    "true_airspeed_max_mps": 5.1099
-   }
-  },
-  "square_stressed": {
-   "case": "eval/square_stressed",
-   "passed": true,
-   "reasons": [],
-   "overrides": {},
-   "figures": {
-    "tilt_max_deg": 7.234,
-    "alt_err_max_m": 0.1704,
-    "fwd_yaw_err_max_deg": 1.9794,
-    "cross_track_max_m": 0.3857,
-    "cruise_speed_err_mps": 0.2246,
-    "pusher_max_cmd": 0.5199,
-    "pusher_sat_frac": 0.0,
-    "lift_max_cmd": 0.5708,
-    "lift_min_cmd": 0.4791,
-    "lift_sat_frac": 0.0,
-    "torque_unachieved_frac": 0.0,
-    "pitch_integ_max": 0.005,
-    "touchdown_err_m": 0.0162,
-    "touchdown_speed_mps": 0.7895,
-    "wing_lift_fraction_max": 0.0654,
-    "cruise_airspeed_mps": 4.9973,
-    "cruise_speed_mps": 5.0367,
-    "cruise_pusher_cmd": 0.1879,
-    "true_airspeed_max_mps": 5.1031
-   }
-  },
-  "square_wind8_from0": {
-   "case": "eval/square_wind8_from0",
-   "passed": true,
-   "reasons": [],
-   "overrides": {
-    "wind_speed_mps": 8.0,
-    "wind_from_deg": 0.0
-   },
-   "figures": {
-    "tilt_max_deg": 11.7416,
-    "alt_err_max_m": 0.187,
-    "fwd_yaw_err_max_deg": 1.2614,
-    "cross_track_max_m": 0.7049,
-    "cruise_speed_err_mps": 0.2801,
-    "pusher_max_cmd": 0.9,
-    "pusher_sat_frac": 0.0277,
-    "lift_max_cmd": 0.6551,
-    "lift_min_cmd": 0.4185,
-    "lift_sat_frac": 0.0,
-    "torque_unachieved_frac": 0.0,
-    "pitch_integ_max": 0.0296,
-    "touchdown_err_m": 0.1372,
-    "touchdown_speed_mps": 0.6755,
-    "wing_lift_fraction_max": 0.1893,
-    "cruise_airspeed_mps": 4.9546,
-    "cruise_speed_mps": 4.9866,
-    "cruise_pusher_cmd": 0.2394,
-    "true_airspeed_max_mps": 12.7605
-   }
-  },
-  "square_wind8_from180": {
-   "case": "eval/square_wind8_from180",
-   "passed": false,
-   "reasons": [
-    "tilt_max_deg 39.27 > 30.0"
-   ],
-   "overrides": {
-    "wind_speed_mps": 8.0,
-    "wind_from_deg": 180.0
-   },
-   "figures": {
-    "tilt_max_deg": 39.2652,
-    "alt_err_max_m": 0.2405,
-    "fwd_yaw_err_max_deg": 1.6198,
-    "cross_track_max_m": 0.684,
-    "cruise_speed_err_mps": 0.3774,
-    "pusher_max_cmd": 0.9,
-    "pusher_sat_frac": 0.0261,
-    "lift_max_cmd": 0.6371,
-    "lift_min_cmd": 0.4144,
-    "lift_sat_frac": 0.0,
-    "torque_unachieved_frac": 0.0,
-    "pitch_integ_max": 0.0267,
-    "touchdown_err_m": 0.0546,
-    "touchdown_speed_mps": 0.5628,
-    "wing_lift_fraction_max": 0.1941,
-    "cruise_airspeed_mps": 4.9359,
-    "cruise_speed_mps": 4.9594,
-    "cruise_pusher_cmd": 0.2559,
-    "true_airspeed_max_mps": 12.6638
-   }
-  },
-  "square_wind8_from270": {
-   "case": "eval/square_wind8_from270",
-   "passed": true,
-   "reasons": [],
-   "overrides": {
-    "wind_speed_mps": 8.0,
-    "wind_from_deg": 270.0
-   },
-   "figures": {
-    "tilt_max_deg": 12.0211,
-    "alt_err_max_m": 0.3141,
-    "fwd_yaw_err_max_deg": 1.8266,
-    "cross_track_max_m": 0.8197,
-    "cruise_speed_err_mps": 0.3559,
-    "pusher_max_cmd": 0.9,
-    "pusher_sat_frac": 0.0276,
-    "lift_max_cmd": 0.6543,
-    "lift_min_cmd": 0.4129,
-    "lift_sat_frac": 0.0,
-    "torque_unachieved_frac": 0.0,
-    "pitch_integ_max": 0.0275,
-    "touchdown_err_m": 0.0428,
-    "touchdown_speed_mps": 0.669,
-    "wing_lift_fraction_max": 0.1905,
-    "cruise_airspeed_mps": 4.9348,
-    "cruise_speed_mps": 4.9623,
-    "cruise_pusher_cmd": 0.2434,
-    "true_airspeed_max_mps": 12.6723
-   }
-  },
-  "square_wind8_from90": {
-   "case": "eval/square_wind8_from90",
-   "passed": false,
-   "reasons": [
-    "fwd_yaw_err_max_deg 21.85 > 20.0"
-   ],
-   "overrides": {
-    "wind_speed_mps": 8.0,
-    "wind_from_deg": 90.0
-   },
-   "figures": {
-    "tilt_max_deg": 11.9038,
-    "alt_err_max_m": 0.3502,
-    "fwd_yaw_err_max_deg": 21.8547,
-    "cross_track_max_m": 0.6539,
-    "cruise_speed_err_mps": 0.3979,
-    "pusher_max_cmd": 0.9,
-    "pusher_sat_frac": 0.0358,
-    "lift_max_cmd": 0.8861,
-    "lift_min_cmd": 0.2168,
-    "lift_sat_frac": 0.0,
-    "torque_unachieved_frac": 0.0,
-    "pitch_integ_max": 0.0301,
-    "touchdown_err_m": 0.1651,
-    "touchdown_speed_mps": 0.7251,
-    "wing_lift_fraction_max": 0.2805,
-    "cruise_airspeed_mps": 4.8792,
-    "cruise_speed_mps": 4.955,
-    "cruise_pusher_cmd": 0.2594,
-    "true_airspeed_max_mps": 12.5488
-   }
-  }
- },
- "later_runs": {
-  "alone/old_wind6_from135": {
-   "case": "alone/old_wind6_from135",
-   "passed": true,
-   "reasons": [],
-   "overrides": {
-    "wind_speed_mps": 6.0,
-    "wind_from_deg": 135.0
-   },
-   "figures": {
-    "tilt_max_deg": 9.893,
-    "alt_err_max_m": 0.2363,
-    "fwd_yaw_err_max_deg": 1.6088,
-    "cross_track_max_m": 0.2715,
-    "cruise_speed_err_mps": 0.2308,
-    "pusher_max_cmd": 0.789,
-    "pusher_sat_frac": 0.0,
-    "lift_max_cmd": 0.5956,
-    "lift_min_cmd": 0.4758,
-    "lift_sat_frac": 0.0,
-    "torque_unachieved_frac": 0.0,
-    "pitch_integ_max": 0.0076,
-    "touchdown_err_m": 0.116,
-    "touchdown_speed_mps": 0.8533,
-    "wing_lift_fraction_max": 0.0951,
-    "cruise_airspeed_mps": 4.9896,
-    "cruise_speed_mps": 5.0153,
-    "cruise_pusher_cmd": 0.2278,
-    "true_airspeed_max_mps": 10.3437
-   }
-  },
-  "alone/old_wind6_from270": {
-   "case": "alone/old_wind6_from270",
-   "passed": true,
-   "reasons": [],
-   "overrides": {
-    "wind_speed_mps": 6.0,
-    "wind_from_deg": 270.0
-   },
-   "figures": {
-    "tilt_max_deg": 10.684,
-    "alt_err_max_m": 0.1951,
-    "fwd_yaw_err_max_deg": 3.926,
-    "cross_track_max_m": 0.8283,
-    "cruise_speed_err_mps": 0.2507,
-    "pusher_max_cmd": 0.8548,
-    "pusher_sat_frac": 0.0,
-    "lift_max_cmd": 0.6073,
-    "lift_min_cmd": 0.4464,
-    "lift_sat_frac": 0.0,
-    "torque_unachieved_frac": 0.0,
-    "pitch_integ_max": 0.0176,
-    "touchdown_err_m": 0.0281,
-    "touchdown_speed_mps": 0.7115,
-    "wing_lift_fraction_max": 0.1449,
-    "cruise_airspeed_mps": 4.9432,
-    "cruise_speed_mps": 4.9982,
-    "cruise_pusher_cmd": 0.2204,
-    "true_airspeed_max_mps": 10.8101
-   }
-  },
-  "alone/old_wind8_from135": {
-   "case": "alone/old_wind8_from135",
-   "passed": true,
-   "reasons": [],
-   "overrides": {
-    "wind_speed_mps": 8.0,
-    "wind_from_deg": 135.0
-   },
-   "figures": {
-    "tilt_max_deg": 21.9254,
-    "alt_err_max_m": 0.205,
-    "fwd_yaw_err_max_deg": 1.3602,
-    "cross_track_max_m": 0.6305,
-    "cruise_speed_err_mps": 0.2094,
-    "pusher_max_cmd": 0.8721,
-    "pusher_sat_frac": 0.0,
-    "lift_max_cmd": 0.6281,
-    "lift_min_cmd": 0.4958,
-    "lift_sat_frac": 0.0,
-    "torque_unachieved_frac": 0.0,
-    "pitch_integ_max": 0.014,
-    "touchdown_err_m": 0.0516,
-    "touchdown_speed_mps": 0.7052,
-    "wing_lift_fraction_max": 0.1194,
-    "cruise_airspeed_mps": 4.9715,
-    "cruise_speed_mps": 5.0155,
-    "cruise_pusher_cmd": 0.2676,
-    "true_airspeed_max_mps": 12.2634
-   }
-  },
-  "alone/old_wind8_from180": {
-   "case": "alone/old_wind8_from180",
-   "passed": false,
-   "reasons": [
-    "tilt_max_deg 34.80 > 30.0"
-   ],
-   "overrides": {
-    "wind_speed_mps": 8.0,
-    "wind_from_deg": 180.0
-   },
-   "figures": {
-    "tilt_max_deg": 34.7951,
-    "alt_err_max_m": 0.2087,
-    "fwd_yaw_err_max_deg": 1.6997,
-    "cross_track_max_m": 0.7263,
-    "cruise_speed_err_mps": 0.3813,
-    "pusher_max_cmd": 0.9,
-    "pusher_sat_frac": 0.031,
-    "lift_max_cmd": 0.6406,
-    "lift_min_cmd": 0.4128,
-    "lift_sat_frac": 0.0,
-    "torque_unachieved_frac": 0.0,
-    "pitch_integ_max": 0.0281,
-    "touchdown_err_m": 0.0497,
-    "touchdown_speed_mps": 0.6706,
-    "wing_lift_fraction_max": 0.1978,
-    "cruise_airspeed_mps": 4.8988,
-    "cruise_speed_mps": 4.9583,
-    "cruise_pusher_cmd": 0.2612,
-    "true_airspeed_max_mps": 12.6238
-   }
-  },
-  "alone/old_wind8_from90": {
-   "case": "alone/old_wind8_from90",
-   "passed": true,
-   "reasons": [],
-   "overrides": {
-    "wind_speed_mps": 8.0,
-    "wind_from_deg": 90.0
-   },
-   "figures": {
-    "tilt_max_deg": 11.9064,
-    "alt_err_max_m": 0.2219,
-    "fwd_yaw_err_max_deg": 12.8395,
-    "cross_track_max_m": 0.5767,
-    "cruise_speed_err_mps": 0.3826,
-    "pusher_max_cmd": 0.9,
-    "pusher_sat_frac": 0.0343,
-    "lift_max_cmd": 0.7644,
-    "lift_min_cmd": 0.3478,
-    "lift_sat_frac": 0.0,
-    "torque_unachieved_frac": 0.0,
-    "pitch_integ_max": 0.0288,
-    "touchdown_err_m": 0.0248,
-    "touchdown_speed_mps": 0.8691,
-    "wing_lift_fraction_max": 0.2837,
-    "cruise_airspeed_mps": 4.9247,
-    "cruise_speed_mps": 4.9571,
-    "cruise_pusher_cmd": 0.2534,
-    "true_airspeed_max_mps": 12.6082
-   }
-  },
-  "alone/smooth_rep1": {
-   "case": "alone/smooth_rep1",
-   "passed": true,
-   "reasons": [],
-   "overrides": {},
-   "figures": {
-    "tilt_max_deg": 5.5904,
-    "alt_err_max_m": 0.2134,
-    "fwd_yaw_err_max_deg": 2.0808,
-    "cross_track_max_m": 0.2917,
-    "cruise_speed_err_mps": 0.2298,
-    "pusher_max_cmd": 0.5012,
-    "pusher_sat_frac": 0.0,
-    "lift_max_cmd": 0.5781,
-    "lift_min_cmd": 0.5111,
-    "lift_sat_frac": 0.0,
-    "torque_unachieved_frac": 0.0,
-    "pitch_integ_max": 0.0029,
-    "touchdown_err_m": 0.0362,
-    "touchdown_speed_mps": 0.6601,
-    "wing_lift_fraction_max": 0.0386,
-    "cruise_airspeed_mps": 4.9713,
-    "cruise_speed_mps": 5.0567,
-    "cruise_pusher_cmd": 0.186,
-    "true_airspeed_max_mps": 5.1024
-   }
-  },
-  "alone/smooth_rep2": {
-   "case": "alone/smooth_rep2",
-   "passed": true,
-   "reasons": [],
-   "overrides": {},
-   "figures": {
-    "tilt_max_deg": 5.6038,
-    "alt_err_max_m": 0.1818,
-    "fwd_yaw_err_max_deg": 2.3452,
-    "cross_track_max_m": 0.2429,
-    "cruise_speed_err_mps": 0.2329,
-    "pusher_max_cmd": 0.5181,
-    "pusher_sat_frac": 0.0,
-    "lift_max_cmd": 0.5762,
-    "lift_min_cmd": 0.4974,
-    "lift_sat_frac": 0.0,
-    "torque_unachieved_frac": 0.0,
-    "pitch_integ_max": 0.0032,
-    "touchdown_err_m": 0.042,
-    "touchdown_speed_mps": 0.6943,
-    "wing_lift_fraction_max": 0.0381,
-    "cruise_airspeed_mps": 4.9986,
-    "cruise_speed_mps": 5.0563,
-    "cruise_pusher_cmd": 0.1903,
-    "true_airspeed_max_mps": 5.1069
-   }
-  },
-  "alone/smooth_rep3": {
-   "case": "alone/smooth_rep3",
-   "passed": true,
-   "reasons": [],
-   "overrides": {},
-   "figures": {
-    "tilt_max_deg": 5.2841,
-    "alt_err_max_m": 0.1914,
-    "fwd_yaw_err_max_deg": 1.6906,
-    "cross_track_max_m": 0.2829,
-    "cruise_speed_err_mps": 0.2212,
-    "pusher_max_cmd": 0.5229,
-    "pusher_sat_frac": 0.0,
-    "lift_max_cmd": 0.5797,
-    "lift_min_cmd": 0.5073,
-    "lift_sat_frac": 0.0,
-    "torque_unachieved_frac": 0.0,
-    "pitch_integ_max": 0.0032,
-    "touchdown_err_m": 0.0525,
-    "touchdown_speed_mps": 0.6775,
-    "wing_lift_fraction_max": 0.0385,
-    "cruise_airspeed_mps": 5.003,
-    "cruise_speed_mps": 5.0537,
-    "cruise_pusher_cmd": 0.2047,
-    "true_airspeed_max_mps": 5.1106
-   }
-  },
-  "alone/smooth_rep4": {
-   "case": "alone/smooth_rep4",
-   "passed": true,
-   "reasons": [],
-   "overrides": {},
-   "figures": {
-    "tilt_max_deg": 5.3996,
-    "alt_err_max_m": 0.1868,
-    "fwd_yaw_err_max_deg": 1.6825,
-    "cross_track_max_m": 0.1739,
-    "cruise_speed_err_mps": 0.2317,
-    "pusher_max_cmd": 0.5254,
-    "pusher_sat_frac": 0.0,
-    "lift_max_cmd": 0.5925,
-    "lift_min_cmd": 0.5091,
-    "lift_sat_frac": 0.0,
-    "torque_unachieved_frac": 0.0,
-    "pitch_integ_max": 0.0032,
-    "touchdown_err_m": 0.0446,
-    "touchdown_speed_mps": 0.6416,
-    "wing_lift_fraction_max": 0.0388,
-    "cruise_airspeed_mps": 5.0078,
-    "cruise_speed_mps": 5.0561,
-    "cruise_pusher_cmd": 0.1989,
-    "true_airspeed_max_mps": 5.1224
-   }
-  },
-  "alone/smooth_rep5": {
-   "case": "alone/smooth_rep5",
-   "passed": true,
-   "reasons": [],
-   "overrides": {},
-   "figures": {
-    "tilt_max_deg": 6.0838,
-    "alt_err_max_m": 0.2172,
-    "fwd_yaw_err_max_deg": 1.7318,
-    "cross_track_max_m": 0.2765,
-    "cruise_speed_err_mps": 0.227,
-    "pusher_max_cmd": 0.5164,
-    "pusher_sat_frac": 0.0,
-    "lift_max_cmd": 0.5907,
-    "lift_min_cmd": 0.5041,
-    "lift_sat_frac": 0.0,
-    "torque_unachieved_frac": 0.0,
-    "pitch_integ_max": 0.0036,
-    "touchdown_err_m": 0.0284,
-    "touchdown_speed_mps": 0.6481,
-    "wing_lift_fraction_max": 0.038,
-    "cruise_airspeed_mps": 5.0072,
-    "cruise_speed_mps": 5.0606,
-    "cruise_pusher_cmd": 0.178,
-    "true_airspeed_max_mps": 5.1101
-   }
-  },
-  "alone/smooth_rep6": {
-   "case": "alone/smooth_rep6",
-   "passed": true,
-   "reasons": [],
-   "overrides": {},
-   "figures": {
-    "tilt_max_deg": 5.4229,
-    "alt_err_max_m": 0.1533,
-    "fwd_yaw_err_max_deg": 2.2068,
-    "cross_track_max_m": 0.429,
-    "cruise_speed_err_mps": 0.2225,
-    "pusher_max_cmd": 0.5127,
-    "pusher_sat_frac": 0.0,
-    "lift_max_cmd": 0.591,
-    "lift_min_cmd": 0.5034,
-    "lift_sat_frac": 0.0,
-    "torque_unachieved_frac": 0.0,
-    "pitch_integ_max": 0.0033,
-    "touchdown_err_m": 0.0286,
-    "touchdown_speed_mps": 0.6476,
-    "wing_lift_fraction_max": 0.0376,
-    "cruise_airspeed_mps": 4.9716,
-    "cruise_speed_mps": 5.0536,
-    "cruise_pusher_cmd": 0.1998,
-    "true_airspeed_max_mps": 5.1101
-   }
-  },
-  "alone/smooth_wind8_from180": {
-   "case": "alone/smooth_wind8_from180",
-   "passed": false,
-   "reasons": [
-    "tilt_max_deg 41.47 > 30.0"
-   ],
-   "overrides": {
-    "wind_speed_mps": 8.0,
-    "wind_from_deg": 180.0
-   },
-   "figures": {
-    "tilt_max_deg": 41.4749,
-    "alt_err_max_m": 0.2375,
-    "fwd_yaw_err_max_deg": 1.6007,
-    "cross_track_max_m": 0.7775,
-    "cruise_speed_err_mps": 0.4856,
-    "pusher_max_cmd": 0.9,
-    "pusher_sat_frac": 0.0238,
-    "lift_max_cmd": 0.6423,
-    "lift_min_cmd": 0.4246,
-    "lift_sat_frac": 0.0,
-    "torque_unachieved_frac": 0.0,
-    "pitch_integ_max": 0.0272,
-    "touchdown_err_m": 0.0707,
-    "touchdown_speed_mps": 0.6561,
-    "wing_lift_fraction_max": 0.1827,
-    "cruise_airspeed_mps": 4.9278,
-    "cruise_speed_mps": 4.9757,
-    "cruise_pusher_cmd": 0.2738,
-    "true_airspeed_max_mps": 12.6859
-   }
-  },
-  "alone/smooth_wind8_from270": {
-   "case": "alone/smooth_wind8_from270",
-   "passed": true,
-   "reasons": [],
-   "overrides": {
-    "wind_speed_mps": 8.0,
-    "wind_from_deg": 270.0
-   },
-   "figures": {
-    "tilt_max_deg": 11.8803,
-    "alt_err_max_m": 0.2197,
-    "fwd_yaw_err_max_deg": 2.8348,
-    "cross_track_max_m": 1.3131,
-    "cruise_speed_err_mps": 0.4941,
-    "pusher_max_cmd": 0.9,
-    "pusher_sat_frac": 0.0223,
-    "lift_max_cmd": 0.6434,
-    "lift_min_cmd": 0.418,
-    "lift_sat_frac": 0.0,
-    "torque_unachieved_frac": 0.0,
-    "pitch_integ_max": 0.0282,
-    "touchdown_err_m": 0.1205,
-    "touchdown_speed_mps": 0.6731,
-    "wing_lift_fraction_max": 0.185,
-    "cruise_airspeed_mps": 4.9271,
-    "cruise_speed_mps": 4.9696,
-    "cruise_pusher_cmd": 0.272,
-    "true_airspeed_max_mps": 12.6674
-   }
-  },
-  "smooth/square_rep1": {
-   "case": "smooth/square_rep1",
-   "passed": true,
-   "reasons": [],
-   "overrides": {},
-   "figures": {
-    "tilt_max_deg": 5.8969,
-    "alt_err_max_m": 0.3245,
-    "fwd_yaw_err_max_deg": 3.5518,
-    "cross_track_max_m": 0.3843,
-    "cruise_speed_err_mps": 0.2401,
-    "pusher_max_cmd": 0.6348,
-    "pusher_sat_frac": 0.0,
-    "lift_max_cmd": 0.5857,
-    "lift_min_cmd": 0.4862,
-    "lift_sat_frac": 0.0,
-    "torque_unachieved_frac": 0.0,
-    "pitch_integ_max": 0.0041,
-    "touchdown_err_m": 0.0297,
-    "touchdown_speed_mps": 0.6097,
-    "wing_lift_fraction_max": 0.0449,
-    "cruise_airspeed_mps": 4.9574,
-    "cruise_speed_mps": 5.0559,
-    "cruise_pusher_cmd": 0.1904,
-    "true_airspeed_max_mps": 5.1143
-   }
-  },
-  "smooth/square_rep2": {
-   "case": "smooth/square_rep2",
-   "passed": false,
-   "reasons": [
-    "tilt_max_deg 33.79 > 30.0",
-    "touchdown_speed_mps 1.66 > 1.0"
-   ],
-   "overrides": {},
-   "figures": {
-    "tilt_max_deg": 33.79,
-    "alt_err_max_m": 0.1665,
-    "fwd_yaw_err_max_deg": 3.9439,
-    "cross_track_max_m": 0.3564,
-    "cruise_speed_err_mps": 0.2311,
-    "pusher_max_cmd": 0.5048,
-    "pusher_sat_frac": 0.0,
-    "lift_max_cmd": 0.7122,
-    "lift_min_cmd": 0.3936,
-    "lift_sat_frac": 0.0,
-    "torque_unachieved_frac": 0.0,
-    "pitch_integ_max": 0.0071,
-    "touchdown_err_m": 0.3437,
-    "touchdown_speed_mps": 1.6593,
-    "wing_lift_fraction_max": 0.0378,
-    "cruise_airspeed_mps": 4.9973,
-    "cruise_speed_mps": 5.0577,
-    "cruise_pusher_cmd": 0.177,
-    "true_airspeed_max_mps": 5.1104
-   }
-  },
-  "smooth/square_rep3": {
-   "case": "smooth/square_rep3",
-   "passed": false,
-   "reasons": [
-    "tilt_max_deg 30.93 > 30.0"
-   ],
-   "overrides": {},
-   "figures": {
-    "tilt_max_deg": 30.9291,
-    "alt_err_max_m": 0.2377,
-    "fwd_yaw_err_max_deg": 1.8168,
-    "cross_track_max_m": 0.4307,
-    "cruise_speed_err_mps": 0.2274,
-    "pusher_max_cmd": 0.5254,
-    "pusher_sat_frac": 0.0,
-    "lift_max_cmd": 0.7532,
-    "lift_min_cmd": 0.3503,
-    "lift_sat_frac": 0.0,
-    "torque_unachieved_frac": 0.0,
-    "pitch_integ_max": 0.0349,
-    "touchdown_err_m": 0.0211,
-    "touchdown_speed_mps": 0.8502,
-    "wing_lift_fraction_max": 0.0394,
-    "cruise_airspeed_mps": 4.9948,
-    "cruise_speed_mps": 5.0569,
-    "cruise_pusher_cmd": 0.1853,
-    "true_airspeed_max_mps": 5.1573
-   }
-  },
-  "smooth/square_rep4": {
-   "case": "smooth/square_rep4",
-   "passed": true,
-   "reasons": [],
-   "overrides": {},
-   "figures": {
-    "tilt_max_deg": 5.5046,
-    "alt_err_max_m": 0.1887,
-    "fwd_yaw_err_max_deg": 1.8998,
-    "cross_track_max_m": 0.2796,
-    "cruise_speed_err_mps": 0.2327,
-    "pusher_max_cmd": 0.5243,
-    "pusher_sat_frac": 0.0,
-    "lift_max_cmd": 0.575,
-    "lift_min_cmd": 0.5056,
-    "lift_sat_frac": 0.0,
-    "torque_unachieved_frac": 0.0,
-    "pitch_integ_max": 0.0034,
-    "touchdown_err_m": 0.0663,
-    "touchdown_speed_mps": 0.6852,
-    "wing_lift_fraction_max": 0.0402,
-    "cruise_airspeed_mps": 4.9774,
-    "cruise_speed_mps": 5.0547,
-    "cruise_pusher_cmd": 0.195,
-    "true_airspeed_max_mps": 5.1148
-   }
-  },
-  "smooth/square_rep5": {
-   "case": "smooth/square_rep5",
-   "passed": true,
-   "reasons": [],
-   "overrides": {},
-   "figures": {
-    "tilt_max_deg": 14.1913,
-    "alt_err_max_m": 0.2536,
-    "fwd_yaw_err_max_deg": 2.9295,
-    "cross_track_max_m": 0.2734,
-    "cruise_speed_err_mps": 0.229,
-    "pusher_max_cmd": 0.5139,
-    "pusher_sat_frac": 0.0,
-    "lift_max_cmd": 0.5833,
-    "lift_min_cmd": 0.4917,
-    "lift_sat_frac": 0.0,
-    "torque_unachieved_frac": 0.0,
-    "pitch_integ_max": 0.0096,
-    "touchdown_err_m": 0.0652,
-    "touchdown_speed_mps": 0.7207,
-    "wing_lift_fraction_max": 0.0381,
-    "cruise_airspeed_mps": 4.9983,
-    "cruise_speed_mps": 5.0573,
-    "cruise_pusher_cmd": 0.1916,
-    "true_airspeed_max_mps": 5.1223
-   }
-  },
-  "smooth/square_rep6": {
-   "case": "smooth/square_rep6",
-   "passed": true,
-   "reasons": [],
-   "overrides": {},
-   "figures": {
-    "tilt_max_deg": 5.7219,
-    "alt_err_max_m": 0.2333,
-    "fwd_yaw_err_max_deg": 1.2532,
-    "cross_track_max_m": 0.2864,
-    "cruise_speed_err_mps": 0.2204,
-    "pusher_max_cmd": 0.5186,
-    "pusher_sat_frac": 0.0,
-    "lift_max_cmd": 0.5692,
-    "lift_min_cmd": 0.5066,
-    "lift_sat_frac": 0.0,
-    "torque_unachieved_frac": 0.0,
-    "pitch_integ_max": 0.0029,
-    "touchdown_err_m": 0.0272,
-    "touchdown_speed_mps": 0.631,
-    "wing_lift_fraction_max": 0.0381,
-    "cruise_airspeed_mps": 5.0117,
-    "cruise_speed_mps": 5.0546,
-    "cruise_pusher_cmd": 0.2007,
-    "true_airspeed_max_mps": 5.0982
-   }
-  },
-  "smooth/square_wind8_from0": {
-   "case": "smooth/square_wind8_from0",
-   "passed": true,
-   "reasons": [],
-   "overrides": {
-    "wind_speed_mps": 8.0,
-    "wind_from_deg": 0.0
-   },
-   "figures": {
-    "tilt_max_deg": 9.8136,
-    "alt_err_max_m": 0.2831,
-    "fwd_yaw_err_max_deg": 1.5931,
-    "cross_track_max_m": 0.5563,
-    "cruise_speed_err_mps": 0.4787,
-    "pusher_max_cmd": 0.9,
-    "pusher_sat_frac": 0.0239,
-    "lift_max_cmd": 0.6419,
-    "lift_min_cmd": 0.4061,
-    "lift_sat_frac": 0.0,
-    "torque_unachieved_frac": 0.0,
-    "pitch_integ_max": 0.0267,
-    "touchdown_err_m": 0.0923,
-    "touchdown_speed_mps": 0.7563,
-    "wing_lift_fraction_max": 0.1952,
-    "cruise_airspeed_mps": 4.9085,
-    "cruise_speed_mps": 4.9828,
-    "cruise_pusher_cmd": 0.2842,
-    "true_airspeed_max_mps": 12.708
-   }
-  },
-  "smooth/square_wind8_from270": {
-   "case": "smooth/square_wind8_from270",
-   "passed": false,
-   "reasons": [
-    "touchdown_speed_mps 1.48 > 1.0"
-   ],
-   "overrides": {
-    "wind_speed_mps": 8.0,
-    "wind_from_deg": 270.0
-   },
-   "figures": {
-    "tilt_max_deg": 24.0332,
-    "alt_err_max_m": 0.2253,
-    "fwd_yaw_err_max_deg": 1.8269,
-    "cross_track_max_m": 1.0778,
-    "cruise_speed_err_mps": 0.4895,
-    "pusher_max_cmd": 0.9,
-    "pusher_sat_frac": 0.0269,
-    "lift_max_cmd": 0.6426,
-    "lift_min_cmd": 0.4043,
-    "lift_sat_frac": 0.0,
-    "torque_unachieved_frac": 0.0,
-    "pitch_integ_max": 0.0288,
-    "touchdown_err_m": 0.2088,
-    "touchdown_speed_mps": 1.4771,
-    "wing_lift_fraction_max": 0.1954,
-    "cruise_airspeed_mps": 4.9097,
-    "cruise_speed_mps": 4.9682,
-    "cruise_pusher_cmd": 0.2644,
-    "true_airspeed_max_mps": 12.6466
-   }
-  }
- },
  "notes": {
-  "square": "the square run that oscillated sideways (report section 5)",
-  "square_stressed": "square with all CPUs deliberately saturated",
-  "headwind8_pitchmin5": "10 m/s straight, 8 m/s headwind, VT_PITCH_MIN = -5",
-  "alone/smooth_*": "eased braking, no other simulation running",
-  "alone/old_*": "frozen sweep code (955e658), no other simulation running",
-  "smooth/*": "eased braking, flown beside the square wind sweep (2 other simulations)",
-  "route_missions square, square2, square3": "flown beside the 10 m/s sweeps",
-  "route_missions eval/*": "flown with no other simulation running"
+  "wind": "steady wind by speed and direction, PX4's own yaw gains; flown two at a time",
+  "rerun_alone": "square cases flown again with no other simulation running; the result replaces the sweep's (report section 5)"
  }
 }

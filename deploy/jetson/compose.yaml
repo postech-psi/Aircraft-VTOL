@@ -1,5 +1,5 @@
 # Companion computer (Jetson): the uXRCE-DDS agent on the serial link to the Pixhawk, and the
-# ROS 2 container the mission nodes run in. docs/04_onboard.md has the steps.
+# ROS 2 container the mission nodes run in. docs/05_onboard.md has the steps.
 #
 #   docker compose -f deploy/jetson/compose.yaml up -d --build
 #   docker exec -it ros2 bash

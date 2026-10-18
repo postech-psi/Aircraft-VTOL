@@ -1,5 +1,5 @@
 # The year-end flight 2026: take off, fly a 50 m square with right turns, land where it took off.
-# docs/02_control_concept.md, section 1.
+# docs/02_flight.md, section 1.
 
 vehicle: psi_qp               # vehicle/psi_qp.yaml
 
@@ -26,6 +26,3 @@ profile:
     - [50.0, -50.0]
     - [0.0, -50.0]
     - [0.0, 0.0]
-  heading_into_wind: 0        # 0 command the heading along the direction of travel;
-                              # 1 command it along the velocity relative to the air, which
-                              # needs the wind (the simulation then uses the true mean wind)
