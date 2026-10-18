@@ -3,7 +3,10 @@ import ast
 import math
 from types import SimpleNamespace
 
+import pytest
+
 from psi_vtol import config
+from psi_vtol.profile import Profile
 
 
 def method(filename, class_name, name, **namespace):
@@ -50,6 +53,19 @@ def test_replayed_position_cannot_refresh_watchdog():
     state = SimpleNamespace(position_received_at=98., last_position_timestamp=1000)
     receive(state, SimpleNamespace(timestamp=1000))
     assert state.position_received_at == 98.
+
+
+@pytest.mark.parametrize("filename, class_name", [("path_node.py", "PathNode"),
+                                                  ("landing_node.py", "LandingNode")])
+def test_step_fails_cleanly_when_heading_into_wind_has_no_wind(filename, class_name):
+    into_wind = dict(config.profile(), heading_into_wind=1)
+    start = method(filename, class_name, "start", Profile=Profile,
+                   config=SimpleNamespace(profile=lambda mission: into_wind))
+    failures = []
+    state = SimpleNamespace(mission="2026_year_end", pos=(0., 0., -0.1), ground_z=-0.1, heading=0.,
+                            t=0., fail=failures.append, flight=None)
+    start(state)
+    assert state.flight is None and "wind" in failures[0]
 
 
 def test_missing_step_status_changes_to_failsafe():

@@ -24,6 +24,10 @@ LIMITS = {
     "wing_lift_fraction_max": 0.40,  # initial stock-controller envelope, not a universal limit
 }
 
+# PX4's land detector reports contact only after the vehicle has stopped moving, and landed
+# later still. The touchdown speed is the fastest the vehicle moved in this long before that.
+TOUCHDOWN_LOOKBACK_S = 3.0
+
 TOPICS = ["vehicle_attitude", "vehicle_attitude_setpoint", "vehicle_local_position",
           "actuator_motors", "rate_ctrl_status", "control_allocator_status", "airspeed_validated",
           "vehicle_land_detected"]
@@ -97,26 +101,33 @@ def aero_metrics(path):
             "voltage_ratio_min": min(float(r["voltage_ratio"]) for r in rows)}
 
 
+def _mask(data, spans):
+    m = np.zeros(len(data["timestamp"]), dtype=bool)
+    for span in spans:
+        m |= _window(data, span)
+    return m
+
+
 def compute(ulog_path, flight):
-    """flight: what run_case.fly() returned (phases in seconds since PX4 boot, home, yaw0)."""
+    """flight: what run_case.fly() returned (phases in seconds since PX4 boot, home, legs)."""
     ulog = ULog(str(ulog_path), message_name_filter_list=TOPICS)
     ph = flight["phases"]
+    legs = flight.get("legs", [])
     out = {}
 
-    def span(first, last):
-        if first in ph and last in ph:
-            return (ph[first][0], ph[last][1])
-        return None
-
-    # Keep diagnostic metrics for an aborted flight; completion/landing remain mandatory.
-    def available_span(first, last_names):
-        last = next((name for name in last_names if name in ph), None)
-        return span(first, last) if first in ph and last is not None else None
-
-    airborne = available_span("climb", ("land", "descend", "hover2", "decel", "cruise", "accel", "hover1", "climb"))
-    level = available_span("hover1", ("hover2", "decel", "cruise", "accel", "hover1"))
-    forward = available_span("accel", ("decel", "cruise", "accel"))
-    cruise = ph.get("cruise")
+    # Spans of the phases flown, also of an aborted flight: its diagnostics are kept, and the
+    # missing completion and landing still fail it.
+    airborne = (ph["climb"][0], max(end for _, end in ph.values())) if "climb" in ph else None
+    route = [ph[name][1] for name in ph if name not in ("climb", "descend", "land")]
+    level = (ph["hover1"][0], max(route)) if "hover1" in ph else None
+    forward = {}            # leg number -> from the start of its speed-up to the end of its slow-down
+    for name in ph:
+        if name.startswith("accel") and name[5:].isdigit():
+            i = int(name[5:])
+            last = next(f"{k}{i}" for k in ("decel", "cruise", "accel") if f"{k}{i}" in ph)
+            forward[i] = (ph[name][0], ph[last][1])
+    late = {i: (max(ph[f"cruise{i}"][0], ph[f"cruise{i}"][1] - 5.0), ph[f"cruise{i}"][1])
+            for i in forward if f"cruise{i}" in ph}         # after the speed has settled
 
     att = _topic(ulog, "vehicle_attitude")
     pos = _topic(ulog, "vehicle_local_position")
@@ -140,7 +151,7 @@ def compute(ulog_path, flight):
         out["hover_lift_cmd"] = float(lift[:, m].mean())
 
     if forward:
-        m = _window(att, forward)
+        m = _mask(att, forward.values())
         if m.any():
             out["fwd_roll_max_deg"] = float(np.abs(roll[m]).max())
             out["fwd_pitch_max_deg"] = float(np.abs(pitch[m]).max())
@@ -150,13 +161,16 @@ def compute(ulog_path, flight):
                 yaw_sp = np.unwrap(np.radians(_euler_deg(asked, "q_d")[2]))
                 yaw_sp = np.degrees(np.interp(att["timestamp"][m], asked["timestamp"], yaw_sp))
                 out["fwd_yaw_err_max_deg"] = float(np.abs(_wrap_deg(yaw[m] - yaw_sp)).max())
-        m = _window(pos, forward)
-        if m.any():
-            # distance to the left or right of the line flown, from home along the first heading
-            dn, de = pos["x"][m] - flight["home"][0], pos["y"][m] - flight["home"][1]
-            cross = -dn * math.sin(flight["yaw0"]) + de * math.cos(flight["yaw0"])
-            out["cross_track_max_m"] = float(np.abs(cross).max())
-        m = _window(mot, forward)
+        cross = []          # distance to the left or right of each leg's line
+        for i, span in forward.items():
+            m = _window(pos, span)
+            if m.any() and i <= len(legs):
+                leg = legs[i - 1]
+                dn, de = pos["x"][m] - leg["start"][0], pos["y"][m] - leg["start"][1]
+                cross.append(np.abs(-dn * math.sin(leg["heading"]) + de * math.cos(leg["heading"])).max())
+        if cross:
+            out["cross_track_max_m"] = float(max(cross))
+        m = _mask(mot, forward.values())
         if m.any():
             out["pusher_max_cmd"] = float(pusher[m].max())
             out["pusher_sat_frac"] = float((pusher[m] >= 0.88).mean())
@@ -166,51 +180,60 @@ def compute(ulog_path, flight):
             out["lift_low_frac"] = float((lift[:, m].min(axis=0) <= 0.05).mean())
         rate = _topic(ulog, "rate_ctrl_status")
         if rate is not None:
-            m = _window(rate, forward)
+            m = _mask(rate, forward.values())
             if m.any():
                 for axis in ("roll", "pitch", "yaw"):
                     out[f"{axis}_integ_max"] = float(np.abs(rate[f"{axis}speed_integ"][m]).max())
         alloc = _topic(ulog, "control_allocator_status")
         if alloc is not None:
-            m = _window(alloc, forward)
+            m = _mask(alloc, forward.values())
             if m.any():
                 out["torque_unachieved_frac"] = float(1.0 - alloc["torque_setpoint_achieved"][m].mean())
-                out["torque_unachieved_max_s"] = _longest_interval(
-                    alloc["timestamp"][m], ~alloc["torque_setpoint_achieved"][m].astype(bool))
+                out["torque_unachieved_max_s"] = max(
+                    _longest_interval(alloc["timestamp"][w], ~alloc["torque_setpoint_achieved"][w].astype(bool))
+                    for w in (_window(alloc, span) for span in forward.values()) if w.any())
 
-    if cruise:
-        late = (max(cruise[0], cruise[1] - 5.0), cruise[1])     # after the speed has settled
-        m = _window(pos, late)
+    if late:
+        m = _mask(pos, late.values())
         if m.any():
-            ground = np.hypot(pos["vx"][m], pos["vy"][m])
-            out["cruise_speed_mps"] = float(ground.mean())
-            along = pos["vx"][m] * math.cos(flight["yaw0"]) + pos["vy"][m] * math.sin(flight["yaw0"])
-            out["cruise_speed_err_mps"] = float(np.abs(along - flight["cruise_mps"]).max())
-        m = _window(att, late)
+            out["cruise_speed_mps"] = float(np.hypot(pos["vx"][m], pos["vy"][m]).mean())
+        errors = []         # speed along each leg against the speed asked for on it
+        for i, span in late.items():
+            m = _window(pos, span)
+            if m.any() and i <= len(legs):
+                leg = legs[i - 1]
+                along = pos["vx"][m] * math.cos(leg["heading"]) + pos["vy"][m] * math.sin(leg["heading"])
+                errors.append(np.abs(along - leg["speed"]).max())
+        if errors:
+            out["cruise_speed_err_mps"] = float(max(errors))
+        m = _mask(att, late.values())
         if m.any():
             out["cruise_pitch_deg"] = float(pitch[m].mean())
-        m = _window(mot, late)
+        m = _mask(mot, late.values())
         if m.any():
             out["cruise_pusher_cmd"] = float(pusher[m].mean())
             out["cruise_lift_cmd"] = float(lift[:, m].mean())
         air = _topic(ulog, "airspeed_validated")
         if air is not None:
-            m = _window(air, late)
+            m = _mask(air, late.values())
             if m.any():
                 out["cruise_airspeed_mps"] = float(np.nanmean(air["true_airspeed_m_s"][m]))
-    for name in ("touchdown_err_m", "touchdown_speed_mps"):
-        if name in flight:
-            out[name] = flight[name]
+    if "touchdown_err_m" in flight:
+        out["touchdown_err_m"] = flight["touchdown_err_m"]
     landed = _topic(ulog, "vehicle_land_detected")
     if landed is not None and "land" in ph:
         m = _window(landed, ph["land"])
         out["landed_confirmed"] = bool(m.any() and landed["landed"][m][-1])
-        contact = m & landed["landed"].astype(bool)
+        flags = [landed[f].astype(bool) for f in ("ground_contact", "maybe_landed", "landed") if f in landed]
+        contact = m & np.logical_or.reduce(flags)
         if contact.any():
             touchdown_t = landed["timestamp"][contact][0]
             i = int(np.argmin(np.abs(pos["timestamp"].astype(float) - touchdown_t)))
-            if "vz" in pos:
-                out["touchdown_speed_mps"] = float(np.linalg.norm([pos[a][i] for a in ("vx", "vy", "vz")]))
+            before = ((pos["timestamp"] >= touchdown_t - TOUCHDOWN_LOOKBACK_S * 1e6)
+                      & (pos["timestamp"] <= touchdown_t))
+            if "vz" in pos and before.any():
+                speed = np.sqrt(pos["vx"][before] ** 2 + pos["vy"][before] ** 2 + pos["vz"][before] ** 2)
+                out["touchdown_speed_mps"] = float(speed.max())
             if "landing_target" in flight:
                 out["touchdown_err_m"] = float(math.hypot(pos["x"][i] - flight["landing_target"][0],
                                                          pos["y"][i] - flight["landing_target"][1]))

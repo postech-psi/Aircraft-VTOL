@@ -37,8 +37,9 @@ def synthetic_log_check(p):
                  ("actuator_motors", mot), ("control_allocator_status", alloc)]]
     flight = {"completed": True, "home": [0, 0, 0], "yaw0": 0, "alt_m": p["alt_m"],
               "cruise_mps": p["cruise_mps"],
+              "legs": [{"start": [0, 0], "end": [250, 0], "heading": 0, "speed": p["cruise_mps"]}],
               "phases": dict(zip(
-                  ["climb", "hover1", "accel", "cruise", "decel", "hover2", "descend", "land"],
+                  ["climb", "hover1", "accel1", "cruise1", "decel1", "hover2", "descend", "land"],
                   [[0, 10], [10, 16], [16, 26], [26, 41], [41, 51], [51, 57], [57, 68], [68, 73]]))}
     with patch.object(metrics, "ULog", return_value=SimpleNamespace(data_list=datasets)):
         figures = metrics.compute("synthetic-no-file.ulg", flight)

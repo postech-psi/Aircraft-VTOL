@@ -113,9 +113,13 @@ class Link:
         key = name.encode()
 
         def reply(send):
-            deadline = time.monotonic() + 5.0
-            send()
+            # PX4 drops requests that arrive while it is still starting, and UDP may lose any
+            # message, so ask again every second until the deadline.
+            deadline, asked = time.monotonic() + 5.0, -math.inf
             while time.monotonic() < deadline:
+                if time.monotonic() - asked >= 1.0:
+                    send()
+                    asked = time.monotonic()
                 msg = self.pump(0.05)
                 if msg is not None and msg.get_type() == "PARAM_VALUE" and msg.param_id == name:
                     return msg
@@ -181,6 +185,7 @@ def fly(p, params, instance, wall_limit_s=420.0):
         # With heading_into_wind the true mean wind is used; the vehicle will need an estimate.
         flight = Profile(p, home, yaw0, wind_ne(p, yaw0))
         result["phases"] = flight.times
+        result["legs"] = [{k: leg[k] for k in ("start", "end", "heading", "speed")} for leg in flight.legs]
 
         # --- arm and take off: PX4 wants the setpoint stream before it accepts offboard -------
         link.setpoint = flight.takeoff_setpoint()
@@ -199,10 +204,7 @@ def fly(p, params, instance, wall_limit_s=420.0):
                 t_ask = link.t
 
         land_asked = False
-        touchdown_speed = None
         while True:
-            if not link.armed and flight.phase == "land" and touchdown_speed is None:
-                touchdown_speed = float(velocity_norm(link.vel))
             link.setpoint = flight.update(link.t, link.pos, link.vel, link.armed)
             if flight.done:
                 break
@@ -229,7 +231,6 @@ def fly(p, params, instance, wall_limit_s=420.0):
                     raise Abort(f"hit the ground in {what}")
         result["touchdown_err_m"] = math.hypot(link.pos[0] - flight.hold[0],
                                                link.pos[1] - flight.hold[1])
-        result["touchdown_speed_mps"] = touchdown_speed if touchdown_speed is not None else math.nan
         result["landing_target"] = list(flight.hold)
         result["completed"] = True
     except Abort as stop:
@@ -336,10 +337,6 @@ def run(cfg, overrides, case_id, instance):
               "log": str(logs[-1]) if logs else None}
     (case_dir / "result.json").write_text(json.dumps(record, indent=1))
     return record
-
-
-def velocity_norm(values):
-    return math.sqrt(sum(v * v for v in values))
 
 
 def provenance(cfg, p):

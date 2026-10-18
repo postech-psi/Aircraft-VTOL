@@ -11,7 +11,7 @@ import rclpy
 from px4_msgs.msg import VehicleStatus
 
 from psi_vtol import config
-from psi_vtol.profile import LANDING_PHASES, Profile
+from psi_vtol.profile import Profile
 from vtol_mission.source import SetpointSource
 
 LAND_RETRY_S = 1.0
@@ -27,8 +27,12 @@ class LandingNode(SetpointSource):
 
     def start(self):
         ground = (self.pos[0], self.pos[1], self.ground_z)
-        self.flight = Profile(config.profile(self.mission), ground, self.heading,
-                              phases=LANDING_PHASES)
+        try:                        # no wind estimate here: heading_into_wind cannot be flown
+            self.flight = Profile(config.profile(self.mission), ground, self.heading,
+                                  part="landing")
+        except ValueError as error:
+            self.fail(str(error))
+            return
         self.t_asked = -1e9
         self.get_logger().info(f"LANDING: descending over {self.pos[:2]}.")
 
