@@ -3,8 +3,6 @@
 
     python3 -m psi_vtol.plots                          # the vehicle and the wing share only
     python3 -m psi_vtol.plots --flight out/square.json
-    python3 -m psi_vtol.plots --oscillation out/calm.json out/wobbled.json 2
-    python3 -m psi_vtol.plots --braking "Old" out/old/*.json --braking "Eased" out/new/*.json
     python3 -m psi_vtol.plots --wind a/wind.json "10 m/s, straight" --wind b/wind.json "5 m/s, square"
     python3 -m psi_vtol.plots --oat out/2026_year_end/aeroprop-v2/oat.json
     python3 -m psi_vtol.plots --speeds out/2026_year_end/aeroprop-v2/scenarios.json
@@ -260,7 +258,7 @@ def ground_track(ax, record, color, label, planned=True):
     ax.plot(right, forward, color=color, lw=1.8 if planned else 1.3, zorder=3, label=label)
 
 
-def flight(record, label, compare=None, compare_label=None, name="fig1_flight"):
+def flight(record, label, compare=None, compare_label=None, name="fig8_through"):
     """Ground track beside the time history of speed, attitude, height and motor commands."""
     f, fl, v = record["figures"], record["flight"], values_of(record)
     data = ulog_topics(record, ["vehicle_local_position", "vehicle_local_position_setpoint",
@@ -363,102 +361,6 @@ def flight(record, label, compare=None, compare_label=None, name="fig1_flight"):
             f"{f.get('tilt_max_deg', math.nan):.0f}°.\nOn the right, alternate legs are shaded; the "
             + ("darker strips are the corners, flown banked without stopping."
                if v.get("fly_through", 0) >= 0.5 else "darker strips are the turns, flown in a hover."))
-    save(fig, name)
-
-
-def oscillation(clean, bad, leg, name="fig6_sideways_oscillation"):
-    """Roll and sideways speed on one leg, for a calm run and for the run that oscillated."""
-    fig, axes = plt.subplots(2, 1, figsize=(7.4, 4.4), sharex=True, gridspec_kw={"hspace": 0.12})
-    for record, color, text in ((clean, BLUE, "Flown alone"), (bad, ORANGE, "Flown beside other simulations")):
-        fl = record["flight"]
-        heading_rad = fl["legs"][leg - 1]["heading"]
-        start, brake = fl["phases"][f"accel{leg}"][0], fl["phases"][f"decel{leg}"][0]
-        end = fl["phases"][f"hover{leg + 1}"][0] + 2.0
-        d = ulog_topics(record, ["vehicle_attitude", "vehicle_local_position"])
-        att, pos = d["vehicle_attitude"], d["vehicle_local_position"]
-        roll, _, _ = metrics._euler_deg(att)
-        ta, tp = att["timestamp"] * 1e-6, pos["timestamp"] * 1e-6
-        ka, kp = (ta >= start) & (ta <= end), (tp >= start) & (tp <= end)
-        side = -pos["vx"][kp] * math.sin(heading_rad) + pos["vy"][kp] * math.cos(heading_rad)
-        axes[0].plot(ta[ka] - brake, roll[ka], color=color, label=text)
-        axes[1].plot(tp[kp] - brake, side, color=color, label=text)
-    for ax in axes:
-        ax.axvline(0, color=INK2, lw=0.9)
-        ax.grid(axis="x", visible=False)
-    axes[0].text(0.15, 0.95, "slow-down starts,\npusher cuts out", transform=axes[0].get_xaxis_transform(),
-                 fontsize=7.2, color=INK2, va="top")
-    limit = metrics.LIMITS["tilt_max_deg"]
-    for sign in (1, -1):
-        axes[0].axhline(sign * limit, color=CRITICAL, lw=0.9)
-    axes[0].text(axes[0].get_xlim()[0] + 0.2, -limit, f"pass limit ±{limit:g}°", fontsize=7,
-                 color=INK2, va="bottom")
-    for ax in axes:
-        low, high = ax.get_ylim()
-        ax.set_ylim(low, high + (high - low) * 0.25)
-    axes[0].set_ylabel("Roll (°)")
-    axes[1].set_ylabel(f"Speed across\nleg {leg} (m/s)")
-    axes[1].set_xlabel("Time from the start of the slow-down (s)")
-    axes[0].legend(loc="upper left", ncol=2, bbox_to_anchor=(0.0, 1.0))
-    footnote(fig, SIM_NOTE)
-    peak = bad["figures"]["tilt_max_deg"]
-    heading(fig, f"A run that shared the machine with other simulations swung into a {peak:.0f}° roll; "
-            "runs alone never did",
-            f"Leg {leg} of the 50 m square at 5 m/s, no wind, the same profile in both. A sway of about 1 Hz "
-            "appeared 1.5 s before braking and peaked\nonce the pusher cut out. Beside other simulations "
-            "6 of 11 squares wobbled like this, alone 0 of 13: Gazebo does not wait for PX4,\nso a busy "
-            "machine delays the motor commands. It is an artifact of the simulation, not of the vehicle.")
-    save(fig, name)
-
-
-def braking(groups, name="fig7_braking"):
-    """Commanded speed, pitch and pusher through every slow-down, for each version of the profile.
-
-    groups: [(label, records)], drawn in that order; the last is the current profile.
-    """
-    grid = np.linspace(-1.0, 10.0, 221)
-    fig, axes = plt.subplots(3, 1, figsize=(7.4, 6.0), sharex=True, gridspec_kw={"hspace": 0.12})
-    keys, peaks = [], []
-    for (label, records), color in zip(groups, (ORANGE, BLUE)):
-        curves = {"speed": [], "pitch": [], "pusher": []}
-        for record in records:
-            d = ulog_topics(record, ["vehicle_attitude", "vehicle_local_position_setpoint",
-                                     "actuator_motors"])
-            att, sp, mot = d["vehicle_attitude"], d["vehicle_local_position_setpoint"], d["actuator_motors"]
-            _, pitch, _ = metrics._euler_deg(att)
-            series = {"speed": (sp["timestamp"], np.hypot(np.nan_to_num(sp["vx"]), np.nan_to_num(sp["vy"]))),
-                      "pitch": (att["timestamp"], pitch),
-                      "pusher": (mot["timestamp"], np.nan_to_num(mot["control[4]"]))}
-            for phase, (start, _) in record["flight"]["phases"].items():
-                if phase.rstrip("0123456789") != "decel":
-                    continue
-                for key, (stamps, values) in series.items():
-                    curves[key].append(np.interp(grid, stamps * 1e-6 - start, values,
-                                                 left=np.nan, right=np.nan))
-        for ax, key in zip(axes, curves):
-            rows = np.array(curves[key])
-            for row in rows:
-                ax.plot(grid, row, color=color, lw=0.6, alpha=0.22, zorder=2)
-            ax.plot(grid, np.nanmedian(rows, axis=0), color=color, lw=2.0, zorder=3)
-        peaks.append(np.median(np.nanmax(np.array(curves["pitch"]), axis=1)))
-        keys.append(Line2D([], [], color=color, lw=2.0,
-                           label=f"{label}: median of {len(curves['pitch'])} slow-downs, thin lines each"))
-    for ax in axes:
-        ax.axvline(0, color=INK2, lw=0.9)
-        ax.grid(axis="x", visible=False)
-    axes[0].set_ylabel("Commanded\nspeed (m/s)")
-    axes[1].set_ylabel("Pitch, nose\nup (°)")
-    axes[2].set_ylabel("Pusher\ncommand")
-    axes[2].set_xlabel("Time from the start of the slow-down (s)")
-    axes[0].set_ylim(0, None)
-    low, high = axes[1].get_ylim()
-    axes[1].set_ylim(low, high + (high - low) * 0.15)
-    axes[0].legend(handles=keys, loc="upper right", fontsize=7.4)
-    footnote(fig, SIM_NOTE)
-    heading(fig, f"Easing into the braking lowers the nose-up from {peaks[0]:.1f}° to {peaks[-1]:.1f}° "
-            "and lets the pusher fade out",
-            "Every slow-down of the 50 m square at 5 m/s, no wind, each run flown with no other simulation "
-            "on the machine.\nThe eased braking takes longer (7.9 s instead of 5 s from 5 m/s) and is "
-            "never harder than the old one.")
     save(fig, name)
 
 
@@ -972,15 +874,10 @@ def main():
     parser.add_argument("--model-revision", default=gz_model.MODEL_REVISION,
                         help="subfolder of figures/ to write into")
     parser.add_argument("--flight", help="a run_case result JSON: ground track and time history")
-    parser.add_argument("--flight-label", default="Square mission")
-    parser.add_argument("--flight-name", default="fig1_flight", help="file name of that figure")
+    parser.add_argument("--flight-label", default="Flown through the corners at 5 m/s")
+    parser.add_argument("--flight-name", default="fig8_through", help="file name of that figure")
     parser.add_argument("--compare", help="a second result JSON, drawn on the ground track")
-    parser.add_argument("--compare-label", default="Another run")
-    parser.add_argument("--oscillation", nargs=3, metavar=("CLEAN", "BAD", "LEG"),
-                        help="two result JSONs: roll and sideways speed on this leg")
-    parser.add_argument("--braking", nargs="+", action="append", default=[], metavar="LABEL JSON",
-                        help="a label and the result JSONs of one version of the profile; give it "
-                             "once per version, the current one last")
+    parser.add_argument("--compare-label", default="Stopped at each corner")
     parser.add_argument("--wind", nargs=2, action="append", default=[], metavar=("JSON", "LABEL"),
                         help="a wind study's records and its label; may be given twice")
     parser.add_argument("--oat", help="the one-at-a-time study's records")
@@ -997,13 +894,6 @@ def main():
     if args.flight:
         flight(load(args.flight), args.flight_label,
                load(args.compare) if args.compare else None, args.compare_label, args.flight_name)
-    if args.oscillation:
-        clean, bad, leg = args.oscillation
-        oscillation(load(clean), load(bad), int(leg))
-    if args.braking:
-        if any(len(group) < 2 for group in args.braking):
-            parser.error("--braking takes a label and at least one result JSON")
-        braking([(label, [load(path) for path in paths]) for label, *paths in args.braking])
     if args.wind:
         sets = [(label, load(path)) for path, label in args.wind]
         wind_envelope(sets)

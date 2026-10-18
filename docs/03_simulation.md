@@ -68,8 +68,8 @@ PX4 v1.17의 고장 주입은 ESC 텔레메트리만 지우고 모터는 그대�
 프로파일이 경로를 따라가지 못함을 알아채거나, 단계가 시간 상한을 넘기거나, 임무가 중단되면 runner는 탑재
 노드와 같은 일을 합니다. 기체를 부드럽게 멈추고(`profile.Stop`) PX4 Hold에 넘기며, 푸셔 고장이면 Land에
 넘깁니다. 그 뒤 기체가 내려올 때까지 따라갑니다. Hold는 15초 지켜본 뒤 조종자가 하듯 Land를 명령하고,
-Return이나 Land는 PX4에 맡깁니다. PX4가 스스로 offboard에서 빠졌을 때도 같습니다. 이런 실행은 임무를 마치지 못했으므로 실패지만, 따로
-`safe`(전복 없이, tilt 30° 이하로, 1 m/s 이하로 착지)를 기록합니다.
+Return이나 Land는 PX4에 맡깁니다. PX4가 스스로 offboard에서 빠졌을 때도 같습니다. 이런 실행은 임무를
+마치지 못했으므로 실패지만, 따로 `safe`(전복 없이, tilt 30° 이하로, 1 m/s 이하로 착지)를 기록합니다.
 
 다음 중 하나가 일어나면 즉시 중단하고 실패로 기록합니다.
 
@@ -205,10 +205,9 @@ Gazebo WindEffects가 world의 바람을 바꾸고 플러그인이 그 값을 �
 - 포화 비율은 명령값을 기준으로 하므로 N 단위의 추력 여유와는 다릅니다.
 - 착륙 속력은 land detector가 처음 접지(`ground_contact`, 없으면 `maybe_landed`나 `landed`)를 알리기
   전 3초 동안의 최대 EKF 속력입니다. PX4는 기체가 멈춘 뒤에야 접지를 알리므로 그 순간의 속력은 거의
-  0입니다. 정상적인 Land라면 하강 속도(`MPC_LAND_SPEED` 0.5 m/s) 근처가 나옵니다. 2026-10-13
-  실행까지는 접지를 알린 순간의 속력을 썼기 때문에 그 기록(0.03–0.11 m/s)은 충격 속도가 아닙니다.
-- 고도 오차는 상승이 끝난 뒤부터 하강 전까지만 봅니다. 상승·하강 중 수직 추종은 단계 도달 여부, 시간 상한, 전 구간
-  tilt로만 감시합니다.
+  0입니다. 정상적인 Land라면 하강 속도(`MPC_LAND_SPEED` 0.5 m/s) 근처가 나옵니다.
+- 고도 오차는 상승이 끝난 뒤부터 하강 전까지만 봅니다. 상승·하강 중 수직 추종은 단계 도달 여부, 시간
+  상한, 전 구간 tilt로만 감시합니다.
 
 ## 6. 스윕
 
@@ -221,11 +220,10 @@ bash simulation/docker_run.sh python3 -m psi_vtol.sim.sweep scenarios
 bash simulation/docker_run.sh python3 -m psi_vtol.plots
 ```
 
-케이스는 기본으로 한 번에 하나씩 비행합니다. Gazebo는 PX4를 기다리지 않으므로, 시뮬레이션을 여러 개
-동시에 돌려 PX4가 뒤처지면 모터 명령이 시뮬레이션 시간으로 늦게 도착합니다. 4 CPU 컴퓨터에서 다른
-시뮬레이션과 함께 돌린 정사각형 11회 중 6회에 1 Hz 흔들림이 생겼고, 혼자 돌린 13회에서는 한 번도
-없었습니다. `--jobs`를 늘리려면 CPU가 충분한지 먼저 확인하세요. 결과의 `flight.other_simulators`에 함께
-돌던 PX4 수가 남습니다.
+케이스는 기본으로 한 번에 하나씩 비행합니다. Gazebo는 PX4의 모터 명령을 기다리지 않으므로, 시뮬레이션을
+여러 개 동시에 돌려 PX4가 뒤처지면 실제 기체에 없는 제어 지연이 생깁니다(4 CPU 컴퓨터에서 함께 돌린
+정사각형에 1 Hz 흔들림이 생겼습니다). `--jobs`를 늘리려면 CPU가 충분한지 먼저 확인하세요. 결과의
+`flight.other_simulators`에 함께 돌던 PX4 수가 남습니다.
 
 | 스터디 | 내용 | 케이스 수 |
 |---|---|---|
@@ -265,8 +263,8 @@ bash simulation/docker_run.sh python3 -m psi_vtol.plots
 - custom PX4 checkout의 untracked 파일은 manifest에 남지 않으니, 비교할 펌웨어는 commit해 둡니다.
 
 스윕 표는 `out/<mission>/aeroprop-v2/<study>.csv`와 `.json`에, 그림은
-`missions/<mission>/figures/aeroprop-v2/`에 저장됩니다. runner가 실패한 케이스는 예전 결과 파일이
-있어도 통과로 치지 않습니다. 이전 모델의 결과를 그리려면 `plots --model-revision legacy`를 씁니다.
+`missions/<mission>/figures/aeroprop-v2/`에 저장됩니다. runner가 실패한 케이스는 이전 실행의 결과
+파일이 있어도 통과로 치지 않습니다.
 
 ## 7. ROS 2 노드로 비행하기
 

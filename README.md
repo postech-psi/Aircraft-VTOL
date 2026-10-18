@@ -43,10 +43,7 @@ bash simulation/docker_run.sh              # 기준 기체로 임무를 한 번 
 | [4. 탑재 소프트웨어](docs/04_onboard.md) | ROS 2 노드, Jetson 구성 |
 | [5. 할 일](docs/05_roadmap.md) | 연말 비행까지 남은 일, 이후 과제, vision VTOL 계획 |
 | [6. 연구 배경과 custom PX4](docs/06_research_and_custom_px4.md) | 선행 연구, stock PX4의 한계, custom 제어 단계, CFD |
-| [시뮬레이션 보고서](missions/2026_year_end/report.md) | 2026-10-18 SITL 결과: 스윕, 경로 임무, 통과 비행, 고장 시나리오 |
-
-이전 모델로 낸 결과와 모델을 바꾸기 전에 한 검토는
-[`missions/2026_year_end/archive/`](missions/2026_year_end/archive/)에 보관합니다.
+| [시뮬레이션 보고서](missions/2026_year_end/report.md) | 2026-10-18 SITL 결과로 정할 것: 경로 방식, 순항 속도, 바람 한계, 고장 대응 |
 
 ## 폴더 구조
 

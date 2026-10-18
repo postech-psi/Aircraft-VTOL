@@ -483,9 +483,9 @@ def run(cfg, overrides, case_id, instance, event=None):
 def other_simulators():
     """PX4 SITL processes running on this machine besides the one about to start.
 
-    Gazebo does not wait for PX4 (there is no lockstep in PX4's gz bridge), so a PX4 that falls
-    behind sends its motor commands late in simulated time. In 2026-10 SITL runs beside other
-    simulations, 6 of 11 squares showed a 1 Hz wobble that 13 runs alone never did. The count is
+    PX4's clock follows Gazebo's, but Gazebo steps on without waiting for PX4's motor commands, so
+    a PX4 that falls behind sends them late in simulated time. On 4 CPUs, 6 of 11 squares flown
+    beside other simulations showed a 1 Hz wobble that 13 runs alone never did. The count is
     recorded with each result so such runs can be told apart.
     """
     count = 0
