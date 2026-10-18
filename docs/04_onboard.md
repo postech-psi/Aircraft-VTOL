@@ -48,17 +48,28 @@ flowchart LR
 
 | 상황 | 동작 |
 |---|---|
-| 단계가 `FAILED`를 보고하거나 `/mission/abort`에 `ABORT` 수신 | mission_manager가 `FAILSAFE`로 가고, mux는 그 자리에서 위치를 유지(HOLD) |
+| 단계가 `FAILED`를 보고하거나 `/mission/abort`에 `ABORT` 수신 | mission_manager가 `FAILSAFE`로 가고, mux가 기체를 부드럽게 멈춤(HOLD). 6초 뒤 아직 offboard면 PX4에 넘김: 푸셔 고장(`FAILED:pusher...`)이면 Land, 아니면 Hold |
+| 앞으로 나가지 못함(가속 3초 뒤 0.5 m/s 미만) 또는 계획보다 1.5 m/s 넘게 느린 채 계속 느려짐 | PATH가 `FAILED:pusher: no forward speed ...` 또는 `FAILED:pusher: losing speed ...`. 위처럼 멈춘 뒤 그 자리에 착륙 |
+| 기준점보다 8 m 넘게 뒤처짐 | PATH가 `FAILED:falling behind the route ...`. 멈춘 뒤 PX4 Hold |
 | 단계 노드의 status가 2초 동안 오지 않음 | `FAILSAFE` |
 | 조종사나 PX4 failsafe가 offboard에서 빼냄 | 노드가 `FAILED:left offboard in <단계>`를 보고. 그 뒤는 조종사와 PX4가 맡음 |
 | 단계가 시간 상한을 넘김 | `FAILED:timeout in <단계>` |
 | 단계 노드가 받는 PX4 위치·상태가 1초 넘게 끊기거나 유효하지 않음 | `FAILED:PX4 state telemetry stale`. 다른 단계가 선택될 때까지 유지 |
-| 선택된 단계의 setpoint가 0.5초 넘게 끊김 | mux가 현재 위치에서 HOLD |
+| 선택된 단계의 setpoint가 0.5초 넘게 끊김 | mux가 HOLD(부드럽게 멈춤) |
 | mux가 받는 위치가 1초 넘게 끊기거나 유효하지 않음 | mux가 offboard 스트림을 멈춤. 이후 PX4의 `COM_OF_LOSS_T`와 loss 동작이 적용됨 |
 
-HOLD는 들어가는 순간의 위치와 기수를 고정하고, 그 뒤 기체가 밀려도 목표를 옮기지 않습니다. `FAILSAFE`의
-HOLD에는 시간 제한이 없어서, 그 뒤의 착륙이나 귀환은 조종사나 PX4 failsafe(배터리 등)가 맡습니다.
-offboard loss 동작은 실제 설정으로 시험해야 합니다.
+HOLD는 기체를 그 자리에 세웁니다. 들어가는 순간의 위치를 목표로 고정하지 않고, 지금 가던 방향으로
+1.5 m/s²까지(0.5초에 걸쳐 키우고 줄임) 감속해 멈춘 곳을 지킵니다(`psi_vtol.profile.Stop`). 5 m/s에서 9.6 m,
+3.8초가 걸립니다. 순항 중에 들어가는 순간의 위치를 목표로 고정하면, 이미 지나친 점으로 되돌아가려고
+SITL에서 기수가 48°까지 숙여졌습니다. 기수와 고도는 들어가는 순간의 값을 지키고, 그 뒤 기체가 밀려도
+목표를 옮기지 않습니다.
+
+mission_manager는 PX4가 아직 offboard일 때만 기체를 넘깁니다. 조종사나 PX4 failsafe(지오펜스, 배터리,
+offboard 상실)가 이미 가져갔으면 손대지 않습니다. 넘긴 뒤에는 PX4의 Hold에서 조종사가 넘겨받거나 배터리
+failsafe가 귀환시킵니다. Jetson이나 링크가 끊겨 mux의 스트림 자체가 멈추면 PX4가 1초 뒤 Hold에 들어갑니다
+(`COM_OF_LOSS_T=1`, `COM_OBL_RC_ACT=5`, [2. 제어 개념](02_control_concept.md#37-failsafe를-sitl에서-확인한-결과)).
+그래서 움직이는 동안의 setpoint에는 수평 위치를 넣지 않고 보정한 속도만 넣습니다(`psi_vtol.profile.for_px4`).
+끊긴 뒤 PX4가 지키는 마지막 setpoint가 이미 지나친 점이면, PX4가 그 점으로 급하게 되돌아가기 때문입니다.
 
 ## 2. PX4 연결
 

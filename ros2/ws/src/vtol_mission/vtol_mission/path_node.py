@@ -1,10 +1,11 @@
 """Mission step PATH: climb, hover, then fly the route: for each waypoint turn, speed up, cruise,
 slow down, and hover over it.
 
-The whole step is flown as a multicopter, with position and velocity setpoints only. It never
-sends a VTOL transition command: this vehicle has no control surfaces, and PX4's fixed-wing
-mode would lose it (docs/02_control_concept.md). The speed ramp is psi_vtol.profile, the same
-code the simulation flew.
+The whole step is flown as a multicopter, on a planned reference: position, velocity,
+acceleration and heading together. It never sends a VTOL transition command: this vehicle has no
+control surfaces, and PX4's fixed-wing mode would lose it (docs/02_control_concept.md). The
+reference is psi_vtol.profile, the same code the simulation flew. A fault the profile sees (no
+forward speed, falling behind) fails the step with its reason; mission_manager acts on it.
 
 Parameters
     mission    folder under missions/; its mission.yaml gives height, speed, ramp and route
@@ -56,7 +57,10 @@ class PathNode(SetpointSource):
         elif self.flight.overdue(self.t):
             self.fail(f"timeout in {phase}")
         else:
-            self.send(self.flight.update(self.t, self.pos, self.vel))
+            self.send(self.flight.update(self.t, self.pos, self.vel, self.armed, self.att))
+            if self.flight.fault:
+                self.fail(self.flight.fault)
+                return
             if self.flight.phase != phase:
                 self.get_logger().info(f"PATH: {phase} -> {self.flight.phase}")
             if self.flight.done:

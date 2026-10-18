@@ -2,7 +2,9 @@
 
 This is the only node that publishes PX4's trajectory setpoint. mission_manager names the step
 whose setpoints go through (/setpoint_mux/source). With no step selected, or when the selected
-step stops sending, PX4 is told to hold the current position.
+step stops sending, the vehicle is brought to a hover where it is (psi_vtol.profile.Stop): slowed
+along its own direction of travel with the braking eased in, never told to be at a point it has
+already passed. Holding the point it was at, at 5 m/s, pitched it to 48 degrees in SITL.
 """
 import math
 import time
@@ -12,9 +14,9 @@ from px4_msgs.msg import OffboardControlMode, TrajectorySetpoint, VehicleLocalPo
 from rclpy.node import Node
 from std_msgs.msg import String
 
+from psi_vtol.profile import Stop, for_px4
 from vtol_mission import px4
 
-NANS = [math.nan, math.nan, math.nan]
 
 
 def has_finite(values):
@@ -33,9 +35,9 @@ class SetpointMux(Node):
         self.source = "HOLD"
         self.latest = {}            # step -> (its last setpoint, when it arrived)
         self.position = None        # north, east, down
+        self.velocity = (0.0, 0.0, 0.0)
         self.heading = 0.0
-        self.hold_position = None
-        self.hold_heading = None
+        self.stop = None            # the stop being flown while holding
         self.position_received_at = None
         self.last_position_timestamp = None
         self.state_timeout_s = self.declare_parameter("state_timeout_s", 1.0).value
@@ -63,7 +65,7 @@ class SetpointMux(Node):
             return
         if source != self.source:
             self.get_logger().info(f"Mux source changed: {self.source} -> {source}")
-            self.hold_position = self.hold_heading = None
+            self.stop = None
         self.source = source
 
     def on_setpoint(self, step, msg):
@@ -77,22 +79,25 @@ class SetpointMux(Node):
             self.position_received_at = None
             return
         self.position = [float(msg.x), float(msg.y), float(msg.z)]
+        if msg.v_xy_valid and all(math.isfinite(v) for v in (msg.vx, msg.vy, msg.vz)):
+            self.velocity = (float(msg.vx), float(msg.vy), float(msg.vz))
         self.heading = float(msg.heading)
         self.position_received_at = time.monotonic()
         self.last_position_timestamp = msg.timestamp
 
     def hold_setpoint(self):
-        """Stay where the vehicle is now. None until PX4 has reported a position."""
+        """Come to a hover where the vehicle is. None until PX4 has reported a position."""
         if self.position is None:
             return None
-        if self.hold_position is None:
-            self.hold_position = list(self.position)
-            self.hold_heading = self.heading
+        now = time.monotonic()
+        if self.stop is None:
+            self.stop = Stop(now, self.position, self.velocity, self.heading)
+        sp = for_px4(self.stop.setpoint(now), self.position)
         msg = TrajectorySetpoint()
-        msg.position = list(self.hold_position)
-        msg.velocity = NANS
-        msg.acceleration = NANS
-        msg.yaw = self.hold_heading
+        msg.position = [sp.x, sp.y, sp.z]
+        msg.velocity = [sp.vx, sp.vy, sp.vz]
+        msg.acceleration = [sp.ax, sp.ay, sp.az]
+        msg.yaw = sp.yaw
         msg.yawspeed = math.nan
         return msg
 
@@ -103,7 +108,7 @@ class SetpointMux(Node):
         setpoint, arrived = self.latest.get(self.source, (None, 0.0))
         if setpoint is None or time.monotonic() - arrived > self.timeout_s:
             return self.hold_setpoint(), f"{self.source}_STALE_HOLD"
-        self.hold_position = self.hold_heading = None
+        self.stop = None
         return setpoint, f"{self.source}_SELECTED"
 
     def forward(self):

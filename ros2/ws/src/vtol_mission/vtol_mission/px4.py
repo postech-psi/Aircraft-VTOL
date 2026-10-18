@@ -5,10 +5,13 @@ whose definition has a version above 0, so the names change between PX4 releases
 one place they are written. Each is also a ROS parameter (px4_topic.<key>), so another firmware
 or a namespace needs no change in the code.
 """
+import math
+
 from rclpy.qos import QoSDurabilityPolicy, QoSHistoryPolicy, QoSProfile, QoSReliabilityPolicy
 
 TOPICS = {
     "local_position": "/fmu/out/vehicle_local_position_v1",
+    "attitude": "/fmu/out/vehicle_attitude",
     "status": "/fmu/out/vehicle_status_v1",
     "trajectory_setpoint": "/fmu/in/trajectory_setpoint",
     "offboard_control_mode": "/fmu/in/offboard_control_mode",
@@ -29,6 +32,15 @@ SETPOINTS = TO_PX4
 def topic(node, key):
     """The name of one PX4 topic, as a parameter of the node."""
     return node.declare_parameter(f"px4_topic.{key}", TOPICS[key]).value
+
+
+def euler(q):
+    """(roll, pitch, yaw) in radians from PX4's attitude quaternion (w, x, y, z)."""
+    w, x, y, z = (float(v) for v in q)
+    roll = math.atan2(2 * (w * x + y * z), 1 - 2 * (x * x + y * y))
+    pitch = math.asin(max(-1.0, min(1.0, 2 * (w * y - z * x))))
+    yaw = math.atan2(2 * (w * z + x * y), 1 - 2 * (y * y + z * z))
+    return roll, pitch, yaw
 
 
 def now_us(node):

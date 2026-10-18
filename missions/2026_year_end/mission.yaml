@@ -4,14 +4,23 @@
 vehicle: psi_qp               # vehicle/psi_qp.yaml
 
 profile:
-  alt_m: 20.0
-  cruise_mps: 5.0             # a 50 m side: 12.5 m to speed up, 3.6 s cruise, 19.6 m to slow down
-  accel_mps2: 1.0             # limit on the commanded speed change; slowing down eases in and
-                              # out and reaches it only halfway (psi_vtol/profile.py)
+  alt_m: 20.0                 # at least 6 m: below 5 m PX4 switches pusher assist off
+  cruise_mps: 5.0
+  accel_mps2: 1.0             # limit on speeding up and slowing down along the path
+  brake_ramp_s: 0.7           # each speed change builds up and fades out over this long, so the
+                              # tilt never steps: from 5 m/s a stop takes 14.3 m and 5.7 s
   hover_s: 6.0
-  # Waypoints [forward, left] in metres from the take-off point, in the frame of the heading at
-  # take-off; negative left is right. The vehicle stops and turns over each one and lands on the
-  # last. Out and back instead, at cruise_mps 10: [[250.0, 0.0], [0.0, 0.0]].
+  fly_through: 1              # 1 round the corners like an airplane, banked by the lift rotors,
+                              # nose along the path; 0 stop and turn in a hover at every waypoint.
+                              # Corners sharper than 120 degrees are always stop and turn
+  turn_radius_m: 15.0         # corners are passed 6 m inside the waypoint; at 5 m/s, 10 deg bank
+  lateral_mps2: 1.7           # most sideways acceleration in a corner (10 deg bank); a tighter
+                              # corner is flown slower
+  route_heading_deg: -1       # -1: route_m is in the frame of the heading at take-off. 0-359: in
+                              # the frame of this heading from north, so a vehicle set down
+                              # facing the wrong way still flies the planned square
+  # Waypoints [forward, left] in metres from the take-off point; negative left is right. The
+  # vehicle lands on the last. Out and back instead, at cruise_mps 10: [[250.0, 0.0], [0.0, 0.0]].
   route_m:
     - [50.0, 0.0]
     - [50.0, -50.0]

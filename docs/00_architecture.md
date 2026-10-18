@@ -153,9 +153,12 @@ flowchart LR
 ## 4. 임무의 흐름
 
 `mission_manager`는 단계(노드) 단위로, `profile.py`는 그 안의 비행 단계(phase) 단위로 진행합니다. PATH
-안에서는 경유점마다 회전–가속–순항–감속–호버를 반복하고, 단계 이름에는 구간 번호가 붙습니다(`accel1`,
-`hover2`, `turn2`, …). 기본 경로(한 변 50 m 정사각형, 오른쪽 회전)는 이 고리를 네 번 돕니다. 단계마다 시간
-상한이 있고, 넘기거나 PX4가 offboard에서 빠지면 `FAILED`를 보고해 `FAILSAFE`(그 자리 유지)로 갑니다.
+안에서는 경로를 계획된 기준점을 따라 납니다. 통과 비행(기본)은 가속한 뒤 순항과 모서리(`corner`)를 번갈아
+지나 마지막 구간에서 감속하고, 멈춰서 돌기는 경유점마다 회전–가속–순항–감속–호버를 반복합니다. 단계
+이름에는 구간 번호가 붙습니다(`accel1`, `corner1`, `hover5`, `turn2`, …). 단계마다 시간 상한이 있고,
+넘기거나, 프로파일이 경로를 따라가지 못함을 알아채거나, PX4가 offboard에서 빠지면 `FAILED`를 보고해
+`FAILSAFE`로 갑니다. FAILSAFE에서는 mux가 기체를 부드럽게 멈추고, 그 뒤 PX4의 Hold(푸셔 고장이면
+Land)에 넘깁니다.
 
 ```mermaid
 stateDiagram-v2
@@ -167,14 +170,17 @@ stateDiagram-v2
         climb --> hover1
         hover1 --> accel
         accel --> cruise
-        cruise --> decel: 제동 거리 도달
-        decel --> hover: 경유점 위로
-        hover --> turn: 다음 경유점이 있음
-        turn --> accel: 기수를 다음 구간으로
+        cruise --> corner: 통과 비행
+        corner --> cruise
+        cruise --> decel: 멈출 경유점 앞
+        decel --> hover: 기준점이 경유점에 멈춤
+        hover --> turn: 멈춰서 돌기, 다음 경유점이 있음
+        turn --> accel: 기수가 다음 구간을 향함
     }
     PATH --> LANDING: 마지막 경유점에서 DONE
     state LANDING {
         direction LR
+        align --> descend: 0.3 m 안, 바람을 마주 봄
         descend --> land: 지면 4 m 아래
     }
     LANDING --> MISSION_DONE: disarm
@@ -186,10 +192,12 @@ stateDiagram-v2
 | 단계 | 하는 일 |
 |---|---|
 | climb, hover1 | 이륙 지점 위로 목표 고도까지 상승하고 잠시 호버 |
-| turn*i* | 다음 경유점 쪽으로 기수를 돌림 (호버 상태, 20°/s) |
-| accel*i*, cruise*i*, decel*i* | 그 구간(leg)을 가속–순항–감속으로 비행 |
-| hover*i+1* | 멈춘 자리에서 경유점으로 천천히 옮겨 가며 호버 |
-| descend, land | 마지막 경유점(기본은 이륙 지점) 위로 하강, PX4 Land 모드로 착륙 |
+| turn*i* | 멈춰서 돌기: 다음 경유점 쪽으로 기수를 돌림 (호버 상태, 20°/s, 기수가 실제로 돌 때까지) |
+| accel*i*, cruise*i*, decel*i* | 구간 *i*를 기준점을 따라 가속–순항–감속. 감속은 경유점에서 정확히 멈추도록 계산됨 |
+| corner*i* | 통과 비행: 구간 *i*에서 *i+1*로 반경 15 m 곡선, 옆으로 약 10° 기울여 돎 |
+| hover*j* | 멈춘 경유점 위에서 호버 |
+| align | 착륙 지점 위에 자리를 잡고 기수를 바람 쪽으로 돌림 |
+| descend, land | 착륙 지점(기본은 이륙 지점) 위로 하강, PX4 Land 모드로 착륙 |
 
 ## 5. 시뮬레이션 한 번의 흐름
 

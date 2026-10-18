@@ -1,6 +1,8 @@
-"""Mission step LANDING: descend over the point reached, then let PX4's Land mode touch down.
+"""Mission step LANDING: align over the point reached, descend, then let PX4's Land mode touch down.
 
-No vision: the landing point is where the vehicle is hovering when the step begins. A landing
+Aligning settles the vehicle over the point and turns its nose into the wind, from the way it
+leans to hold its place (psi_vtol.profile). No vision: the landing point is where the vehicle is
+hovering when the step begins. A landing
 on a detected target would be another step with the same contract (source.py), put in this
 one's place in the list of steps.
 
@@ -34,18 +36,18 @@ class LandingNode(SetpointSource):
             self.fail(str(error))
             return
         self.t_asked = -1e9
-        self.get_logger().info(f"LANDING: descending over {self.pos[:2]}.")
+        self.get_logger().info(f"LANDING: aligning over {self.pos[:2]}.")
 
     def step(self):
         phase = self.flight.phase
-        if phase == "descend" and not self.armed:
-            self.fail("disarmed in descend")
-        elif phase == "descend" and not self.offboard:
-            self.fail("left offboard in descend")       # the pilot or a PX4 failsafe took over
+        if phase in ("align", "descend") and not self.armed:
+            self.fail(f"disarmed in {phase}")
+        elif phase in ("align", "descend") and not self.offboard:
+            self.fail(f"left offboard in {phase}")      # the pilot or a PX4 failsafe took over
         elif self.flight.overdue(self.t):
             self.fail(f"timeout in {phase}")
         else:
-            self.send(self.flight.update(self.t, self.pos, self.vel, self.armed))
+            self.send(self.flight.update(self.t, self.pos, self.vel, self.armed, self.att))
             if self.flight.done:
                 self.get_logger().info(f"LANDING phases [s, PX4 clock]: {self.flight.times}")
                 self.finish()

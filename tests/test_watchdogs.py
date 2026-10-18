@@ -6,7 +6,8 @@ from types import SimpleNamespace
 import pytest
 
 from psi_vtol import config
-from psi_vtol.profile import Profile
+from psi_vtol.profile import Profile, Stop, for_px4
+from psi_vtol.trajectory import stopping_distance
 
 
 def method(filename, class_name, name, **namespace):
@@ -21,14 +22,22 @@ def method(filename, class_name, name, **namespace):
     return scope[name]
 
 
-def test_hold_target_does_not_follow_position_drift():
-    hold = method("setpoint_mux.py", "SetpointMux", "hold_setpoint")
-    state = SimpleNamespace(position=[0., 0., -20.], heading=.1, hold_position=None, hold_heading=None)
+def test_hold_brakes_along_the_way_and_does_not_follow_position_drift():
+    """A point the vehicle has already passed, at 5 m/s, pitched it to 48 degrees (SITL)."""
+    clock = SimpleNamespace(t=100.0)
+    hold = method("setpoint_mux.py", "SetpointMux", "hold_setpoint", Stop=Stop, for_px4=for_px4,
+                  time=SimpleNamespace(monotonic=lambda: clock.t))
+    state = SimpleNamespace(position=[0., 0., -20.], velocity=(5., 0., 0.), heading=.1, stop=None)
     first = hold(state)
-    state.position, state.heading = [5., -2., -18.], .5
-    second = hold(state)
-    assert second.position == first.position == [0., 0., -20.]
-    assert second.yaw == first.yaw == .1
+    assert all(map(math.isnan, first.position[:2])) and first.position[2] == -20.  # moving: a velocity
+    assert first.velocity[:2] == [5., 0.]
+    assert first.acceleration[:2] == pytest.approx([0., 0.])           # braking eases in
+    state.position, state.velocity, state.heading = [5., -2., -18.], (0., 0., 0.), .5
+    clock.t = 120.0
+    later = hold(state)
+    assert later.position == pytest.approx([stopping_distance(5., 1.5, .5), 0., -20.])
+    assert later.velocity[:2] == pytest.approx([0., 0.])
+    assert later.yaw == first.yaw == .1
 
 
 def test_stale_position_stops_offboard_stream():
@@ -70,9 +79,36 @@ def test_step_fails_cleanly_when_heading_into_wind_has_no_wind(filename, class_n
 
 def test_missing_step_status_changes_to_failsafe():
     run = method("mission_manager.py", "MissionManager", "run_step", FAILSAFE="FAILSAFE")
-    transitions = []
+    failures = []
     state = SimpleNamespace(state="PATH", step_status_time=97., state_start=90., status_timeout_s=2.,
-        announce=lambda *args: None, change_state=transitions.append,
+        announce=lambda *args: None, fail_mission=failures.append,
         get_logger=lambda: SimpleNamespace(error=lambda text: None))
     run(state)
-    assert transitions == ["FAILSAFE"]
+    assert failures == ["no status from the PATH node"]
+
+
+OFFBOARD, POSITION = 14, 2
+
+
+@pytest.mark.parametrize("failure, nav_state, expected", [
+    ("pusher: no forward speed 3 s into accel1", OFFBOARD, 6),     # land where it is
+    ("falling behind the route by 8 m in cruise2", OFFBOARD, 3),   # PX4 Hold
+    ("aborted: ABORT", POSITION, None),                            # the pilot has it: leave it
+])
+def test_failsafe_hands_the_stopped_vehicle_to_px4(failure, nav_state, expected):
+    class VehicleCommand(SimpleNamespace):
+        VEHICLE_CMD_DO_SET_MODE = 176
+    hand_over = method("mission_manager.py", "MissionManager", "hand_over",
+                       VehicleCommand=VehicleCommand, PX4_MAIN_MODE_AUTO=4,
+                       PX4_SUB_MODE_AUTO_LOITER=3, PX4_SUB_MODE_AUTO_LAND=6,
+                       VehicleStatus=SimpleNamespace(NAVIGATION_STATE_OFFBOARD=OFFBOARD),
+                       px4=SimpleNamespace(now_us=lambda node: 0))
+    sent = []
+    state = SimpleNamespace(state_start=90., handover_s=6., handover_sent=0., failure=failure,
+                            nav_state=nav_state, command_pub=SimpleNamespace(publish=sent.append),
+                            get_logger=lambda: SimpleNamespace(warn=lambda text: None))
+    hand_over(state)
+    if expected is None:
+        assert not sent
+    else:
+        assert sent[0].param2 == 4 and sent[0].param3 == expected

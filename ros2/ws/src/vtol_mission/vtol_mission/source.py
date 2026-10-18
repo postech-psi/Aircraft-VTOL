@@ -13,11 +13,12 @@ two steps of the year-end flight; a vision landing would be a third.
 import math
 import time
 
-from px4_msgs.msg import (TrajectorySetpoint, VehicleCommand, VehicleLocalPosition,
-                          VehicleStatus)
+from px4_msgs.msg import (TrajectorySetpoint, VehicleAttitude, VehicleCommand,
+                          VehicleLocalPosition, VehicleStatus)
 from rclpy.node import Node
 from std_msgs.msg import String
 
+from psi_vtol.profile import for_px4
 from vtol_mission import px4
 
 PX4_MAIN_MODE_OFFBOARD = 6
@@ -36,6 +37,7 @@ class SetpointSource(Node):
         self.pos = None             # north, east, down [m]
         self.vel = None
         self.heading = 0.0
+        self.att = None             # (roll, pitch, yaw) [rad]; None until PX4 has reported it
         self.armed = False
         self.nav_state = None
         self.ground_z = 0.0         # the height the vehicle stood at before it was armed
@@ -55,6 +57,8 @@ class SetpointSource(Node):
                                  self._on_local_position, px4.FROM_PX4)
         self.create_subscription(VehicleStatus, px4.topic(self, "status"),
                                  self._on_vehicle_status, px4.FROM_PX4)
+        self.create_subscription(VehicleAttitude, px4.topic(self, "attitude"),
+                                 self._on_attitude, px4.FROM_PX4)
         self.create_subscription(String, "/mission/state", self._on_mission_state, 10)
         self.create_timer(1.0 / rate_hz, self._tick)
         self.get_logger().info(f"{self.step_name} node started.")
@@ -73,7 +77,8 @@ class SetpointSource(Node):
         return self.nav_state == VehicleStatus.NAVIGATION_STATE_OFFBOARD
 
     def send(self, sp):
-        """Publish one setpoint (psi_vtol.profile.Setpoint)."""
+        """Publish one setpoint (psi_vtol.profile.Setpoint), as profile.for_px4 makes it."""
+        sp = for_px4(sp, self.pos)
         msg = TrajectorySetpoint()
         msg.timestamp = px4.now_us(self)
         msg.position = [float(sp.x), float(sp.y), float(sp.z)]
@@ -130,6 +135,10 @@ class SetpointSource(Node):
         self.heading = float(msg.heading)
         if not self.armed:
             self.ground_z = self.pos[2]
+
+    def _on_attitude(self, msg):
+        if all(math.isfinite(float(v)) for v in msg.q):
+            self.att = px4.euler(msg.q)
 
     def _on_vehicle_status(self, msg):
         self.status_received_at = time.monotonic()

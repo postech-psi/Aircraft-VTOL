@@ -30,6 +30,8 @@ concept:
   # Failsafes. Mission-dependent ones (geofence, return height) are added by gz_model.mission_params.
   COM_OBL_RC_ACT: 5           # setpoints from the Jetson stop: Hold. The default hands over to an RC
                               # pilot; without one the vehicle flew on at 5 m/s for 15 s in SITL
+  COM_OF_LOSS_T: 1.0          # ... after 1 s, PX4's default. SITL's start script raises it to 4 s
+                              # (1 s times the speed factor), as long as 4 s of flight on a dead link
   COM_LOW_BAT_ACT: 3          # return at the critical level, land at the emergency level
   GF_ACTION: 3                # outside the geofence: return
   MPC_ACC_HOR: 1.5            # PX4's own braking (Hold, Return, Land) at 1.5 m/s^2, not 3. At 3 a
