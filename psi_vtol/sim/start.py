@@ -10,8 +10,8 @@ Ctrl-C stops PX4 and Gazebo. The PX4 log stays under the run folder that is prin
 import argparse
 import json
 import signal
-from pathlib import Path
 import uuid
+from pathlib import Path
 
 from psi_vtol import config
 from psi_vtol.sim import gz_model, run_case

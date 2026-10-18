@@ -75,7 +75,9 @@ def _reachable(v0, length, limit, accel, ramp_s):
 def _turn_shape(turn, radius, transition_m, ds=0.02):
     """A turn by `turn` radians that eases its curvature in and out over transition_m.
 
-    Returned in a frame where the turn starts at the origin heading along +x, as arrays of
+    The curvature rises in proportion to the distance flown (a clothoid), holds at 1/radius (an
+    arc) and falls back to zero (a clothoid), so the bank needed builds up and fades out instead
+    of stepping. Returned in a frame where the turn starts at the origin heading along +x, as arrays of
     (distance, x, y, heading, curvature), with the curvature it reaches. A positive turn is to
     the right: heading is measured from north towards east, so +y is to the right.
     """
@@ -182,6 +184,10 @@ class Path:
 
     @staticmethod
     def _tangent(shape, turn):
+        """How far before its waypoint a turn starts, and after it ends. The turn ends at (x, y)
+        heading `turn`; that heading's line crosses the x axis, the incoming line, at
+        x - y / tan(turn): the waypoint. The shape is symmetric, so the distance is the same on
+        the outgoing line."""
         _, xs, ys, _, _, _ = shape
         return xs[-1] - ys[-1] * math.cos(turn) / math.sin(turn) if abs(math.sin(turn)) > 1e-9 \
             else math.inf
@@ -206,18 +212,28 @@ class SpeedPlan:
     """Speed along a Path: from rest to rest, at most cruise_mps on lines, and slow enough in
     each turn that the sideways acceleration stays below lateral_mps2.
 
-    Speed changes are SpeedRamps. state(t) gives the distance along the path, the speed, the
-    acceleration along it, and the label of the piece flown: ("accel" | "cruise" | "decel" |
-    "corner", leg or corner index).
+    1. Each section gets a speed limit: cruise_mps on a line, sqrt(lateral_mps2 / curvature) in a
+       turn. A turn is flown at one speed.
+    2. The speeds where sections meet start at the lower of the two limits, and zero at both
+       ends. Forward passes lower each line's end to what it can reach from its start, backward
+       passes its start to what it can still slow down from; a turn takes the lower of its two
+       ends. The passes repeat until nothing changes.
+    3. Each line speeds up from its start speed to the highest speed it can reach and still slow
+       to its end speed, holds it, and slows down. Speed changes are SpeedRamps.
+
+    state(t) gives the distance along the path, the speed, the acceleration along it, and the
+    label of the piece flown: ("accel" | "cruise" | "decel" | "corner", leg or corner index).
     """
 
     def __init__(self, path, cruise_mps, accel_mps2, ramp_s, lateral_mps2):
         sections = path.sections
         limit = [cruise_mps if sec[0] == "line"
                  else min(cruise_mps, math.sqrt(lateral_mps2 / sec[3])) for sec in sections]
-        # speed where each section starts and ends: rest at both ends, the turn's speed between
+        # speed where each section starts and ends: rest at both ends, the lower limit between
         edge = [0.0] + [min(limit[i], limit[i + 1]) for i in range(len(sections) - 1)] + [0.0]
-        for _ in range(3):              # forward and backward: what the lines can reach
+        before = None
+        while edge != before:           # forward and backward passes, until nothing changes
+            before = list(edge)
             for i, sec in enumerate(sections):
                 if sec[0] == "line":
                     edge[i + 1] = min(edge[i + 1], _reachable(edge[i], sec[2], limit[i], accel_mps2, ramp_s))

@@ -9,6 +9,7 @@ __pycache__/
 .venv/
 venv/
 .pytest_cache/
+.ruff_cache/
 
 # ROS 2 build output
 ros2/ws/build/
