@@ -140,9 +140,8 @@ def vehicle_plan():
 # ---------------------------------------------------------------------------------------------
 # 1. One flight of the nominal vehicle
 # ---------------------------------------------------------------------------------------------
-PHASES = [("climb", "Climb"), ("hover1", "Hover"), ("accel", "Accel"), ("cruise", "Cruise"),
-          ("decel", "Decel"), ("hover2", "Hover"), ("descend", "Descent"),
-          ("land", "Landing")]
+LABELS = {"climb": "Climb", "hover": "Hover", "turn": "Turn", "accel": "Accel", "cruise": "Cruise",
+          "decel": "Decel", "descend": "Descent", "land": "Landing"}
 
 
 def nominal_flight(record=None):
@@ -159,7 +158,9 @@ def nominal_flight(record=None):
     att, pos = topic("vehicle_attitude"), topic("vehicle_local_position")
     t1 = flight["phases"].get("land", [0, pos["timestamp"][-1] * 1e-6])[1]
     asked, mot = topic("vehicle_local_position_setpoint"), topic("actuator_motors")
-    cos0, sin0 = math.cos(flight["yaw0"]), math.sin(flight["yaw0"])
+    # phases in the order flown, each with its label: accel1 and accel2 are both "Accel"
+    phases = sorted(flight["phases"].items(), key=lambda item: item[1][0])
+    phases = [(a, b, LABELS.get(name.rstrip("0123456789"), name)) for name, (a, b) in phases]
 
     def clip(data):
         t = data["timestamp"] * 1e-6
@@ -170,24 +171,21 @@ def nominal_flight(record=None):
                              gridspec_kw={"hspace": 0.34})
     for ax in axes:
         ax.grid(axis="x", visible=False)        # the phase bands already mark time
-        for i, (key, _) in enumerate(PHASES):
-            if i % 2 == 0 and key in flight["phases"]:
-                a, b = flight["phases"][key]
+        for i, (a, b, _) in enumerate(phases):
+            if i % 2 == 0:
                 ax.axvspan(a - t0, b - t0, color=BAND, lw=0)
-    for key, label in PHASES:
-        if key not in flight["phases"]:
-            continue
-        a, b = flight["phases"][key]
+    for a, b, label in phases:
         axes[0].text((a + b) / 2 - t0, 1.25, label, transform=axes[0].get_xaxis_transform(),
-                     ha="center", va="bottom", fontsize=7.5, color=INK2, linespacing=0.95)
+                     ha="center", va="bottom", fontsize=7.5, color=INK2, linespacing=0.95,
+                     rotation=90 if len(phases) > 8 else 0)
 
     ax = axes[0]
     t, keep = clip(asked)
-    speed_asked = np.nan_to_num(asked["vx"][keep]) * cos0 + np.nan_to_num(asked["vy"][keep]) * sin0
-    ax.plot(t, speed_asked, color=MUTED, label="Commanded")
+    ax.plot(t, np.hypot(np.nan_to_num(asked["vx"][keep]), np.nan_to_num(asked["vy"][keep])),
+            color=MUTED, label="Commanded")
     t, keep = clip(pos)
-    ax.plot(t, pos["vx"][keep] * cos0 + pos["vy"][keep] * sin0, color=BLUE, label="Flown")
-    ax.set_title("Speed along the track (m/s)")
+    ax.plot(t, np.hypot(pos["vx"][keep], pos["vy"][keep]), color=BLUE, label="Flown")
+    ax.set_title("Horizontal speed (m/s)")
     ax.margins(y=.12)
     ax.legend(loc="upper right", ncol=2)
 

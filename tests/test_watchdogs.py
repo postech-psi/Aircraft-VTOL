@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import pytest
 
 from psi_vtol import config
-from psi_vtol.profile import LANDING_PHASES, PATH_PHASES, Profile
+from psi_vtol.profile import Profile
 
 
 def method(filename, class_name, name, **namespace):
@@ -55,13 +55,12 @@ def test_replayed_position_cannot_refresh_watchdog():
     assert state.position_received_at == 98.
 
 
-@pytest.mark.parametrize("filename, class_name, phases", [
-    ("path_node.py", "PathNode", PATH_PHASES), ("landing_node.py", "LandingNode", LANDING_PHASES)])
-def test_step_fails_cleanly_when_heading_into_wind_has_no_wind(filename, class_name, phases):
+@pytest.mark.parametrize("filename, class_name", [("path_node.py", "PathNode"),
+                                                  ("landing_node.py", "LandingNode")])
+def test_step_fails_cleanly_when_heading_into_wind_has_no_wind(filename, class_name):
     into_wind = dict(config.profile(), heading_into_wind=1)
     start = method(filename, class_name, "start", Profile=Profile,
-                   config=SimpleNamespace(profile=lambda mission: into_wind),
-                   PATH_PHASES=PATH_PHASES, LANDING_PHASES=LANDING_PHASES)
+                   config=SimpleNamespace(profile=lambda mission: into_wind))
     failures = []
     state = SimpleNamespace(mission="2026_year_end", pos=(0., 0., -0.1), ground_z=-0.1, heading=0.,
                             t=0., fail=failures.append, flight=None)

@@ -185,6 +185,7 @@ def fly(p, params, instance, wall_limit_s=420.0):
         # With heading_into_wind the true mean wind is used; the vehicle will need an estimate.
         flight = Profile(p, home, yaw0, wind_ne(p, yaw0))
         result["phases"] = flight.times
+        result["legs"] = [{k: leg[k] for k in ("start", "end", "heading", "speed")} for leg in flight.legs]
 
         # --- arm and take off: PX4 wants the setpoint stream before it accepts offboard -------
         link.setpoint = flight.takeoff_setpoint()

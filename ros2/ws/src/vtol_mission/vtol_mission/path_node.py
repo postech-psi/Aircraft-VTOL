@@ -1,4 +1,5 @@
-"""Mission step PATH: climb, hover, speed up, cruise, slow down, hover.
+"""Mission step PATH: climb, hover, then fly the route: for each waypoint turn, speed up, cruise,
+slow down, and hover over it.
 
 The whole step is flown as a multicopter, with position and velocity setpoints only. It never
 sends a VTOL transition command: this vehicle has no control surfaces, and PX4's fixed-wing
@@ -6,14 +7,14 @@ mode would lose it (docs/02_control_concept.md). The speed ramp is psi_vtol.prof
 code the simulation flew.
 
 Parameters
-    mission    folder under missions/; its mission.yaml gives height, speed and the ramp
+    mission    folder under missions/; its mission.yaml gives height, speed, ramp and route
     auto_arm   true: the node asks PX4 for offboard mode and arms. false: it waits for the
                pilot to do both, which is the default.
 """
 import rclpy
 
 from psi_vtol import config
-from psi_vtol.profile import PATH_PHASES, Profile
+from psi_vtol.profile import Profile
 from vtol_mission.source import SetpointSource
 
 ARM_AFTER_S = 1.5       # PX4 wants the setpoint stream for a moment before it accepts offboard
@@ -34,7 +35,7 @@ class PathNode(SetpointSource):
     def start(self):
         try:                        # no wind estimate here: heading_into_wind cannot be flown
             self.flight = Profile(config.profile(self.mission), self.pos, self.heading,
-                                  phases=PATH_PHASES)
+                                  part="path")
         except ValueError as error:
             self.fail(str(error))
             return

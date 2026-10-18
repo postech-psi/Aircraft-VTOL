@@ -22,12 +22,13 @@ flowchart LR
 |---|---|---|
 | `mission_manager` | `mission_manager.py` | 임무를 단계 목록 순서대로 진행합니다. `WAIT_START → PATH → LANDING → MISSION_DONE`, 문제가 생기면 어디서든 `FAILSAFE` |
 | `setpoint_mux` | `setpoint_mux.py` | 지금 단계의 setpoint만 PX4로 보냅니다. PX4에 setpoint를 보내는 노드는 이것 하나입니다 |
-| `path_node` | `path_node.py` | 단계 `PATH`: 상승, 호버, 가속, 순항, 감속, 호버. 천이 명령은 보내지 않습니다 |
-| `landing_node` | `landing_node.py` | 단계 `LANDING`: 멈춘 지점 위에서 하강하다가 4 m 아래에서 PX4 Land 모드에 넘깁니다 |
+| `path_node` | `path_node.py` | 단계 `PATH`: 상승, 호버, 그리고 경로의 경유점마다 회전–가속–순항–감속–호버. 천이 명령은 보내지 않습니다 |
+| `landing_node` | `landing_node.py` | 단계 `LANDING`: 마지막 경유점(기본은 이륙 지점) 위에서 하강하다가 4 m 아래에서 PX4 Land 모드에 넘깁니다 |
 
 `path_node`와 `landing_node`의 setpoint는 `psi_vtol/profile.py`가 만듭니다. 시뮬레이션이 비행한 것과
-같은 코드이고, 고도·속도·가속 한계는
-[`missions/2026_year_end/mission.yaml`](../missions/2026_year_end/mission.yaml)에서 읽습니다.
+같은 코드이고, 고도·속도·가속 한계·경로는
+[`missions/2026_year_end/mission.yaml`](../missions/2026_year_end/mission.yaml)에서 읽습니다. 전체 흐름은
+[0. 전체 구조](00_architecture.md#3-탑재-비행-소프트웨어)에 그림으로 있습니다.
 
 ### 단계 노드의 규칙
 

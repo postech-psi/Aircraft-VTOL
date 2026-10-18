@@ -5,6 +5,7 @@ PSI VTOL 기체의 제어 설계, 시뮬레이션, 탑재 소프트웨어를 모
 
 기체는 리프트 로터 4개와 푸셔 1개를 단 quadplane이고 조종면이 없습니다. 그래서 고정익으로
 천이하지 않고, 이륙부터 착륙까지 멀티콥터 모드로 날면서 앞으로 갈 때 푸셔를 씁니다.
+기본 임무는 250 m 갔다가 경유점에서 멈춰 돌고, 이륙 지점으로 돌아와 착륙하는 것입니다.
 
 ## 현재 상태
 
@@ -32,6 +33,7 @@ bash simulation/docker_run.sh              # 기준 기체로 임무를 한 번 
 
 | 문서 | 내용 |
 |---|---|
+| [0. 전체 구조](docs/00_architecture.md) | 시스템, 코드, 탑재 소프트웨어, 임무 흐름을 그림으로 |
 | [1. 기체](docs/01_vehicle.md) | 제원, 무엇으로 무엇을 제어하는가, 수치의 출처 |
 | [2. 제어 개념과 PX4 설정](docs/02_control_concept.md) | 비행 순서, 제어 방법, 모터 배치와 파라미터 |
 | [3. 시뮬레이션](docs/03_simulation.md) | 실행 방법, 물리 모델, 합격 기준, 스윕 |
@@ -66,7 +68,7 @@ bash simulation/docker_run.sh              # 기준 기체로 임무를 한 번 
 |---|---|
 | 기체 치수, 질량, 모터 | `vehicle/psi_qp.yaml` |
 | PX4 파라미터 | `px4/params.yaml` |
-| 고도, 순항 속도, 가속 한계 | `missions/<임무>/mission.yaml` |
+| 고도, 순항 속도, 가속 한계, 경로(경유점) | `missions/<임무>/mission.yaml` |
 | 스윕 범위 | `missions/<임무>/study.yaml` |
 | 비행 순서, 속도 ramp | `psi_vtol/profile.py` (시뮬레이션과 ROS 2 노드가 함께 씀) |
 | 공력·추진 수식 | `simulation/gazebo/AeroPhysics.hh` |
